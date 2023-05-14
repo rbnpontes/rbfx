@@ -98,6 +98,10 @@
 #include "../Actions/ActionManager.h"
 #endif
 
+#ifdef URHO3D_JS
+#include "../JavaScript/JavaScriptSystem.h"
+#endif
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #endif
@@ -167,6 +171,9 @@ Engine::Engine(Context* context) :
     context_->RegisterSubsystem(new Localization(context_));
 #ifdef URHO3D_NETWORK
     context_->RegisterSubsystem(new Network(context_));
+#endif
+#ifdef URHO3D_JS
+    JavaScriptSystem::RegisterObject(context_);
 #endif
     // Required in headless mode as well.
     RegisterGraphicsLibrary(context_);
