@@ -194,7 +194,7 @@ cmake_dependent_option(URHO3D_COMPUTE            "Enable Compute shaders"       
 option                (URHO3D_ACTIONS            "Tweening actions"                                      ${URHO3D_ENABLE_ALL})
 option                (URHO3D_SHADER_TRANSLATOR  "Enable shader translation from universal GLSL shaders to other GAPI via glslang and SPIRV-Cross" ON)
 option                (URHO3D_SHADER_OPTIMIZER   "Enable shader optimization via SPIRV-Tools"            ON)
-
+option                (URHO3D_JS                 "Enable Javascript as scripting language"               ON)
 # Features
 set (URHO3D_CSHARP_TOOLS ${URHO3D_CSHARP})
 cmake_dependent_option(URHO3D_CSHARP             "Enable C# support"                                     OFF                  "BUILD_SHARED_LIBS;NOT MINGW"   OFF)

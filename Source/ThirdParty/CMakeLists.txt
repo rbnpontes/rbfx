@@ -43,6 +43,10 @@ add_subdirectory(spdlog)
 add_subdirectory(SDL)
 add_subdirectory(ETCPACK)
 
+if(URHO3D_JS)
+    add_subdirectory(duktape)
+endif ()
+
 if (NOT WEB)
     add_subdirectory(enkiTS)
 endif ()
