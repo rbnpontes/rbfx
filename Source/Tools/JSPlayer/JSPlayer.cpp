@@ -12,7 +12,7 @@ namespace Urho3D
         engineParameters_[EP_APPLICATION_NAME] = "JSPlayer";
         engineParameters_[EP_WINDOW_RESIZABLE] = true;
         engineParameters_[EP_WINDOW_WIDTH] = 500;
-        engineParameters_[EP_WINDOW_WIDTH] = 400;
+        engineParameters_[EP_WINDOW_HEIGHT] = 400;
         engineParameters_[EP_BORDERLESS] = false;
         engineParameters_[EP_HEADLESS] = false;
         engineParameters_[EP_FULL_SCREEN] = false;

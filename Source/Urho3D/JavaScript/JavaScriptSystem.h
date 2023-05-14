@@ -38,6 +38,9 @@ namespace Urho3D
         void Run(const ea::string& jsCode);
         static void RegisterObject(Context* context);
     private:
+        static void HandleFatalError(void* udata, const char* msg);
+        void Init();
+        void ForceStop();
         duk_context* dukCtx_;
     };
 }
