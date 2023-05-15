@@ -39,7 +39,7 @@ namespace Urho3D
             HandleFatalError
         );
 
-        JavaScript_SetupBindings(dukCtx_);
+        JavaScript_SetupBindings(dukCtx_, this);
     }
     void JavaScriptSystem::ForceStop()
     {
