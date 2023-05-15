@@ -124,9 +124,9 @@ namespace Urho3D
     }, 1); \
     duk_def_prop(ctx, obj_idx, DUK_DEFPROP_HAVE_GETTER | DUK_DEFPROP_HAVE_SETTER | DUK_DEFPROP_HAVE_ENUMERABLE);
 
-    duk_ret_t Object_Finalizer(duk_context* ctx, duk_idx_t obj_idx) {
+    duk_ret_t Object_Finalizer(duk_context* ctx, duk_idx_t obj_idx, Object* instance) {
         duk_push_c_function(ctx, [](duk_context* ctx) {
-            duk_push_this(ctx);
+            duk_push_current_function(ctx);
             duk_get_prop_string(ctx, -1, OBJECT_PTR_PROP);
 
             void* ptr = duk_get_pointer_default(ctx, -1, nullptr);
@@ -137,6 +137,8 @@ namespace Urho3D
 
             return 0;
         }, 1);
+        duk_push_pointer(ctx, instance);
+        duk_put_prop_string(ctx, -2, OBJECT_PTR_PROP);
         duk_set_finalizer(ctx, obj_idx);
         return 0;
     }
@@ -157,7 +159,6 @@ namespace Urho3D
     }
     // Subsystems Ctors
     duk_ret_t ResourceCache_Ctor(duk_context* ctx, duk_idx_t obj_idx, Object* instance) {
-        Object_Finalizer(ctx, obj_idx);
         Object_Ctor(ctx, obj_idx, instance);
         return 1;
     }
@@ -224,12 +225,13 @@ namespace Urho3D
 
 #define DEF_OBJECT_CTOR(ctx, typeName, CtorCall) \
     duk_push_c_function(ctx, [](duk_context* ctx)-> duk_ret_t { \
-        duk_is_constructor_call(ctx); \
+        if(!duk_is_constructor_call(ctx)) \
+            return DUK_RET_TYPE_ERROR; \
         duk_idx_t thisIdx = duk_get_top(ctx); \
         duk_push_this(ctx); \
         typeName* obj = new typeName(sJsSystemInstance->GetContext()); \
         obj->AddRef(); \
-        Object_Finalizer(ctx, thisIdx); \
+        Object_Finalizer(ctx, thisIdx, obj); \
         duk_ret_t result = CtorCall(ctx, thisIdx, obj); \
         duk_dup(ctx, thisIdx); \
         return result; \
