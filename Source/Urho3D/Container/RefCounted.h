@@ -108,6 +108,10 @@ public:
 #endif
     }
 
+#if URHO3D_JS
+    /// setup js heapptr, must be used by the javascript workflow only
+    void SetJSHeapptr(void* heapptr);
+#endif
 protected:
 #if URHO3D_CSHARP
     /// Returns handle to wrapper script object. This is scripting-runtime-dependent.
@@ -127,6 +131,10 @@ private:
     void* scriptObject_{};
     /// GC Handle type (strong vs weak).
     bool isScriptStrongRef_{};
+#endif
+#if URHO3D_JS
+    /// A handle to javascript object that wraps this native instance.
+    void* jsHeapptr_{};
 #endif
 };
 

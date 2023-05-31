@@ -158,4 +158,11 @@ void RefCounted::ResetScriptObject()
     isScriptStrongRef_ = false;
 }
 #endif
+
+#if URHO3D_JS
+void RefCounted::SetJSHeapptr(void* heapptr)
+{
+    jsHeapptr_ = nullptr;
+}
+#endif
 }
