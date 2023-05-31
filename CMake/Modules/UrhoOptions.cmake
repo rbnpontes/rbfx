@@ -203,6 +203,9 @@ if (NOT MINI_URHO)
 	# Otherwise it would fail because we build tools with -DBUILD_SHARED_LIBS=OFF due to cryptic build errors, and C# is disabled in static builds.
     set (URHO3D_CSHARP_TOOLS ${URHO3D_CSHARP})
 endif ()
+option                (URHO3D_JS                 "Enable JavaScript support"                             OFF)
+# JavaScript Binding Generation uses C# to generate bindings
+cmake_dependent_option(URHO3D_JS_BINDINGS        "Enable JavaScript Binding Generation"                  OFF                 "URHO3D_CSHARP;URHO3D_JS"        OFF)
 # Valid values at https://docs.microsoft.com/en-us/dotnet/standard/frameworks
 # At the moment only netstandard2.1 supported
 set(URHO3D_NETFX netstandard2.1 CACHE STRING "TargetFramework value for .NET libraries")

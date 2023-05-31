@@ -175,7 +175,9 @@ if (NOT MINI_URHO)
         set (CAPSTONE_X86_ATT_DISABLE ON)
         add_subdirectory (capstone)
     endif ()
-
+    if(URHO3D_JS)
+        add_subdirectory(duktape)
+    endif ()
     # Tracy's headers are included even in non-profiled builds in order to provide stub profiler macros.
     add_subdirectory (tracy)
 endif ()

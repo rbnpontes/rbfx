@@ -1,8 +1,8 @@
-file (GLOB SOURCE_FILES src/*.cpp include/*.h)
+file (GLOB SOURCE_FILES src/*.cpp)
 
 add_library(duktape STATIC ${SOURCE_FILES})
-target_include_directories(duktape SYSTEM 
-    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+target_include_directories(duktape SYSTEM
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
 install (DIRECTORY /include DESTINATION ${DEST_THIRDPARTY_HEADERS_DIR}/ FILES_MATCHING PATTERN *.h)

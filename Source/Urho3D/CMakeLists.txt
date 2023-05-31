@@ -207,6 +207,7 @@ set (PUBLIC_THIRD_PARTY_DEPENDENCIES
     RmlUi
     tinygltf
     enkiTS
+    duktape
 )
 
 # Private dependencies that are hidden from the user and are not exposed in the public API or headers
