@@ -40,8 +40,10 @@ URHO3D_GLOBAL_CONSTANT(ConstString Category_Scene{"Component/Scene"});
 URHO3D_GLOBAL_CONSTANT(ConstString Category_Subsystem{"Component/Subsystem"});
 URHO3D_GLOBAL_CONSTANT(ConstString Category_Urho2D{"Component/Urho2D"});
 URHO3D_GLOBAL_CONSTANT(ConstString Category_User{"Component/User"});
+URHO3D_GLOBAL_CONSTANT(ConstString Category_JavaScript{"Component/JavaScript"});
 
 URHO3D_GLOBAL_CONSTANT(ConstString Category_Transformer{"Transformer"});
 URHO3D_GLOBAL_CONSTANT(ConstString Category_UI{"UI"});
+
 
 }

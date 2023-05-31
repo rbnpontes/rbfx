@@ -98,9 +98,14 @@
 #include "../Actions/ActionManager.h"
 #endif
 
+#ifdef URHO3D_JS
+#include "../JavaScript/JavaScriptSystem.h"
+#endif
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #endif
+
 
 #include "StateManager.h"
 #include "../Core/CommandLine.h"
@@ -167,6 +172,9 @@ Engine::Engine(Context* context) :
     context_->RegisterSubsystem(new Localization(context_));
 #ifdef URHO3D_NETWORK
     context_->RegisterSubsystem(new Network(context_));
+#endif
+#ifdef URHO3D_JS
+    JavaScriptSystem::RegisterObject(context_);
 #endif
     // Required in headless mode as well.
     RegisterGraphicsLibrary(context_);
@@ -294,6 +302,9 @@ bool Engine::Initialize(const StringVariantMap& parameters)
 
     context_->RegisterSubsystem(new PluginManager(context_));
 
+#ifdef URHO3D_JS
+    context_->GetSubsystem<JavaScriptSystem>()->Initialize();
+#endif
     // Set maximally accurate low res timer
     GetSubsystem<Time>()->SetTimerPeriod(1);
 

@@ -110,6 +110,10 @@ if (URHO3D_ACTIONS)
     define_engine_source_files (Actions)
 endif ()
 
+if (URHO3D_JS)
+    define_engine_source_files (JavaScript)
+endif ()
+
 # Remove compute source files as needed
 if (NOT URHO3D_COMPUTE)
     list(REMOVE_ITEM SOURCE_FILES
