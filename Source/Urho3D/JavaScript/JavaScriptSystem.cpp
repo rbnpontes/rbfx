@@ -2,7 +2,11 @@
 #include "JavaScriptAsset.h"
 #include "../Core/Context.h"
 #include "../Core/ObjectCategory.h"
+#include "JavaScriptLogging.h"
+#include "JavaScriptEvents.h"
+
 #include <duktape/duktape.h>
+
 namespace Urho3D
 {
     JavaScriptSystem* JavaScriptSystem::instance_ = nullptr;
@@ -56,7 +60,14 @@ namespace Urho3D
     {
         if (dukCtx_) return;
 
-        dukCtx_ = duk_create_heap(nullptr, nullptr, nullptr, nullptr, HandleFatalError);
+        duk_context* ctx = duk_create_heap(nullptr, nullptr, nullptr, nullptr, HandleFatalError);
+        dukCtx_ = ctx;
+
+        JavaScript_SetupLogger(ctx);
+
+        VariantMap args;
+        args[JavaScriptSetup::P_DUKCTX] = ctx;
+        SendEvent(E_JAVASCRIPT_SETUP, args);
     }
     void JavaScriptSystem::RunCode(const ea::string& jsCode)
     {
@@ -67,6 +78,8 @@ namespace Urho3D
     }
     void JavaScriptSystem::StopJS()
     {
+        SendEvent(E_JAVASCRIPT_STOP);
+
         duk_destroy_heap(static_cast<duk_context*>(dukCtx_));
         dukCtx_ = nullptr;
     }
