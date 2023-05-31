@@ -66,6 +66,9 @@
 #include "Foundation/StandardFileTypes.h"
 #include "Foundation/Texture2DViewTab.h"
 #include "Foundation/TextureCubeViewTab.h"
+#ifdef URHO3D_JS
+#include "Foundation/JavaScriptConsoleTab.h"
+#endif
 
 #include <IconFontCppHeaders/IconsFontAwesome6.h>
 
@@ -148,6 +151,10 @@ Editor::Editor(Context* context)
     editorPluginManager_->AddPlugin("Foundation.Glue.Project", &Foundation_ProjectGlue);
     editorPluginManager_->AddPlugin("Foundation.Glue.ResourceBrowser", &Foundation_ResourceBrowserGlue);
     editorPluginManager_->AddPlugin("Foundation.Glue.SceneView", &Foundation_SceneViewGlue);
+
+#ifdef URHO3D_JS
+    editorPluginManager_->AddPlugin("Foundation.JavaScript", &Foundation_JavaScriptConsoleTab);
+#endif
 }
 
 void Editor::SerializeInBlock(Archive& archive)

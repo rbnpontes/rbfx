@@ -21,20 +21,26 @@
 //
 
 #pragma once
-
 #include "../Core/Object.h"
-
 namespace Urho3D
 {
-    class JavaScriptAsset;
-    class URHO3D_API JavaScriptSystem : public Object {
-        friend class JavaScriptComponent;
-        URHO3D_OBJECT(JavaScriptSystem, Object);
+    //@{
+    // This dummy is used to inject js objects into reflection registry
+    // and must not be used to any other purposes.
+    //@}
+    class JavaScriptDummy : public Object {
     public:
-        JavaScriptSystem(Context* context);
-        ~JavaScriptSystem();
-        void Run(const JavaScriptAsset* asset);
-        void Run(const ea::string& jsCode);
-        static void RegisterObject(Context* context);
+        JavaScriptDummy(Context* context);
+
+        virtual StringHash GetType() const override { return currentType_->GetType(); }
+        virtual const ea::string& GetTypeName() const override { return currentType_->GetTypeName(); }
+        virtual const TypeInfo* GetTypeInfo() const override { return currentType_; }
+
+        static StringHash GetTypeStatic() { return currentType_->GetType(); }
+        static const ea::string& GetTypeNameStatic() { return currentType_->GetTypeName(); }
+        static const TypeInfo* GetTypeInfoStatic() { return currentType_; }
+        static void SetTypeInfoStatic(TypeInfo* currentType);
+    private:
+        static TypeInfo* currentType_;
     };
 }

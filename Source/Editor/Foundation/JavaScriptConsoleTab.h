@@ -20,21 +20,26 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#pragma
 
-#include "../Core/Object.h"
+#ifdef URHO3D_JS
+#include "../Project/Project.h"
+#include "../Project/EditorTab.h"
 
 namespace Urho3D
 {
-    class JavaScriptAsset;
-    class URHO3D_API JavaScriptSystem : public Object {
-        friend class JavaScriptComponent;
-        URHO3D_OBJECT(JavaScriptSystem, Object);
+    void Foundation_JavaScriptConsoleTab(Context* context, Project* project);
+    /// Tab that displays application log and executes JavaScript code
+    class JavaScriptConsoleTab : public EditorTab {
+        URHO3D_OBJECT(JavaScriptConsoleTab, EditorTab);
+
     public:
-        JavaScriptSystem(Context* context);
-        ~JavaScriptSystem();
-        void Run(const JavaScriptAsset* asset);
-        void Run(const ea::string& jsCode);
-        static void RegisterObject(Context* context);
+        explicit JavaScriptConsoleTab(Context* context);
+
+        void RenderContent() override;
+    private:
+        float CalculateTextHeight();
+        ea::string currentCode_;
     };
 }
+#endif

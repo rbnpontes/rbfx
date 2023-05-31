@@ -23,18 +23,22 @@
 #pragma once
 
 #include "../Core/Object.h"
+#include "../Core/Variant.h"
 
 namespace Urho3D
 {
-    class JavaScriptAsset;
-    class URHO3D_API JavaScriptSystem : public Object {
-        friend class JavaScriptComponent;
-        URHO3D_OBJECT(JavaScriptSystem, Object);
+    class JavaScriptEventHandle : public Object {
+        URHO3D_OBJECT(JavaScriptEventHandle, Object);
     public:
-        JavaScriptSystem(Context* context);
-        ~JavaScriptSystem();
-        void Run(const JavaScriptAsset* asset);
-        void Run(const ea::string& jsCode);
-        static void RegisterObject(Context* context);
+        JavaScriptEventHandle(Context* context);
+        unsigned GetConnectedEvents() { return connectedEvents_; }
+        void SetId(unsigned id) { id_ = id; }
+        void Connect(StringHash eventType);
+        void Disconnect(StringHash eventType);
+    private:
+        void HandleEventCall(StringHash eventType, const VariantMap& eventArgs);
+
+        unsigned id_;
+        unsigned connectedEvents_;
     };
 }

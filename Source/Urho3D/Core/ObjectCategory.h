@@ -43,5 +43,6 @@ URHO3D_GLOBAL_CONSTANT(ConstString Category_User{"Component/User"});
 
 URHO3D_GLOBAL_CONSTANT(ConstString Category_Transformer{"Transformer"});
 URHO3D_GLOBAL_CONSTANT(ConstString Category_UI{"UI"});
+URHO3D_GLOBAL_CONSTANT(ConstString Category_JavaScript{"JavaScript"});
 
 }
