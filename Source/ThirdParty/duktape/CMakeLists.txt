@@ -1,0 +1,12 @@
+file (GLOB SOURCE_FILES src/*.cpp include/*.h)
+
+add_library(duktape STATIC ${SOURCE_FILES})
+target_include_directories(duktape SYSTEM 
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+
+install (DIRECTORY /include DESTINATION ${DEST_THIRDPARTY_HEADERS_DIR}/ FILES_MATCHING PATTERN *.h)
+
+if (NOT URHO3D_MERGE_STATIC_LIBS)
+    install (TARGETS duktape EXPORT Urho3D ARCHIVE DESTINATION ${DEST_ARCHIVE_DIR_CONFIG})
+endif ()
