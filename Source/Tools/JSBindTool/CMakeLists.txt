@@ -20,7 +20,5 @@
 # THE SOFTWARE.
 #
 
-file (GLOB SOURCE_FILES *.cpp *.h)
-add_executable (JSPlayer ${SOURCE_FILES})
-target_link_libraries(JSPlayer Urho3D duktape)
-install(TARGETS JSPlayer RUNTIME DESTINATION ${DEST_BIN_DIR_CONFIG})
+project (JSBindTool)
+include_external_msproject(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.csproj)

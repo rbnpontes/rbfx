@@ -38,7 +38,7 @@ endif ()
 if (URHO3D_TOOLS AND URHO3D_JS)
     add_subdirectory(JSPlayer)
     if (URHO3D_CSHARP AND WIN32)
-        add_subdirectory(JSBinTool)
+        add_subdirectory(JSBindTool)
     endif ()
 endif ()
 

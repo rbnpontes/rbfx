@@ -136,5 +136,4 @@ packaging/nuget/SDK-*
 packaging/nuget/rbfx-*.zip
 
 # JS Bind tool
-JSBindTool/obj/
-JSBindTool/obj/*
+/Source/Tools/JSBindTool/obj/
