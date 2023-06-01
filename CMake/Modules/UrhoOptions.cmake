@@ -205,7 +205,7 @@ if (NOT MINI_URHO)
 endif ()
 option                (URHO3D_JS                 "Enable JavaScript support"                                    OFF)
 # JavaScript Binding Generation uses C# to generate bindings
-option()              (URHO3D_JS_BINDINGS        "Enable JavaScript Binding Generation. Requires .NET Core"     OFF                 "URHO3D_JS"        OFF)
+cmake_dependent_option(URHO3D_JS_BINDINGS        "Enable JavaScript Binding Generation. Requires .NET Core"     OFF                 "URHO3D_JS"        OFF)
 # Valid values at https://docs.microsoft.com/en-us/dotnet/standard/frameworks
 # At the moment only netstandard2.1 supported
 set(URHO3D_NETFX netstandard2.1 CACHE STRING "TargetFramework value for .NET libraries")
