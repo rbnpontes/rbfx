@@ -30,15 +30,7 @@ namespace Urho3D
     }
     void JavaScriptSystem::Run(const ea::string& jsCode) {
         URHO3D_ASSERTLOG(instance_, "must initialize JavaScriptSystem first.");
-
-        // Add wrap method with exception treatment
-        ea::string scopedCode = "(function() {\n";
-        scopedCode += "try {\n";
-        scopedCode += jsCode;
-        scopedCode += "} catch (e) { console.error(e); }\n";
-        scopedCode += "})();";
-
-        instance_->RunCode(scopedCode);
+        instance_->RunCode(jsCode);
     }
     void JavaScriptSystem::ReleaseHeapptr(void* heapptr) {
         if (!heapptr)

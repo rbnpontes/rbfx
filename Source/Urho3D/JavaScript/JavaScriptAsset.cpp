@@ -9,7 +9,9 @@ namespace Urho3D
     }
     bool JavaScriptAsset::BeginLoad(Deserializer& source)
     {
-        sourceCode_ = source.ReadString();
+        sourceCode_ = "(function() {\ntry {\n";
+        sourceCode_ += source.ReadString();
+        sourceCode_ += "} catch(e) { console.error(e); }\n})();";
         return true;
     }
     bool JavaScriptAsset::Save(Serializer& desc) const

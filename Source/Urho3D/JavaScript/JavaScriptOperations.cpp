@@ -1,4 +1,5 @@
 #include "JavaScriptOperations.h"
+#include "JavaScriptMathResolvers.h"
 #include "../IO/Log.h"
 #include "../Container/Hash.h"
 
@@ -6,7 +7,20 @@
 #define JS_OBJ_HIDDEN_WRAP_CALL DUK_HIDDEN_SYMBOL("__wrapcall")
 namespace Urho3D
 {
-    StringHash ref_counted_type = StringHash("RefCounted");
+    StringHash g_ref_counted_type   = StringHash("RefCounted");
+    StringHash g_vector2_type       = StringHash("Vector2");
+    StringHash g_vector3_type       = StringHash("Vector3");
+    StringHash g_int_vector2_type   = StringHash("IntVector2");
+    StringHash g_int_vector3_type   = StringHash("IntVector3");
+    StringHash g_vector4_type       = StringHash("Vector4");
+    StringHash g_quaternion_type    = StringHash("Quaternion");
+    StringHash g_color_type         = StringHash("Color");
+    StringHash g_rect_type          = StringHash("Rect");
+    StringHash g_int_rect_type      = StringHash("IntRect");
+    StringHash g_matrix2_type       = StringHash("Matrix2");
+    StringHash g_matrix3_type       = StringHash("Matrix3");
+    StringHash g_matrix3x4_type     = StringHash("Matrix3x4");
+    StringHash g_matrix4_type       = StringHash("Matrix4");
 
     StringHash rbfx_require_string_hash(duk_context* ctx, duk_idx_t stack_idx)
     {
@@ -312,6 +326,109 @@ namespace Urho3D
                 duk_push_null(ctx);
                 break;
         }
+    }
+
+    Variant rbfx_get_variant(duk_context* ctx, duk_idx_t stack_idx)
+    {
+        Variant vary;
+        duk_idx_t type = duk_get_type(ctx, stack_idx);
+        switch (type)
+        {
+        case DUK_TYPE_UNDEFINED:
+        case DUK_TYPE_NULL:
+            vary.Clear();
+            break;
+        case DUK_TYPE_BOOLEAN:
+            vary = (bool)duk_get_boolean(ctx, stack_idx);
+            break;
+        case DUK_TYPE_NUMBER:
+            vary = duk_get_number(ctx, stack_idx);
+            break;
+        case DUK_TYPE_STRING:
+            vary = duk_get_string(ctx, stack_idx);
+            break;
+        case DUK_TYPE_OBJECT:
+        {
+            if (duk_get_prop_string(ctx, -1, "ptr")) {
+                vary = static_cast<RefCounted*>(duk_get_pointer(ctx, -1));
+                duk_pop(ctx);
+            }
+            else if (duk_get_prop_string(ctx, -1, "type")) {
+                StringHash type = duk_get_string(ctx, -1);
+                duk_pop(ctx);
+
+                if (type == g_vector2_type)
+                    vary = rbfx_vector2_resolve(ctx, stack_idx);
+                else if (type == g_int_vector2_type)
+                    vary = rbfx_int_vector2_resolve(ctx, stack_idx);
+                else if (type == g_vector3_type)
+                    vary = rbfx_vector3_resolve(ctx, stack_idx);
+                else if (type == g_vector4_type)
+                    vary = rbfx_int_vector3_resolve(ctx, stack_idx);
+                else if (type == g_vector4_type)
+                    vary = rbfx_vector4_resolve(ctx, stack_idx);
+                else if (type == g_quaternion_type)
+                    vary = rbfx_quaternion_resolve(ctx, stack_idx);
+                else if (type == g_quaternion_type)
+                    vary = rbfx_color_resolve(ctx, stack_idx);
+                else if (type == g_rect_type)
+                    vary = rbfx_rect_resolve(ctx, stack_idx);
+                else if (type == g_int_rect_type)
+                    vary = rbfx_int_rect_resolve(ctx, stack_idx);
+                else if (type == g_matrix2_type)
+                {
+                    // unfortunally Variant does not support Matrix2
+                    // in this case we use Vector4 instead
+                    Matrix2 m = rbfx_matrix2_resolve(ctx, stack_idx);
+                    vary = Vector4(m.m00_, m.m01_, m.m10_, m.m11_);
+                }
+                else if (type == g_matrix3_type)
+                    vary = rbfx_matrix3_resolve(ctx, stack_idx);
+                else if (type == g_matrix3x4_type)
+                    vary = rbfx_matrix3x4_resolve(ctx, stack_idx);
+                else if (type == g_matrix4_type)
+                    vary = rbfx_matrix4_resolve(ctx, stack_idx);
+            }
+            else {
+                duk_pop_2(ctx);
+                vary = rbfx_get_variant_map(ctx, stack_idx);
+            }
+        }
+            break;
+        case DUK_TYPE_BUFFER:
+        {
+            duk_size_t bufferSize = 0;
+            void* buffer = duk_get_buffer(ctx, stack_idx, &bufferSize);
+
+            VariantBuffer varyBuffer;
+            varyBuffer.resize(bufferSize);
+            memcpy(varyBuffer.data(), buffer, bufferSize);
+            vary = varyBuffer;
+        }
+            break;
+        case DUK_TYPE_POINTER:
+            vary = duk_get_pointer(ctx, stack_idx);
+            break;
+        }
+        return vary;
+    }
+    VariantMap rbfx_get_variant_map(duk_context* ctx, duk_idx_t stack_idx)
+    {
+        VariantMap result;
+        duk_enum(ctx, stack_idx, DUK_ENUM_INCLUDE_NONENUMERABLE);
+
+        while (duk_next(ctx, stack_idx + 1, 0)) {
+            const char* key = duk_get_string(ctx, -1);
+            duk_pop(ctx);
+
+            duk_idx_t obj_prop_idx = duk_get_top(ctx);
+            duk_get_prop_string(ctx, stack_idx, key);
+
+            result[key] = rbfx_get_variant(ctx, obj_prop_idx);
+            duk_pop(ctx);
+        }
+
+        return result;
     }
     void rbfx_push_object(duk_context* ctx, RefCounted* ref_count)
     {

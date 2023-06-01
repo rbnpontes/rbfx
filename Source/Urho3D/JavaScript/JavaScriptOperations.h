@@ -44,6 +44,8 @@ namespace Urho3D
     URHO3D_API StringHash rbfx_get_string_hash(duk_context* ctx, duk_idx_t stack_idx);
     /// push variant to stack
     URHO3D_API void rbfx_push_variant(duk_context* ctx, const Variant& vary);
+    URHO3D_API Variant rbfx_get_variant(duk_context* ctx, duk_idx_t stack_idx);
+    URHO3D_API VariantMap rbfx_get_variant_map(duk_context* ctx, duk_idx_t stack_idx);
     /// push ref counted object to stack
     URHO3D_API void rbfx_push_object(duk_context* ctx, RefCounted* ref_count);
     /// wrap ref counted instance into js object
