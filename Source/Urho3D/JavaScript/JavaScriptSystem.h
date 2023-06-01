@@ -38,12 +38,14 @@ namespace Urho3D
         static void Run(const ea::string& jsCode);
         static void Stop();
         static void RegisterObject(Context* context);
+        static void ReleaseHeapptr(void* heapptr);
     private:
         static void* GetDukCtx() { return instance_->dukCtx_; }
         static void HandleFatalError(void* udata, const char* msg);
         void StopJS();
         void SetupJS();
         void RunCode(const ea::string& jsCode);
+
         static JavaScriptSystem* instance_;
 
         void* dukCtx_;

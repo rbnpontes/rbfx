@@ -111,6 +111,8 @@ public:
 #if URHO3D_JS
     /// setup js heapptr, must be used by the javascript workflow only
     void SetJSHeapptr(void* heapptr);
+    /// get current js heapptr
+    void* GetJSHeapptr() const { return jsHeapptr_; }
 #endif
 protected:
 #if URHO3D_CSHARP

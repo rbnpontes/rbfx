@@ -31,6 +31,9 @@
 #if URHO3D_CSHARP
 #   include "../Script/Script.h"
 #endif
+#if URHO3D_JS
+#   include "../JavaScript/JavaScriptSystem.h"
+#endif
 
 namespace Urho3D
 {
@@ -123,6 +126,11 @@ int RefCounted::ReleaseRef()
         delete this;
     }
 #else
+#ifdef URHO3D_JS
+    JavaScriptSystem::ReleaseHeapptr(jsHeapptr_);
+    jsHeapptr_ = nullptr;
+#endif
+
     if (refs == 0)
         delete this;
 #endif

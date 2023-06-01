@@ -6,6 +6,16 @@
 #include <Urho3D/Input/Input.h>
 namespace Urho3D
 {
+    class Foo : public RefCounted {
+    public:
+        Foo() : RefCounted(){}
+    };
+    class Bar : public Object {
+        URHO3D_OBJECT(Bar, Object);
+    public:
+        Bar(Context* context) : Object(context){}
+    };
+
     JSPlayer::JSPlayer(Context* context) : Application(context)
     {
         engineParameters_[EP_WINDOW_TITLE] = "rbfx - Javascript Player";

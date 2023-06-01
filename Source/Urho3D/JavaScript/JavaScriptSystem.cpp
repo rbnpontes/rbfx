@@ -4,6 +4,7 @@
 #include "../Core/ObjectCategory.h"
 #include "JavaScriptLogging.h"
 #include "JavaScriptEvents.h"
+#include "JavaScriptOperations.h"
 
 #include <duktape/duktape.h>
 
@@ -39,6 +40,14 @@ namespace Urho3D
 
         instance_->RunCode(scopedCode);
     }
+    void JavaScriptSystem::ReleaseHeapptr(void* heapptr) {
+        if (!heapptr)
+            return;
+        URHO3D_ASSERTLOG(instance_, "must initialize JavaScriptSystem first.");
+        duk_context* ctx = static_cast<duk_context*>(instance_->dukCtx_);
+        if (rbfx_is_valid_heapptr(ctx, heapptr))
+            rbfx_unlock_heapptr(ctx, heapptr);
+    }
 
     void JavaScriptSystem::Stop() {
         URHO3D_ASSERTLOG(instance_, "must initializes JavaScriptSystem first.");
@@ -62,6 +71,12 @@ namespace Urho3D
 
         duk_context* ctx = duk_create_heap(nullptr, nullptr, nullptr, nullptr, HandleFatalError);
         dukCtx_ = ctx;
+
+        // create heapptr global stash object
+        duk_push_global_stash(ctx);
+        duk_push_object(ctx);
+        duk_put_prop_string(ctx, -2, JS_OBJECT_HEAPPTR_PROP);
+        duk_pop(ctx);
 
         JavaScript_SetupLogger(ctx);
 
