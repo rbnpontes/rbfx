@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace JSBindTool.Core
 {
-    public class SharedPtr<T> : TemplateObject<T>
+    public class Vector<T> : TemplateObject<T>
     {
     }
 }

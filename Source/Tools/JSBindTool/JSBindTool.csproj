@@ -28,6 +28,9 @@
         <Compile Include="Core\Annotations\PropertyMapAttribute.cs" />
         <Compile Include="Core\Annotations\PropertyNameAttribute.cs" />
         <Compile Include="Core\SharedPtr.cs" />
+        <Compile Include="Core\TemplateObject.cs" />
+        <Compile Include="Core\Vector.cs" />
+        <Compile Include="Core\WeakPtr.cs" />
         <Compile Include="Program.cs" />
     </ItemGroup>
 

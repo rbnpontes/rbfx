@@ -8,7 +8,8 @@ using System.Threading.Tasks;
 namespace JSBindTool.Bindings.SceneTypes
 {
     [Abstract]
-    public class Animatable
+    [Include("Urho3D/Scene/Animatable")]
+    public class Animatable : SerializableType
     {
     }
 }

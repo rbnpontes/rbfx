@@ -17,7 +17,7 @@ namespace JSBindTool.Bindings.UITypes
         [PropertyMap("GetName", "SetName")]
         public string Name { get; set; } = string.Empty;
         [PropertyMap("GetChildren")]
-        public IList<SharedPtr<UIElement>> Children { get; set; } = new List<SharedPtr<UIElement>>();
+        public Vector<SharedPtr<UIElement>> Children { get; set; } = new Vector<SharedPtr<UIElement>>();
         [PropertyMap("GetHorizontalAlignment", "SetHorizontalAlignment")]
         public HorizontalAlignment HorizontalAlignment { get; set; }
         [PropertyMap(null, "SetColor")]
