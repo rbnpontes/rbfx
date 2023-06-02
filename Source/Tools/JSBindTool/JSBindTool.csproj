@@ -27,7 +27,12 @@
         <Compile Include="Core\Annotations\IncludeAttribute.cs" />
         <Compile Include="Core\Annotations\PropertyMapAttribute.cs" />
         <Compile Include="Core\Annotations\PropertyNameAttribute.cs" />
+        <Compile Include="Core\Binder.cs" />
+        <Compile Include="Core\CodeBuilder.cs" />
+        <Compile Include="Core\CodeGen.cs" />
+        <Compile Include="Core\EnumGen.cs" />
         <Compile Include="Core\SharedPtr.cs" />
+        <Compile Include="Core\BindingState.cs" />
         <Compile Include="Core\TemplateObject.cs" />
         <Compile Include="Core\Vector.cs" />
         <Compile Include="Core\WeakPtr.cs" />

@@ -137,3 +137,4 @@ packaging/nuget/rbfx-*.zip
 
 # JS Bind tool
 /Source/Tools/JSBindTool/obj/
+/Source/Tools/JSBindTool/Properties/launchSettings.json

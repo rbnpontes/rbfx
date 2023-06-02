@@ -22,3 +22,6 @@
 
 project (JSBindTool)
 include_external_msproject(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.csproj)
+
+set_target_properties(JSBindTool PROPERTIES
+    VS_DEBUGGER_COMMAND_ARGUMENTS "${CMAKE_CURRENT_SOURCE_DIR}../../JSBindings")
