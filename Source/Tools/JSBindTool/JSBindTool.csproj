@@ -9,6 +9,25 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="Bindings\EngineObject.cs" />
+        <Compile Include="Bindings\MathTypes\Color.cs" />
+        <Compile Include="Bindings\MathTypes\StringHash.cs" />
+        <Compile Include="Bindings\ResourceTypes\Resource.cs" />
+        <Compile Include="Bindings\ResourceTypes\ResourceCache.cs" />
+        <Compile Include="Bindings\SceneTypes\Animatable.cs" />
+        <Compile Include="Bindings\SceneTypes\SerializableType.cs" />
+        <Compile Include="Bindings\UITypes\Enums.cs" />
+        <Compile Include="Bindings\UITypes\Font.cs" />
+        <Compile Include="Bindings\UITypes\Text.cs" />
+        <Compile Include="Bindings\UITypes\UIElement.cs" />
+        <Compile Include="Bindings\UITypes\UI.cs" />
+        <Compile Include="Bindings\UITypes\UISelectable.cs" />
+        <Compile Include="Core\Annotations\AbstractAttribute.cs" />
+        <Compile Include="Core\Annotations\ClassNameAttribute.cs" />
+        <Compile Include="Core\Annotations\IncludeAttribute.cs" />
+        <Compile Include="Core\Annotations\PropertyMapAttribute.cs" />
+        <Compile Include="Core\Annotations\PropertyNameAttribute.cs" />
+        <Compile Include="Core\SharedPtr.cs" />
         <Compile Include="Program.cs" />
     </ItemGroup>
 
