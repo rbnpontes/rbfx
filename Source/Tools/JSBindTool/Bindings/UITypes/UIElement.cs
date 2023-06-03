@@ -13,6 +13,7 @@ namespace JSBindTool.Bindings.UITypes
     [Include("Urho3D/UI/UIElement.h")]
     public class UIElement : Animatable
     {
+        [PropertyMap("IsEnabled", "SetName")]
         public bool IsEnabled { get; set; }
         [PropertyMap("GetName", "SetName")]
         public string Name { get; set; } = string.Empty;
@@ -23,10 +24,16 @@ namespace JSBindTool.Bindings.UITypes
         [PropertyMap("GetVerticalAlignment", "SetVerticalAlignment")]
         public VerticalAlignment VerticalAlignment { get; set; }
         [PropertyMap(null, "SetColor")]
-        public Color Color { get; set; }
+        public Color Color { set { } }
 
+        public UIElement() : base(typeof(UIElement)) { }
+        public UIElement(Type type) : base(type) { }
+
+        [Method]
         public void AddChild(UIElement arg) { }
+        [Method]
         public void GetColor(Corner corner) { }
+        [Method]
         public void SetColor(Corner corner, Color color) { }
     }
 }

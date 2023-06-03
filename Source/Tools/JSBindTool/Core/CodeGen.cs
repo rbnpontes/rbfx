@@ -1,4 +1,3 @@
-using JSBindTool.Bindings;
 using JSBindTool.Bindings.MathTypes;
 using JSBindTool.Core.Annotations;
 using System;

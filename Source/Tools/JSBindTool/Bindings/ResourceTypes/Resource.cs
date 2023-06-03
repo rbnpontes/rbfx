@@ -1,3 +1,4 @@
+using JSBindTool.Core;
 using JSBindTool.Core.Annotations;
 using System;
 using System.Collections.Generic;
@@ -13,5 +14,8 @@ namespace JSBindTool.Bindings.ResourceTypes
     {
         [PropertyMap("GetName", "SetName")]
         public string Name { get; set; } = string.Empty;
+
+        public Resource() : base(typeof(Resource)) { }
+        public Resource(Type type) : base(type) { }
     }
 }

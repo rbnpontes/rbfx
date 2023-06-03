@@ -156,10 +156,10 @@ namespace JSBindTool.Core
             if ((opFlags & OperatorFlags.Equal) != 0)
                 EmitOperatorMethod("equal", "==", code);
 
-            var methods = Target.GetMethods().ToList();
-            methods.ForEach(method =>
-            {
-            });
+            //var methods = Target.GetMethods().ToList();
+            //methods.ForEach(method =>
+            //{
+            //});
         }
         private void EmitOperatorMethod(string methodName, string operatorSignal, CodeBuilder code)
         {

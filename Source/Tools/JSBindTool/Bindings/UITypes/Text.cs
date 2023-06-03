@@ -19,6 +19,9 @@ namespace JSBindTool.Bindings.UITypes
         [PropertyMap("GetFontSize", "SetFontSize")]
         public float FontSize { get; set; }
 
+        public Text() : base(typeof(Text)) { }
+        public Text(Type type) : base(type) { }
+
         public bool SetFont(Font font, float fontSize)
         {
             return true;

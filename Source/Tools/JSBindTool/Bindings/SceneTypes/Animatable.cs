@@ -11,5 +11,7 @@ namespace JSBindTool.Bindings.SceneTypes
     [Include("Urho3D/Scene/Animatable")]
     public class Animatable : SerializableType
     {
+        public Animatable() : base(typeof(Animatable)) { }
+        public Animatable(Type type) : base(type) { }
     }
 }

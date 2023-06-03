@@ -9,7 +9,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Bindings\EngineObject.cs" />
+        <Compile Include="Core\Annotations\MethodAttribute.cs" />
+        <Compile Include="Core\EngineObject.cs" />
         <Compile Include="Bindings\MathTypes\Color.cs" />
         <Compile Include="Bindings\MathTypes\StringHash.cs" />
         <Compile Include="Bindings\ResourceTypes\Resource.cs" />

@@ -1,4 +1,3 @@
-using JSBindTool.Bindings;
 using JSBindTool.Bindings.MathTypes;
 using System;
 using System.Collections.Generic;
@@ -23,7 +22,7 @@ namespace JSBindTool.Core
             StringBuilder output = new StringBuilder();
 
             if (type.IsSubclassOf(typeof(EngineObject)))
-                output.Append(type.Name == "EngineObject" ? "Object" : type.Name).Append("*");
+                output.Append(type.Name == "EngineObject" ? "Object" : AnnotationUtils.GetClassName(type)).Append("*");
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {
                 var templateObj = TemplateObject.Create(type);
@@ -171,7 +170,7 @@ namespace JSBindTool.Core
                 }
             }
             else if (type.IsSubclassOf(typeof(PrimitiveObject)))
-                throw new NotImplementedException();
+                code.Add($"{AnnotationUtils.GetClassName(type)} {varName} = {type.Name}_resolve(ctx, {accessor});");
             else throw new NotImplementedException();
         }
     }

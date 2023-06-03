@@ -1,3 +1,4 @@
+using JSBindTool.Core;
 using JSBindTool.Core.Annotations;
 using System;
 using System.Collections.Generic;
@@ -10,5 +11,7 @@ namespace JSBindTool.Bindings.UITypes
     [Include("Urho3D/UI/UI.h")]
     public class UI : EngineObject
     {
+        public UI() : base(typeof(UI)) { }
+        public UI(Type type) : base(type) { }
     }
 }

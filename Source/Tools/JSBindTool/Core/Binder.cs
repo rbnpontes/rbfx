@@ -1,4 +1,3 @@
-using JSBindTool.Bindings;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -128,7 +127,7 @@ namespace JSBindTool.Core
                 GenerateSetupHeader(outputPath, "ClassBindings", "Class", classes);
                 GenerateSetupSource(outputPath, "ClassBindings", "Class", classes);
             }
-            //WorkerUtils.ForEach(BindingState.GetClasses(), type => GenerateBindingFiles<ClassGen>(type, outputPath, "_Class"));
+            WorkerUtils.ForEach(BindingState.GetClasses(), type => GenerateBindingFiles<ClassGen>(type, outputPath, "_Class"));
             Console.WriteLine("------------------------------------------------");
             Console.WriteLine("--- Bindings has been Generated with Success ---");
         }

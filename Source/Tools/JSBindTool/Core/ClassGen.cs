@@ -1,4 +1,3 @@
-using JSBindTool.Bindings;
 using JSBindTool.Core.Annotations;
 using System;
 using System.Collections.Generic;
@@ -17,48 +16,37 @@ namespace JSBindTool.Core
 
         public override CodeBuilder BuildHeader()
         {
+            EngineObject obj = EngineObject.Create(Target);
+
             CodeBuilder header = new CodeBuilder();
             header.IndentationSize = 0;
             HeaderUtils.EmitNotice(header);
             header.Add("#pragma once");
-            header.Add(GetIncludes()).AddNewLine();
 
-            header.Add("namespace Urho3D");
-            header.Add("{");
+            obj.EmitHeaderIncludes(header);
+
+            header.Namespace("Urho3D", (signatures) =>
             {
-                CodeBuilder signatures = new CodeBuilder();
-                if (!IsAbstract())
-                {
-                    signatures.Add($"void {Target.Name}_setup(duk_context* ctx);");
-                    signatures.Add($"void {Target.Name}_ctor(duk_context* ctx);");
-                }
-                signatures.Add($"void {Target.Name}_wrap(duk_context* ctx, duk_idx_t obj_idx, {Target.Name}* instance);");
-                header.Add(signatures);
-            }
-            header.Add("}");
+                obj.EmitHeaderSignatures(signatures);
+            });
 
             return header;
         }
 
         public override CodeBuilder BuildSource()
         {
+            EngineObject obj = EngineObject.Create(Target);
+
             CodeBuilder source = new CodeBuilder();
             source.IndentationSize = 0;
             HeaderUtils.EmitNotice(source);
-            source.Add($"#include \"{Target.Name}.h\"").AddNewLine();
-            source.Add("namespace Urho3D");
-            source.Add("{");
+            obj.EmitSourceIncludes(source);
 
-            CodeBuilder scope = new CodeBuilder();
-            if (!IsAbstract())
+            source.Namespace("Urho3D", (sourceScope) =>
             {
-                BuildSetup(scope);
-                BuildConstructor(scope);
-            }
-            BuildWrap(source);
+                obj.EmitSource(sourceScope);
+            });
 
-            source.Add(scope);
-            source.Add("}");
             return source;
         }
 

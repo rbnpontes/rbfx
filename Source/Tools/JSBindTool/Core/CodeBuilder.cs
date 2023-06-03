@@ -71,6 +71,18 @@ namespace JSBindTool.Core
             Add("}");
             return this;
         }
+        public CodeBuilder Function(Action<CodeBuilder> body, string args)
+        {
+            CodeBuilder scope = new CodeBuilder();
+            body(scope);
+
+            Add("duk_push_c_function(ctx, [](duk_context* ctx)");
+            Add("{");
+            Add(scope);
+            Add("}"+$", {args});");
+
+            return this;
+        }
 
         public CodeBuilder Clear()
         {
