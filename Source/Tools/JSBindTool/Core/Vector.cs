@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 
 namespace JSBindTool.Core
 {
-    public class Vector<T> : TemplateObject<T>
+    public class Vector<T> : TemplateObject
     {
+        public Vector() : base(typeof(T), TemplateType.Vector)
+        {
+        }
     }
 }

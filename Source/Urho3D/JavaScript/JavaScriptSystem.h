@@ -39,6 +39,8 @@ namespace Urho3D
         static void Stop();
         static void RegisterObject(Context* context);
         static void ReleaseHeapptr(void* heapptr);
+        static Context* GetContext();
+        static void* GetJSCtx();
     private:
         static void* GetDukCtx() { return instance_->dukCtx_; }
         static void HandleFatalError(void* udata, const char* msg);

@@ -24,18 +24,30 @@
         <Compile Include="Bindings\UITypes\UISelectable.cs" />
         <Compile Include="Core\Annotations\AbstractAttribute.cs" />
         <Compile Include="Core\Annotations\ClassNameAttribute.cs" />
+        <Compile Include="Core\Annotations\IgnoreAttribute.cs" />
         <Compile Include="Core\Annotations\IncludeAttribute.cs" />
+        <Compile Include="Core\Annotations\OperatorAttribute.cs" />
         <Compile Include="Core\Annotations\PropertyMapAttribute.cs" />
         <Compile Include="Core\Annotations\PropertyNameAttribute.cs" />
+        <Compile Include="Core\Annotations\VariableAttribute.cs" />
+        <Compile Include="Core\AnnotationUtils.cs" />
         <Compile Include="Core\Binder.cs" />
+        <Compile Include="Core\ClassGen.cs" />
         <Compile Include="Core\CodeBuilder.cs" />
         <Compile Include="Core\CodeGen.cs" />
+        <Compile Include="Core\CodeUtils.cs" />
         <Compile Include="Core\EnumGen.cs" />
+        <Compile Include="Core\HeaderUtils.cs" />
+        <Compile Include="Core\JSFunction.cs" />
+        <Compile Include="Core\NoopPrimitive.cs" />
+        <Compile Include="Core\PrimitiveGen.cs" />
+        <Compile Include="Core\PrimitiveObject.cs" />
         <Compile Include="Core\SharedPtr.cs" />
         <Compile Include="Core\BindingState.cs" />
         <Compile Include="Core\TemplateObject.cs" />
         <Compile Include="Core\Vector.cs" />
         <Compile Include="Core\WeakPtr.cs" />
+        <Compile Include="Core\WorkerUtils.cs" />
         <Compile Include="Program.cs" />
     </ItemGroup>
 

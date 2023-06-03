@@ -1,4 +1,6 @@
-// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
-Console.WriteLine(args[0]);
-Console.WriteLine(args[1]);
+using JSBindTool.Core;
+
+if (args.Length == 0)
+    throw new Exception("output path is required.");
+Binder.CollectTypes();
+Binder.GenerateBindings(args[0]);

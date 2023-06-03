@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace JSBindTool.Core
 {
-    public class WeakPtr<T> : TemplateObject<T>
+    public class WeakPtr<T> : TemplateObject
     {
+        public WeakPtr() : base(typeof(T), TemplateType.WeakPtr) { }
     }
 }

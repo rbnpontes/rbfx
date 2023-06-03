@@ -6,14 +6,30 @@ using System.Threading.Tasks;
 
 namespace JSBindTool.Core
 {
-    public class TemplateObject<T>
+    public enum TemplateType
+    {
+        SharedPtr=0,
+        WeakPtr,
+        Vector
+    }
+    public class TemplateObject
     {
         public Type TargetType { get; private set; }
-        public T Target { get; private set; }
-        public TemplateObject()
+        public TemplateType TemplateType { get; private set; }
+        public TemplateObject(Type type, TemplateType templateType)
         {
-            TargetType = typeof(T);
-            Target = Activator.CreateInstance<T>();
+            TargetType = type;
+            TemplateType = templateType;
+        }
+
+        public static TemplateObject Create(Type type)
+        {
+            if (!type.IsSubclassOf(typeof(TemplateObject)))
+                throw new Exception("invalid template object derived type.");
+            var templateObj = Activator.CreateInstance(type) as TemplateObject;
+            if (templateObj is null)
+                throw new Exception("could not possible to instantiate this template object derived type.");
+            return templateObj;
         }
     }
 }

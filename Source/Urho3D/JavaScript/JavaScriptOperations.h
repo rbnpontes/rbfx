@@ -27,6 +27,7 @@
 #include "../Core/Variant.h"
 
 #define JS_OBJECT_HEAPPTR_PROP "heapptr"
+#define JS_OBJ_HIDDEN_WRAP_CALL DUK_HIDDEN_SYMBOL("__wrapcall")
 namespace Urho3D
 {
     // This file is a set of operations used by the Binding and JavaScript api

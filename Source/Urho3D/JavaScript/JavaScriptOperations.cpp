@@ -4,7 +4,6 @@
 #include "../Container/Hash.h"
 
 #define JS_OBJ_HIDDEN_PTR DUK_HIDDEN_SYMBOL("__ptr")
-#define JS_OBJ_HIDDEN_WRAP_CALL DUK_HIDDEN_SYMBOL("__wrapcall")
 namespace Urho3D
 {
     StringHash g_ref_counted_type   = StringHash("RefCounted");

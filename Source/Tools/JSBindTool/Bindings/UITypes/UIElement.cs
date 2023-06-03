@@ -20,6 +20,8 @@ namespace JSBindTool.Bindings.UITypes
         public Vector<SharedPtr<UIElement>> Children { get; set; } = new Vector<SharedPtr<UIElement>>();
         [PropertyMap("GetHorizontalAlignment", "SetHorizontalAlignment")]
         public HorizontalAlignment HorizontalAlignment { get; set; }
+        [PropertyMap("GetVerticalAlignment", "SetVerticalAlignment")]
+        public VerticalAlignment VerticalAlignment { get; set; }
         [PropertyMap(null, "SetColor")]
         public Color Color { get; set; }
 

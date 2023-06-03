@@ -8,21 +8,23 @@ namespace JSBindTool.Core
 {
     public class CodeBuilder
     {
-        private StringBuilder pBuilder = new StringBuilder();
+        private List<string> pChunks = new List<string>();
         public uint IndentationSize { get; set; } = 1;
 
+        private string GetIndentation()
+        {
+            char[] parts = new char[IndentationSize];
+            Array.Fill(parts, '\t');
+            return new string(parts);
+        }
         public CodeBuilder Add(CodeBuilder code)
         {
-            pBuilder.AppendLine(code.ToString());
+            code.pChunks.ForEach(chunk => Add(chunk));
             return this;
         }
         public CodeBuilder Add(string code)
         {
-            StringBuilder indentation = new StringBuilder();
-            for (uint i = 0; i < IndentationSize; ++i)
-                indentation.Append("\t");
-            pBuilder.Append(indentation);
-            pBuilder.AppendLine(code);
+            pChunks.Add(GetIndentation() + code);
             return this;
         }
         public CodeBuilder Add(IEnumerable<CodeBuilder> codeParts)
@@ -37,22 +39,50 @@ namespace JSBindTool.Core
         }
         public CodeBuilder Add(params CodeBuilder[] args)
         {
-            return Add(args);
+            foreach (CodeBuilder arg in args)
+                Add(arg);
+            return this;
         }
         public CodeBuilder Add(params string[] args)
         {
-            return Add(args);
+            foreach (string arg in args)
+                Add(arg);
+            return this;
+        }
+
+        public CodeBuilder AddNewLine(uint count = 1)
+        {
+            for (uint i = 0; i < count; ++i)
+                Add("");
+            return this;
+        }
+
+        public CodeBuilder Namespace(string namespaceName, Action<CodeBuilder> body)
+        {
+            return Add($"namespace {namespaceName}").Scope(body);
+        }
+        public CodeBuilder Scope(Action<CodeBuilder> body)
+        {
+            CodeBuilder scope = new CodeBuilder();
+            body(scope);
+
+            Add("{");
+            Add(scope);
+            Add("}");
+            return this;
         }
 
         public CodeBuilder Clear()
         {
-            pBuilder.Clear();
+            pChunks.Clear();
             return this;
         }
 
         public override string ToString()
         {
-            return pBuilder.ToString();
+            StringBuilder builder = new StringBuilder();
+            pChunks.ForEach(x => builder.AppendLine(x));
+            return builder.ToString();
         }
     }
 }

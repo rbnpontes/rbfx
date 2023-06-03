@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 
 namespace JSBindTool.Core.Annotations
 {
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Enum, AllowMultiple = true)]
-    public class IncludeAttribute : Attribute
+    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
+    public class VariableAttribute : Attribute
     {
         public string Value { get; private set; }
-        public IncludeAttribute(string includePath)
+        public VariableAttribute(string name)
         {
-            Value = includePath;
+            Value = name;
         }
     }
 }
