@@ -23,7 +23,7 @@ namespace JSBindTool.Bindings.UITypes
         public HorizontalAlignment HorizontalAlignment { get; set; }
         [PropertyMap("GetVerticalAlignment", "SetVerticalAlignment")]
         public VerticalAlignment VerticalAlignment { get; set; }
-        [PropertyMap(null, "SetColor")]
+        [PropertyMap(null, "SetColor")] 
         public Color Color { set { } }
 
         public UIElement() : base(typeof(UIElement)) { }

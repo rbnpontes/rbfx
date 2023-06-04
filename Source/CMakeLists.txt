@@ -92,6 +92,10 @@ if (URHO3D_EDITOR)
     add_subdirectory (Editor)
 endif ()
 
+if (URHO3D_JS AND URHO3D_JS_BINDINGS)
+    add_subdirectory(JSBindings)
+endif ()
+
 if (NOT MINI_URHO)
     if (URHO3D_CSHARP AND NOT CMAKE_VS_MSBUILD_COMMAND)
         # Generate a VS solution for C# projects when outside of visual studio.

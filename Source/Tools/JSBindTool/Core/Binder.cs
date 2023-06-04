@@ -48,9 +48,6 @@ namespace JSBindTool.Core
         {
             if (!Directory.Exists(outputPath))
                 throw new ArgumentException("Provided output path does not exists.", "outputPath");
-            // Generate Directories
-            Directory.CreateDirectory(Path.Join(outputPath, "include"));
-            Directory.CreateDirectory(Path.Join(outputPath, "src"));
 
             // Generate bindings setup header
             {
@@ -69,7 +66,7 @@ namespace JSBindTool.Core
                     header.Add(setupSignature);
                 }
                 header.Add("}");
-                File.WriteAllText(Path.Join(outputPath, "include", "Bindings.h"), header.ToString());
+                File.WriteAllText(Path.Join(outputPath, "Bindings.h"), header.ToString());
             }
             // Generate bindings setup source
             {
@@ -97,7 +94,7 @@ namespace JSBindTool.Core
                     source.Add(setupBody);
                 }
                 source.Add("}");
-                File.WriteAllText(Path.Join(outputPath, "src", "Bindings.cpp"), source.ToString());
+                File.WriteAllText(Path.Join(outputPath, "Bindings.cpp"), source.ToString());
             }
 
             // Generate Files
@@ -139,8 +136,8 @@ namespace JSBindTool.Core
             CodeGen builder = (CodeGen)Activator.CreateInstance(typeof(TCodeGen), type);
             builder.HeaderName = type.Name + headerSuffix;
 
-            File.WriteAllText(Path.Join(outputPath, "include", builder.HeaderName + ".h"), builder.BuildHeader().ToString());
-            File.WriteAllText(Path.Join(outputPath, "src", builder.HeaderName + ".cpp"), builder.BuildSource().ToString());
+            File.WriteAllText(Path.Join(outputPath, builder.HeaderName + ".h"), builder.BuildHeader().ToString());
+            File.WriteAllText(Path.Join(outputPath, builder.HeaderName + ".cpp"), builder.BuildSource().ToString());
 #pragma warning restore IDE0059 // Unnecessary assignment of a value
         }
         private static void GenerateSetupHeader(string outputPath, string prefix, string headerSuffix, List<Type> types)
@@ -158,7 +155,7 @@ namespace JSBindTool.Core
             builder.Add(header);
             builder.Add("}");
 
-            File.WriteAllText(Path.Join(outputPath, "include", prefix+".h"), builder.ToString());
+            File.WriteAllText(Path.Join(outputPath, prefix+".h"), builder.ToString());
         }
         private static void GenerateSetupSource(string outputPath, string prefix, string headerSuffix, List<Type> types)
         {
@@ -183,7 +180,7 @@ namespace JSBindTool.Core
             builder.Add(source);
             builder.Add("}");
 
-            File.WriteAllText(Path.Join(outputPath, "src", prefix+".cpp"), builder.ToString());
+            File.WriteAllText(Path.Join(outputPath, prefix+".cpp"), builder.ToString());
         }
     }
 }
