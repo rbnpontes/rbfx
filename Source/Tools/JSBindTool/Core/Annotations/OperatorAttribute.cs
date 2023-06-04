@@ -10,11 +10,11 @@ namespace JSBindTool.Core.Annotations
     public enum OperatorFlags
     {
         None = 0,
-        Add,
-        Sub,
-        Mul,
-        Div,
-        Equal
+        Add = 1 << 0,
+        Sub = 1 << 1,
+        Mul = 1 << 2,
+        Div = 1 << 3,
+        Equal = 1 << 4
     }
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
     public class OperatorAttribute : Attribute

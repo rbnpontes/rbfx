@@ -13,7 +13,7 @@ namespace JSBindTool.Bindings.UITypes
     [Include("Urho3D/UI/UIElement.h")]
     public class UIElement : Animatable
     {
-        [PropertyMap("IsEnabled", "SetName")]
+        [PropertyMap("IsEnabled", "SetEnabled")]
         public bool IsEnabled { get; set; }
         [PropertyMap("GetName", "SetName")]
         public string Name { get; set; } = string.Empty;

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace JSBindTool.Bindings.MathTypes
 {
     [Include("Urho3D/Math/Color.h")]
-    [Operator(OperatorFlags.Add | OperatorFlags.Sub | OperatorFlags.Mul | OperatorFlags.Div | OperatorFlags.Equal)]
+    [Operator(OperatorFlags.Add | OperatorFlags.Sub | OperatorFlags.Mul | OperatorFlags.Equal)]
     public class Color : PrimitiveObject
     {
         [Variable("r_")]

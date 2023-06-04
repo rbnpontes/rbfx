@@ -36,7 +36,11 @@ namespace JSBindTool.Core
         {
             string typeName = Target.Name;
             HashSet<string> includes = new HashSet<string>();
-            includes.Add("UIElement_Class.h");
+            includes.Add($"{Target.Name}_Class.h");
+            if (Target.BaseType != null && Target.BaseType != typeof(EngineObject))
+                includes.Add($"{Target.BaseType.Name}_Class.h");
+            includes.Add("Urho3D/JavaScript/JavaScriptSystem.h");
+            includes.Add("Urho3D/JavaScript/JavaScriptOperations.h");
             Action<Type> addInclude = (type) =>
             {
                 AnnotationUtils
@@ -60,20 +64,20 @@ namespace JSBindTool.Core
                 }
             };
             // collect binding dependency
-            Target.GetProperties()
+            Target.GetProperties(BindingFlags.DeclaredOnly)
                 .ToList()
                 .ForEach(prop =>
                 {
                     addInclude(prop.PropertyType);
                 });
-            Target.GetFields()
+            Target.GetFields(BindingFlags.DeclaredOnly)
                 .Where(x => !AnnotationUtils.IsIgnored(x))
                 .ToList()
                 .ForEach(field =>
                 {
                     addInclude(field.FieldType);
                 });
-            Target.GetMethods()
+            Target.GetMethods(BindingFlags.DeclaredOnly)
                 .Where(x => AnnotationUtils.IsValidMethod(x))
                 .ToList()
                 .ForEach(method =>
@@ -101,11 +105,9 @@ namespace JSBindTool.Core
 
         protected virtual void EmitSourceSetup(CodeBuilder code)
         {
-            code.Add($"duk_idx_t {Target.Name}_setup(duk_context* ctx)");
+            code.Add($"void {Target.Name}_setup(duk_context* ctx)");
             code.Scope(scope =>
             {
-
-                scope.Add("return 1;");
             });
         }
         protected virtual void EmitSourceConstructor(CodeBuilder code)
@@ -173,16 +175,20 @@ namespace JSBindTool.Core
         }
         protected virtual void EmitSourceWrap(CodeBuilder code)
         {
-            code.Add($"void {Target.Name}_wrap(duk_context* ctx)");
+            code.Add($"void {Target.Name}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetClassName(Target)}* instance)");
             code.Scope(scope =>
             {
+                if (Target.BaseType == typeof(EngineObject))
+                    scope.Add("rbfx_object_wrap(ctx, obj_idx, instance);");
+                else if(Target.BaseType != null)
+                    scope.Add($"{Target.BaseType.Name}_wrap(ctx, obj_idx, instance);");
                 EmitProperties(scope);
             });
         }
 
         protected virtual void EmitProperties(CodeBuilder code)
         {
-            Target.GetProperties()
+            Target.GetProperties(BindingFlags.DeclaredOnly)
                 .Where(x => AnnotationUtils.IsValidProperty(x))
                 .ToList()
                 .ForEach(prop => EmitProperty(prop, code));

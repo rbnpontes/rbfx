@@ -21,6 +21,11 @@
 #
 
 file (GLOB SOURCE_FILES *.cpp *.h)
-add_executable (JSBindings ${SOURCE_FILES})
-target_link_libraries(JSBindings Urho3D duktape)
-install(TARGETS JSBindings RUNTIME DESTINATION ${DEST_BIN_DIR_CONFIG})
+
+set (CMAKE_CXX_STANDARD 17)
+set (TARGET_NAME JSBindings)
+
+add_library(${TARGET_NAME} SHARED ${SOURCE_FILES})
+target_link_libraries(${TARGET_NAME} PRIVATE Urho3D duktape)
+
+define_static_plugin(${TARGET_NAME} ${TARGET_NAME})

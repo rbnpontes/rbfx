@@ -21,7 +21,21 @@ namespace JSBindTool.Core
         {
             StringBuilder output = new StringBuilder();
 
-            if (type.IsSubclassOf(typeof(EngineObject)))
+            if (type == typeof(string))
+                output.Append("ea::string");
+            else if (type == typeof(StringHash))
+                output.Append("StringHash");
+            else if (type == typeof(bool))
+                output.Append("bool");
+            else if (type == typeof(float))
+                output.Append("float");
+            else if (type == typeof(double))
+                output.Append("double");
+            else if (type == typeof(uint))
+                output.Append("unsigned");
+            else if (type == typeof(IntPtr))
+                output.Append("void*");
+            else if (type.IsSubclassOf(typeof(EngineObject)))
                 output.Append(type.Name == "EngineObject" ? "Object" : AnnotationUtils.GetClassName(type)).Append("*");
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {
@@ -51,7 +65,7 @@ namespace JSBindTool.Core
             if (type == typeof(JSFunction))
                 throw new Exception("function cannot be used as write value");
             else if (type == typeof(string))
-                code.Add($"duk_push_string(ctx, {accessor});");
+                code.Add($"duk_push_string(ctx, {accessor}.c_str());");
             else if (type == typeof(StringHash))
                 code.Add($"rbfx_push_string_hash(ctx, {accessor}.Value());");
             else if (type == typeof(bool))
@@ -107,7 +121,7 @@ namespace JSBindTool.Core
         public static void EmitValueRead(Type type, string varName, string accessor, CodeBuilder code)
         {
             if (type == typeof(string))
-                code.Add($"const char* {varName} = duk_get_string_default(ctx, {accessor}, \"\");");
+                code.Add($"ea::string {varName} = duk_get_string_default(ctx, {accessor}, \"\");");
             else if (type == typeof(StringHash))
                 code.Add($"StringHash {varName} = rbfx_get_string_hash(ctx, {accessor});");
             else if (type == typeof(bool))

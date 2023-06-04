@@ -102,8 +102,8 @@ namespace JSBindTool.Core
             Console.WriteLine("-- Generating Enumerators");
             {
                 var enums = BindingState.GetEnums().ToList();
-                GenerateSetupHeader(outputPath, "EnumBindings", "Enums", enums);
-                GenerateSetupSource(outputPath, "EnumBindings", "Enums", enums);
+                GenerateSetupHeader(outputPath, "EnumBindings", "Enum", enums);
+                GenerateSetupSource(outputPath, "EnumBindings", "Enum", enums);
             }
 
             WorkerUtils.ForEach(BindingState.GetEnums(), type => GenerateBindingFiles<EnumGen>(type, outputPath, "_Enum"));
@@ -147,38 +147,31 @@ namespace JSBindTool.Core
 
             CodeBuilder builder = new CodeBuilder();
             builder.IndentationSize = 0;
+            HeaderUtils.EmitNotice(builder);
 
             types.ForEach(type => builder.Add($"#include \"{type.Name}_{headerSuffix}.h\""));
-            HeaderUtils.EmitNotice(builder);
-            builder.Add("namespace Urho3D");
-            builder.Add("{");
-            builder.Add(header);
-            builder.Add("}");
+            builder.Namespace("Urho3D", scope => scope.Add(header));
 
             File.WriteAllText(Path.Join(outputPath, prefix+".h"), builder.ToString());
         }
         private static void GenerateSetupSource(string outputPath, string prefix, string headerSuffix, List<Type> types)
         {
-            CodeBuilder sourceScope = new CodeBuilder();
-            types.ForEach(type =>
-            {
-                sourceScope.Add($"{type.Name}_setup(ctx);");
-            });
-
-            CodeBuilder source = new CodeBuilder();
-            source.Add($"void {prefix}_Setup(duk_context* ctx)");
-            source.Add("{");
-            source.Add(sourceScope);
-            source.Add("}");
-
             CodeBuilder builder = new CodeBuilder();
             builder.IndentationSize = 0;
             HeaderUtils.EmitNotice(builder);
-            builder.Add($"#include \"{prefix}_{headerSuffix}.h\"");
-            builder.Add("namespace Urho3D");
-            builder.Add("{");
-            builder.Add(source);
-            builder.Add("}");
+
+            builder.Add($"#include \"{prefix}.h\"");
+            builder.Namespace("Urho3D", source =>
+            {
+                source.Add($"void {prefix}_setup(duk_context* ctx)");
+                source.Scope(scope =>
+                {
+                    types.ForEach(type =>
+                    {
+                        scope.Add($"{type.Name}_setup(ctx);");
+                    });
+                });
+            });
 
             File.WriteAllText(Path.Join(outputPath, prefix+".cpp"), builder.ToString());
         }

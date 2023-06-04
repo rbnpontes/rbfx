@@ -49,6 +49,7 @@ namespace JSBindTool.Core
         public virtual void EmitSourceIncludes(CodeBuilder code)
         {
             code.Add($"#include \"{Target.Name}_Primitive.h\"");
+            code.Add($"#include <Urho3D/IO/Log.h>");
         }
         public virtual void EmitResolveSource(CodeBuilder code)
         {
@@ -56,11 +57,11 @@ namespace JSBindTool.Core
             code.Scope(resolveScope =>
             {
                 resolveScope.Add($"{Target.Name} result;").AddNewLine();
-                resolveScope.Add("if(!duk_get_prop_string(ctx, \"type\"))");
+                resolveScope.Add("if(!duk_get_prop_string(ctx, stack_idx, \"type\"))");
                 resolveScope.Scope(ifScope =>
                 {
                     ifScope.Add("duk_pop(ctx);");
-                    ifScope.Add($"URHO3D_LOGWARNING(\"invalid '{Target.Name}' type. resolving to default!\")");
+                    ifScope.Add($"URHO3D_LOGWARNING(\"invalid '{Target.Name}' type. resolving to default!\");");
                     ifScope.Add("return result;");
                 }).AddNewLine();
                 resolveScope.Add("StringHash currType = rbfx_get_string_hash(ctx, -1);");
@@ -68,7 +69,7 @@ namespace JSBindTool.Core
                 resolveScope.Add($"if(currType != StringHash(\"{Target.Name}\"))");
                 resolveScope.Scope(ifScope =>
                 {
-                    ifScope.Add($"URHO3D_LOGWARNING(\"invalid '{Target.Name}' type. resolving to default!\")");
+                    ifScope.Add($"URHO3D_LOGWARNING(\"invalid '{Target.Name}' type. resolving to default!\");");
                     ifScope.Add("return result;");
                 }).AddNewLine();
 
@@ -98,14 +99,14 @@ namespace JSBindTool.Core
 
                 ctorScope.AddNewLine().Add(
                     "duk_push_this(ctx);",
-                    "duk_idx_t push_idx = duk_get_top(ctx) - 1;"
+                    "duk_idx_t this_idx = duk_get_top(ctx) - 1;"
                 ).AddNewLine();
                 CollectVariables().ForEach(vary =>
                 {
                     ctorScope.Scope(writeScope =>
                     {
                         CodeUtils.EmitValueWrite(vary.Type, $"instance.{vary.NativeName}", writeScope);
-                        writeScope.Add($"duk_put_prop_string(ctx, push_idx, \"{vary.JSName}\");");
+                        writeScope.Add($"duk_put_prop_string(ctx, this_idx, \"{vary.JSName}\");");
                     });
                 });
 
@@ -163,17 +164,14 @@ namespace JSBindTool.Core
         }
         private void EmitOperatorMethod(string methodName, string operatorSignal, CodeBuilder code)
         {
-            code.Add("duk_push_c_function(ctx, [](duk_context* ctx)");
-            code.Add("{");
+            code.Function(scope =>
             {
-                CodeBuilder scope = new CodeBuilder();
                 scope.Add("duk_push_this(ctx);");
                 scope.Add($"{Target.Name} value = {Target.Name}_resolve(ctx, 0);");
                 if (string.Equals(operatorSignal, "=="))
                 {
                     scope.Add($"duk_push_boolean(ctx, {Target.Name}_resolve(ctx, 1) == value);");
                     scope.Add("return 1;");
-                    code.Add(scope);
                 }
                 else
                 {
@@ -188,11 +186,8 @@ namespace JSBindTool.Core
 
                     scope.Add($"duk_new(ctx, {variables.Count});").AddNewLine();
                     scope.Add("return 1;");
-
-                    code.Add(scope);
                 }
-            }
-            code.Add("}, 1);");
+            }, "1");
             code.Add($"duk_put_prop_string(ctx, this_idx, \"{methodName}\");");
         }
         private List<Variable> CollectVariables()
