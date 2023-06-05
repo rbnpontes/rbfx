@@ -112,6 +112,9 @@ namespace JSBindTool.Core
 
                 ctorScope.AddNewLine();
 
+                ctorScope.Add($"duk_push_string(ctx, \"{AnnotationUtils.GetClassName(Target)}\");");
+                ctorScope.Add("duk_put_prop_string(ctx, this_idx, \"type\");");
+
                 EmitMethods(ctorScope);
                 ctorScope.AddNewLine();
 
