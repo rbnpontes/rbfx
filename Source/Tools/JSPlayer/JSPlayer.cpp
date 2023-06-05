@@ -4,6 +4,10 @@
 #include <Urho3D/JavaScript/JavaScriptAsset.h>
 #include <Urho3D/Engine/EngineDefs.h>
 #include <Urho3D/Input/Input.h>
+#include <Urho3D/Plugins/PluginManager.h>
+#include <Urho3D/Plugins/ModulePlugin.h>
+#include <Urho3D/IO/FileSystem.h>
+
 namespace Urho3D
 {
     JSPlayer::JSPlayer(Context* context) : Application(context)
@@ -26,9 +30,22 @@ namespace Urho3D
 
     void JSPlayer::Setup() {
         URHO3D_LOGDEBUG("Setup JSPlayer");
+        FileSystem* fs = context_->GetSubsystem<FileSystem>();
+
+        PluginApplication::RegisterStaticPlugins();
+
     }
     void JSPlayer::Start() {
         URHO3D_LOGDEBUG("Starting JSPlayer");
+        FileSystem* fs = context_->GetSubsystem<FileSystem>();
+
+        ModulePlugin* jsBindingsPlugin = new ModulePlugin(context_);
+        jsBindingsPlugin->SetName("JSBindings");
+
+        auto pluginManager = GetSubsystem<PluginManager>();
+        pluginManager->AddDynamicPlugin(jsBindingsPlugin);
+        pluginManager->StartApplication();
+
         Input* input = GetSubsystem<Input>();
         input->SetMouseMode(MM_FREE);
         input->SetMouseVisible(true);
