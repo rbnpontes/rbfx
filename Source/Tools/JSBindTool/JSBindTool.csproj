@@ -9,6 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="Core\Annotations\FieldAttribute.cs" />
         <Compile Include="Core\Annotations\MethodAttribute.cs" />
         <Compile Include="Core\EngineObject.cs" />
         <Compile Include="Bindings\MathTypes\Color.cs" />
@@ -24,7 +25,7 @@
         <Compile Include="Bindings\UITypes\UI.cs" />
         <Compile Include="Bindings\UITypes\UISelectable.cs" />
         <Compile Include="Core\Annotations\AbstractAttribute.cs" />
-        <Compile Include="Core\Annotations\ClassNameAttribute.cs" />
+        <Compile Include="Core\Annotations\TypeNameAttribute.cs" />
         <Compile Include="Core\Annotations\IgnoreAttribute.cs" />
         <Compile Include="Core\Annotations\IncludeAttribute.cs" />
         <Compile Include="Core\Annotations\OperatorAttribute.cs" />

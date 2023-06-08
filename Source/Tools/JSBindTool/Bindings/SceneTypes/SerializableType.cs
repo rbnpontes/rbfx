@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace JSBindTool.Bindings.SceneTypes
 {
     [Abstract]
-    [ClassName("Serializable")]
+    [TypeName("Serializable")]
     [Include("Urho3D/Scene/Serializable.h")]
     public class SerializableType : EngineObject
     {

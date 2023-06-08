@@ -36,7 +36,7 @@ namespace JSBindTool.Core
             else if (type == typeof(IntPtr))
                 output.Append("void*");
             else if (type.IsSubclassOf(typeof(EngineObject)))
-                output.Append(type.Name == "EngineObject" ? "Object" : AnnotationUtils.GetClassName(type)).Append("*");
+                output.Append(type.Name == "EngineObject" ? "Object" : AnnotationUtils.GetTypeName(type)).Append("*");
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {
                 var templateObj = TemplateObject.Create(type);
@@ -184,7 +184,7 @@ namespace JSBindTool.Core
                 }
             }
             else if (type.IsSubclassOf(typeof(PrimitiveObject)))
-                code.Add($"{AnnotationUtils.GetClassName(type)} {varName} = {type.Name}_resolve(ctx, {accessor});");
+                code.Add($"{AnnotationUtils.GetTypeName(type)} {varName} = {type.Name}_resolve(ctx, {accessor});");
             else throw new NotImplementedException();
         }
     }

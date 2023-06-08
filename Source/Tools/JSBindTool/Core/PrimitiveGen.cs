@@ -28,6 +28,7 @@ namespace JSBindTool.Core
             {
                 obj.EmitResolveSignature(signatures);
                 obj.EmitConstructorSignature(signatures);
+                obj.EmitConstructorSignature(signatures);
                 obj.EmitSetupSignature(signatures);
             });
 
@@ -49,6 +50,7 @@ namespace JSBindTool.Core
             {
                 obj.EmitResolveSource(source);
                 obj.EmitConstructorSource(source);
+                obj.EmitPushSource(source);
                 obj.EmitSetupSetupSource(source);
             });
             

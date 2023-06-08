@@ -29,7 +29,7 @@ namespace JSBindTool.Core
             code.Add($"void {Target.Name}_setup(duk_context* ctx);");
             if (!AnnotationUtils.IsAbstract(Target))
                 code.Add($"duk_idx_t {Target.Name}_ctor(duk_context* ctx);");
-            code.Add($"void {Target.Name}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetClassName(Target)}* instance);");
+            code.Add($"void {Target.Name}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance);");
         }
 
         public virtual void EmitSourceIncludes(CodeBuilder code)
@@ -122,12 +122,12 @@ namespace JSBindTool.Core
                     ifScope.Add("return duk_throw(ctx);");
                 }).AddNewLine();
 
-                scope.Add($"{AnnotationUtils.GetClassName(Target)}* instance = nullptr;");
+                scope.Add($"{AnnotationUtils.GetTypeName(Target)}* instance = nullptr;");
                 scope.Add("duk_idx_t obj_idx = duk_get_top(ctx);");
                 scope.Add("if(obj_idx > 1)");
                 scope.Scope(ifScope =>
                 {
-                    ifScope.Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid '{AnnotationUtils.GetClassName(Target)}' constructor call.\");");
+                    ifScope.Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid '{AnnotationUtils.GetTypeName(Target)}' constructor call.\");");
                     ifScope.Add("return duk_throw(ctx);");
                 }).AddNewLine();
 
@@ -135,11 +135,11 @@ namespace JSBindTool.Core
                 scope.Add("duk_push_this(ctx);");
                 scope.Add("// if has argument, the first argument must be a pointer to Object*");
                 scope.Add("if(obj_idx == 0)");
-                scope.Scope(ifScope => ifScope.Add($"instance = new {AnnotationUtils.GetClassName(Target)}(JavaScriptSystem::GetContext());"));
+                scope.Scope(ifScope => ifScope.Add($"instance = new {AnnotationUtils.GetTypeName(Target)}(JavaScriptSystem::GetContext());"));
                 scope.Add("else");
                 scope.Scope(ifScope =>
                 {
-                    ifScope.Add($"instance = static_cast<{AnnotationUtils.GetClassName(Target)}*>(duk_require_pointer(ctx, 0));");
+                    ifScope.Add($"instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(duk_require_pointer(ctx, 0));");
                     ifScope.Add("if(!instance)");
                     ifScope.Scope(nestedIfScope =>
                     {
@@ -175,7 +175,7 @@ namespace JSBindTool.Core
         }
         protected virtual void EmitSourceWrap(CodeBuilder code)
         {
-            code.Add($"void {Target.Name}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetClassName(Target)}* instance)");
+            code.Add($"void {Target.Name}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance)");
             code.Scope(scope =>
             {
                 if (Target.BaseType == typeof(EngineObject))
@@ -207,7 +207,7 @@ namespace JSBindTool.Core
                 {
                     getterScope.Add(
                         "duk_push_this(ctx);",
-                        $"{AnnotationUtils.GetClassName(Target)}* instance = static_cast<{AnnotationUtils.GetClassName(Target)}*>(rbfx_get_instance(ctx, -1));",
+                        $"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(rbfx_get_instance(ctx, -1));",
                         "duk_pop(ctx);",
                         $"{CodeUtils.GetNativeDeclaration(prop.PropertyType)} result = instance->{AnnotationUtils.GetGetterName(prop)}();"
                     );
@@ -224,7 +224,7 @@ namespace JSBindTool.Core
                 {
                     setterScope.Add(
                         "duk_push_this(ctx);",
-                        $"{AnnotationUtils.GetClassName(Target)}* instance = static_cast<{AnnotationUtils.GetClassName(Target)}*>(rbfx_get_instance(ctx, -1));",
+                        $"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(rbfx_get_instance(ctx, -1));",
                         "duk_pop(ctx);"
                     );
                     CodeUtils.EmitValueRead(prop.PropertyType, "result", "0", setterScope);

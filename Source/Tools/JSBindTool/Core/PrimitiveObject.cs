@@ -41,6 +41,10 @@ namespace JSBindTool.Core
         {
             code.Add($"duk_idx_t {Target.Name}_constructor(duk_context* ctx);");
         }
+        public virtual void EmitPushSignature(CodeBuilder code)
+        {
+            code.Add($"void {Target.Name}_push(duk_context* ctx, const Color& color);");
+        }
         public virtual void EmitSetupSignature(CodeBuilder code)
         {
             code.Add($"void {Target.Name}_setup(duk_context* ctx);");
@@ -112,7 +116,7 @@ namespace JSBindTool.Core
 
                 ctorScope.AddNewLine();
 
-                ctorScope.Add($"duk_push_string(ctx, \"{AnnotationUtils.GetClassName(Target)}\");");
+                ctorScope.Add($"duk_push_string(ctx, \"{AnnotationUtils.GetTypeName(Target)}\");");
                 ctorScope.Add("duk_put_prop_string(ctx, this_idx, \"type\");");
 
                 EmitMethods(ctorScope);
@@ -122,15 +126,49 @@ namespace JSBindTool.Core
                 ctorScope.Add("return 1;");
             });
         }
+        public virtual void EmitPushSource(CodeBuilder code)
+        {
+            code.Add($"void {Target.Name}_push(duk_context* ctx, const Color& color)");
+            code.Scope(scope =>
+            {
+                scope.Add($"duk_get_global_string(ctx, \"{AnnotationUtils.GetTypeName(Target)}\");");
+                var variables = CollectVariables();
+                variables.ForEach(vary =>
+                {
+                    CodeUtils.EmitValueWrite(vary.Type, "color."+vary.NativeName, scope);
+                });
+                scope.Add($"duk_new(ctx, {variables.Count});");
+            });
+        }
         public virtual void EmitSetupSetupSource(CodeBuilder code)
         {
             code.Add($"void {Target.Name}_setup(duk_context* ctx)");
             code.Scope(setupScope =>
             {
+                setupScope.Add("duk_idx_t top = duk_get_top(ctx);");
                 setupScope.Add($"duk_push_c_function(ctx, {Target.Name}_constructor, DUK_VARARGS);");
-                setupScope.Add($"duk_put_global_string(ctx, \"{Target.Name}\");");
+                setupScope.Add("duk_dup(ctx, -1);");
+                setupScope.Add($"duk_put_global_string(ctx, \"{AnnotationUtils.GetTypeName(Target)}\");");
+                setupScope.Add("// setup static fields");
+                EmitStaticFields(setupScope, "top");
             });
         }
+
+        private void EmitStaticFields(CodeBuilder code, string accessor)
+        {
+            Target.GetFields(BindingFlags.Static | BindingFlags.Public)
+                .Where(x => x.GetCustomAttribute<FieldAttribute>() != null)
+                .ToList()
+                .ForEach(field => EmitStaticField(field, code, accessor));
+        }
+        private void EmitStaticField(FieldInfo field, CodeBuilder code, string accessor)
+        {
+            FieldAttribute fieldAttr = AnnotationUtils.GetFieldAttribute(field);
+
+            code.Add($"{Target.Name}_push(ctx, Color::{fieldAttr.NativeName});");
+            code.Add($"duk_put_prop_string(ctx, {accessor}, \"{fieldAttr.JSName}\");");
+        }
+
 
         private void EmitObjectRead(CodeBuilder code, string accessor)
         {
@@ -196,14 +234,14 @@ namespace JSBindTool.Core
         private List<Variable> CollectVariables()
         {
             List<Variable> variables = new List<Variable>();
-            Target.GetProperties().Where(x => !string.Equals(x.Name, "Target")).ToList().ForEach(prop =>
+            Target.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance).Where(x => !string.Equals(x.Name, "Target")).ToList().ForEach(prop =>
             {
                 Variable vary = new Variable(prop.PropertyType);
                 vary.NativeName = AnnotationUtils.GetVariableName(prop);
                 vary.JSName = CodeUtils.ToCamelCase(vary.NativeName);
                 variables.Add(vary);
             });
-            Target.GetFields().ToList().ForEach(field =>
+            Target.GetFields(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance).ToList().ForEach(field =>
             {
                 Variable vary = new Variable(field.FieldType);
                 vary.NativeName = AnnotationUtils.GetVariableName(field);

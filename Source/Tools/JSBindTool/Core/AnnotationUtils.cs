@@ -48,9 +48,9 @@ namespace JSBindTool.Core
             return fieldInfo.GetCustomAttribute<VariableAttribute>()?.Value ?? fieldInfo.Name;
         }
 
-        public static string GetClassName(Type type)
+        public static string GetTypeName(Type type)
         {
-            return type.GetCustomAttribute<ClassNameAttribute>()?.ClassName ?? type.Name;
+            return type.GetCustomAttribute<TypeNameAttribute>()?.Name ?? type.Name;
         }
 
         public static string GetPropertyName(PropertyInfo prop)
@@ -75,6 +75,14 @@ namespace JSBindTool.Core
         public static bool IsValidProperty(PropertyInfo prop)
         {
             return !IsIgnored(prop) && prop.GetCustomAttribute<PropertyMapAttribute>() != null;
+        }
+
+        public static FieldAttribute GetFieldAttribute(FieldInfo field)
+        {
+            FieldAttribute? attr = field.GetCustomAttribute<FieldAttribute>();
+            if (attr is null)
+                throw new NullReferenceException("field does not contains FieldAttribute");
+            return attr;
         }
     }
 }
