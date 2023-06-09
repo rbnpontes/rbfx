@@ -29,11 +29,11 @@ namespace JSBindTool.Bindings.UITypes
         public UIElement() : base(typeof(UIElement)) { }
         public UIElement(Type type) : base(type) { }
 
-        [Method]
+        [Method("AddChild")]
         public void AddChild(UIElement arg) { }
-        [Method]
+        [Method("GetColor")]
         public void GetColor(Corner corner) { }
-        [Method]
+        [Method("SetColor")]
         public void SetColor(Corner corner, Color color) { }
     }
 }

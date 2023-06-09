@@ -23,6 +23,17 @@ namespace JSBindTool.Bindings.MathTypes
 
         public Color() : base(typeof(Color)) { }
 
+        [Method("ToUInt")]
+        public uint ToUInt() { return 0u; }
+        [Method("FromUInt")]
+        public void FromUInt(uint value) { }
+        [Method("FromHSL")]
+        public void FromHSL(float arg0, float arg1, float arg2, float arg3) { }
+        [Method("FromHSV")]
+        public void FromHSV(float arg0, float arg1, float arg2, float arg3) { }
+        [Method("SumRGB")]
+        public float SumRGB() { return 0f; }
+
         [Field("white", "WHITE")]
         public static Color White = new Color();
         [Field("gray", "GRAY")]

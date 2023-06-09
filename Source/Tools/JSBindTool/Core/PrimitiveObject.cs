@@ -198,17 +198,15 @@ namespace JSBindTool.Core
             if ((opFlags & OperatorFlags.Equal) != 0)
                 EmitOperatorMethod("equal", "==", code);
 
-            //var methods = Target.GetMethods().ToList();
-            //methods.ForEach(method =>
-            //{
-            //});
+            var methods = Target.GetMethods(BindingFlags.Public | BindingFlags.DeclaredOnly | BindingFlags.Instance);
+            methods.Where(x => AnnotationUtils.IsValidMethod(x)).ToList().ForEach(method => EmitMethod(method, code));
         }
         private void EmitOperatorMethod(string methodName, string operatorSignal, CodeBuilder code)
         {
             code.Function(scope =>
             {
                 scope.Add("duk_push_this(ctx);");
-                scope.Add($"{Target.Name} value = {Target.Name}_resolve(ctx, 0);");
+                scope.Add($"{AnnotationUtils.GetTypeName(Target)} value = {Target.Name}_resolve(ctx, 0);");
                 if (string.Equals(operatorSignal, "=="))
                 {
                     scope.Add($"duk_push_boolean(ctx, {Target.Name}_resolve(ctx, 1) == value);");
@@ -216,7 +214,7 @@ namespace JSBindTool.Core
                 }
                 else
                 {
-                    scope.Add($"{Target.Name} result = {Target.Name}_resolve(ctx, 1) {operatorSignal} value;").AddNewLine();
+                    scope.Add($"{AnnotationUtils.GetTypeName(Target)} result = {Target.Name}_resolve(ctx, 1) {operatorSignal} value;").AddNewLine();
 
                     scope.Add($"duk_get_global_string(ctx, \"{Target.Name}\");");
                     var variables = CollectVariables();
@@ -230,6 +228,39 @@ namespace JSBindTool.Core
                 }
             }, "1");
             code.Add($"duk_put_prop_string(ctx, this_idx, \"{methodName}\");");
+        }
+        private void EmitMethod(MethodInfo method, CodeBuilder code)
+        {
+            string nativeName = AnnotationUtils.GetMethodNativeName(method);
+            code.Function(scope =>
+            {
+                scope.Add("duk_push_this(ctx);");
+                scope.Add($"{AnnotationUtils.GetTypeName(Target)} value = {Target.Name}_resolve(ctx, -1);");
+                scope.Add("duk_pop(ctx);");
+                var parameters = method.GetParameters();
+
+                StringBuilder argsCall = new StringBuilder();
+                for(int i =0; i < parameters.Length; ++i)
+                {
+                    CodeUtils.EmitValueRead(parameters[i].ParameterType, $"arg{i}", i.ToString(), scope);
+                    argsCall.Append($"arg{i}");
+                    if (i < parameters.Length - 1)
+                        argsCall.Append(", ");
+                }
+
+                if(method.ReturnType == typeof(void))
+                {
+                    scope.Add($"value.{nativeName}({argsCall});");
+                    scope.Add("return 0;");
+                }
+                else
+                {
+                    scope.Add($"{CodeUtils.GetNativeDeclaration(method.ReturnType)} result = value.{nativeName}({argsCall});");
+                    CodeUtils.EmitValueWrite(method.ReturnType, "result", scope);
+                    scope.Add("return 1;");
+                }
+            }, method.GetParameters().Length.ToString());
+            code.Add($"duk_put_prop_string(ctx, this_idx, \"{AnnotationUtils.GetMethodName(method)}\");");
         }
         private List<Variable> CollectVariables()
         {

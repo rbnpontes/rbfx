@@ -68,6 +68,15 @@ namespace JSBindTool.Core
             return prop.GetCustomAttribute<PropertyMapAttribute>()?.SetterName ?? prop.Name;
         }
 
+        public static string GetMethodNativeName(MethodInfo method)
+        {
+            return method.GetCustomAttribute<MethodAttribute>()?.NativeName ?? method.Name;
+        }
+        public static string GetMethodName(MethodInfo method)
+        {
+            return CodeUtils.ToCamelCase(method.Name);
+        }
+
         public static bool IsValidMethod(MethodInfo method)
         {
             return method.GetCustomAttribute<MethodAttribute>() != null;
