@@ -335,7 +335,7 @@ jobs:
 
   MacOS:
     if: github.event.pull_request.draft == false
-    runs-on: macos-13
+    runs-on: macos-latest
     needs: [CheckSkipCI]
 
     strategy:
