@@ -50,7 +50,7 @@ generators_windows=('-G' 'Visual Studio 17 2022')
 generators_uwp=('-G' 'Visual Studio 17 2022' '-DCMAKE_SYSTEM_NAME=WindowsStore' '-DCMAKE_SYSTEM_VERSION=10.0' '-DURHO3D_PACKAGING=ON')
 generators_linux=('-G' 'Ninja')
 generators_web=('-G' 'Ninja')
-generators_macos=('-G' 'Xcode')
+generators_macos=('-G' 'Xcode' '-T' 'buildsystem=1')
 generators_ios=('-G' 'Xcode' '-T' 'buildsystem=1')
 
 toolchains_ios=(
