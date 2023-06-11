@@ -241,6 +241,11 @@ endif ()
 # TODO(diligent): Remove this define
 set (URHO3D_DILIGENT ON)
 
+# TODO(diligent): Fix the disabled features on new Mac`s
+if (APPLE)
+    set (URHO3D_GLOW OFF)
+    set (URHO3D_SSE OFF)
+endif ()
 # Whether to use legacy renderer. Only OpenGL support legacy renderer.
 cmake_dependent_option(URHO3D_LEGACY_RENDERER "Use legacy renderer by default" OFF "URHO3D_OPENGL" OFF)
 

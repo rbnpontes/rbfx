@@ -50,7 +50,7 @@ generators_windows=('-G' 'Visual Studio 17 2022')
 generators_uwp=('-G' 'Visual Studio 17 2022' '-DCMAKE_SYSTEM_NAME=WindowsStore' '-DCMAKE_SYSTEM_VERSION=10.0' '-DURHO3D_PACKAGING=ON')
 generators_linux=('-G' 'Ninja')
 generators_web=('-G' 'Ninja')
-generators_macos=('-G' 'Xcode' '-T' 'buildsystem=1')
+generators_macos=('-G' 'Xcode')
 generators_ios=('-G' 'Xcode' '-T' 'buildsystem=1')
 
 toolchains_ios=(
@@ -99,6 +99,9 @@ quirks_uwp_msvc_arm64=('-A' 'ARM64')
 quirks_clang=('-DTRACY_NO_PARALLEL_ALGORITHMS=ON')                  # Includes macos and ios
 quirks_macos_x86=('-DCMAKE_OSX_ARCHITECTURES=i386')
 quirks_macos_x64=('-DCMAKE_OSX_ARCHITECTURES=x86_64')
+quirks_macos_arm64=(
+    '-DCMAKE_OSX_ARCHITECTURES=arm64'
+)
 quirks_linux_x86=(
     '-DCMAKE_C_FLAGS=-m32'
     '-DCMAKE_CXX_FLAGS=-m32'
