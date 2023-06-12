@@ -342,7 +342,7 @@ jobs:
       fail-fast: false
       matrix:
         ci_arch:
-          - x64
+          - arm64
           # - x86           # TODO: Untested.
         ci_lib_type:
           - dll
@@ -387,10 +387,6 @@ jobs:
       - name: Bash
         shell: bash
         run: brew install bash
-
-      - name: Display Current Xcode version
-        shell: bash
-        run: sudo xcode-select -p
 
       - name: Setup dotnet
         uses: actions/setup-dotnet@v3
