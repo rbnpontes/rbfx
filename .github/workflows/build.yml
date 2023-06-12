@@ -388,6 +388,10 @@ jobs:
         shell: bash
         run: brew install bash
 
+      - name: Setup Xcode
+        shell: bash
+        run: xcode-select --reset
+
       - name: Setup dotnet
         uses: actions/setup-dotnet@v3
         if: matrix.ci_lib_type == 'dll'
