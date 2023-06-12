@@ -388,6 +388,10 @@ jobs:
         shell: bash
         run: brew install bash
 
+      - name: Display Current Xcode version
+        shell: bash
+        run: sudo xcode-select -p
+
       - name: Setup dotnet
         uses: actions/setup-dotnet@v3
         if: matrix.ci_lib_type == 'dll'
