@@ -390,7 +390,7 @@ jobs:
 
       - name: Setup Xcode
         shell: bash
-        run: xcode-select --reset
+        run: sudo xcode-select --reset
 
       - name: Setup dotnet
         uses: actions/setup-dotnet@v3
