@@ -48,8 +48,6 @@ namespace JSBindTool.Core
                     includes.Add($"#include \"{type.Name}_Primitive.h\"");
                 else if (type.IsSubclassOf(typeof(ClassObject)))
                     includes.Add($"#include \"{type.Name}_Class.h\"");
-                else if (type.IsEnum)
-                    includes.Add($"#include \"{type.Name}_Enum.h\"");
             };
 
             GetProperties().ForEach(prop => addInclude(prop.PropertyType));

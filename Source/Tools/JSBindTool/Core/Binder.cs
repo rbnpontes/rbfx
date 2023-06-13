@@ -23,9 +23,9 @@ namespace JSBindTool.Core
                         // Collect all used Enums
                         type.GetMethods().ToList().ForEach(methodInfo =>
                         {
-                            methodInfo.GetGenericArguments().Where(x => x.IsEnum).ToList().ForEach(x => BindingState.AddEnum(x));
-                            if (methodInfo.ReturnParameter.ParameterType.IsEnum)
-                                BindingState.AddEnum(methodInfo.ReturnParameter.ParameterType);
+                            methodInfo.GetParameters().Where(x => x.ParameterType.IsEnum).ToList().ForEach(x => BindingState.AddEnum(x.ParameterType));
+                            if (methodInfo.ReturnType.IsEnum)
+                                BindingState.AddEnum(methodInfo.ReturnType);
                         });
                         type.GetProperties().ToList().ForEach(propInfo =>
                         {
@@ -38,7 +38,7 @@ namespace JSBindTool.Core
                                 BindingState.AddEnum(fieldInfo.FieldType);
                         });
                     }
-                    else
+                    else if(type.IsSubclassOf(typeof(PrimitiveObject)))
                     {
                         BindingState.AddPrimitives(type);
                     }
