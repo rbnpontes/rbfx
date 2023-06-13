@@ -10,7 +10,7 @@ namespace JSBindTool.Bindings.ResourceTypes
 {
     [Include("Urho3D/Resource/Resource.h")]
     [Abstract]
-    public class Resource : EngineObject
+    public class Resource : ClassObject
     {
         [PropertyMap("GetName", "SetName")]
         public string Name { get; set; } = string.Empty;

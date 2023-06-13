@@ -53,19 +53,26 @@ namespace JSBindTool.Core
             return type.GetCustomAttribute<TypeNameAttribute>()?.Name ?? type.Name;
         }
 
-        public static string GetPropertyName(PropertyInfo prop)
+        public static PropertyMapAttribute GetPropertyMap(PropertyInfo prop)
         {
-            string propName = prop.GetCustomAttribute<PropertyMapAttribute>()?.GetterName ?? prop.Name;
+            var attr = prop.GetCustomAttribute<PropertyMapAttribute>();
+            if (attr is null)
+                throw new NullReferenceException($"Property {prop.Name} does not contains PropertyMapAttribute");
+            return attr;
+        }
+        public static string GetJSPropertyName(PropertyInfo prop)
+        {
+            string propName = GetPropertyMap(prop).GetterName ?? prop.Name;
             propName = propName.Replace("Get", string.Empty).Replace("Set", string.Empty);
             return propName;
         }
         public static string GetGetterName(PropertyInfo prop)
         {
-            return prop.GetCustomAttribute<PropertyMapAttribute>()?.GetterName ?? prop.Name;
+            return GetPropertyMap(prop).GetterName ?? prop.Name;
         }
         public static string GetSetterName(PropertyInfo prop)
         {
-            return prop.GetCustomAttribute<PropertyMapAttribute>()?.SetterName ?? prop.Name;
+            return GetPropertyMap(prop).SetterName ?? prop.Name;
         }
 
         public static string GetMethodNativeName(MethodInfo method)

@@ -35,18 +35,18 @@ namespace JSBindTool.Core
                 output.Append("unsigned");
             else if (type == typeof(IntPtr))
                 output.Append("void*");
-            else if (type.IsSubclassOf(typeof(EngineObject)))
-                output.Append(type.Name == "EngineObject" ? "Object" : AnnotationUtils.GetTypeName(type)).Append("*");
+            else if (type.IsSubclassOf(typeof(ClassObject)))
+                output.Append(type == typeof(ClassObject) ? "Object" : AnnotationUtils.GetTypeName(type)).Append("*");
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {
                 var templateObj = TemplateObject.Create(type);
                 switch (templateObj.TemplateType)
                 {
                     case TemplateType.SharedPtr:
-                        output.Append($"SharedPtr<{GetNativeDeclaration(templateObj.TargetType)}>");
+                        output.Append($"SharedPtr<{AnnotationUtils.GetTypeName(templateObj.TargetType)}>");
                         break;
                     case TemplateType.WeakPtr:
-                        output.Append($"WeakPtr<{GetNativeDeclaration(templateObj.TargetType)}>");
+                        output.Append($"WeakPtr<{AnnotationUtils.GetTypeName(templateObj.TargetType)}>");
                         break;
                     case TemplateType.Vector:
                         output.Append($"ea::vector<{GetNativeDeclaration(templateObj.TargetType)}>");
@@ -80,7 +80,7 @@ namespace JSBindTool.Core
                 code.Add($"duk_push_pointer(ctx, {accessor});");
             else if (type.IsEnum)
                 code.Add($"duk_push_int(ctx, {accessor});");
-            else if (type.IsSubclassOf(typeof(EngineObject)) || type.Name.StartsWith("SharedPtr"))
+            else if (type.IsSubclassOf(typeof(ClassObject)) || type.Name.StartsWith("SharedPtr"))
                 code.Add($"rbfx_push_object(ctx, {accessor});");
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {
@@ -140,15 +140,15 @@ namespace JSBindTool.Core
                 code.Add($"duk_idx_t {varName} = {accessor};");
             else if (type.IsEnum)
                 code.Add($"{type.Name} {varName} = ({type.Name})duk_get_int(ctx, {accessor});");
-            else if (type.IsSubclassOf(typeof(EngineObject)))
-                code.Add($"{type.Name}* {varName} = static_cast<{type.Name}*>(rbfx_get_instance(ctx, {accessor}));");
+            else if (type.IsSubclassOf(typeof(ClassObject)))
+                code.Add($"{AnnotationUtils.GetTypeName(type)}* {varName} = static_cast<{AnnotationUtils.GetTypeName(type)}*>(rbfx_get_instance(ctx, {accessor}));");
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {
                 var templateObj = TemplateObject.Create(type);
                 switch (templateObj.TemplateType)
                 {
                     case TemplateType.SharedPtr:
-                        code.Add($"{GetNativeDeclaration(templateObj.TargetType)} {varName}(static_cast<{templateObj.TargetType.Name}*>(rbfx_get_instance(ctx, {accessor})));");
+                        code.Add($"{GetNativeDeclaration(templateObj.TargetType)} {varName}(static_cast<{AnnotationUtils.GetTypeName(templateObj.TargetType)}*>(rbfx_get_instance(ctx, {accessor})));");
                         break;
                     case TemplateType.WeakPtr:
                         throw new NotImplementedException();
@@ -160,7 +160,7 @@ namespace JSBindTool.Core
                             {
                                 int deepCount = ++pDeepValueCount;
                                 CodeBuilder scopeRead = new CodeBuilder();
-                                scopeRead.Add($"duk_size_t len_{deepCount} = duk_get_len(ctx, {accessor});");
+                                scopeRead.Add($"duk_size_t len_{deepCount} = duk_get_length(ctx, {accessor});");
                                 scopeRead.Add($"{varName}.resize(len_{deepCount});").AddNewLine();
 
                                 scopeRead.Add($"for(duk_uarridx_t i_{deepCount} = 0; i_{deepCount} < len_{deepCount}; ++i_{deepCount})");

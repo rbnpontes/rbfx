@@ -12,12 +12,12 @@ namespace JSBindTool.Core
         public static void CollectTypes()
         {
             Assembly.GetExecutingAssembly().GetTypes()
-                .Where(x => x.IsSubclassOf(typeof(EngineObject)) || x.IsSubclassOf(typeof(PrimitiveObject)))
+                .Where(x => x.IsSubclassOf(typeof(ClassObject)) || x.IsSubclassOf(typeof(PrimitiveObject)))
                 .Where(x => !AnnotationUtils.IsIgnored(x))
                 .ToList()
                 .ForEach(type =>
                 {
-                    if (type.IsSubclassOf(typeof(EngineObject)))
+                    if (type.IsSubclassOf(typeof(ClassObject)))
                     {
                         BindingState.AddClass(type);
                         // Collect all used Enums

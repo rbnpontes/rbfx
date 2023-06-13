@@ -11,7 +11,7 @@
     <ItemGroup>
         <Compile Include="Core\Annotations\FieldAttribute.cs" />
         <Compile Include="Core\Annotations\MethodAttribute.cs" />
-        <Compile Include="Core\EngineObject.cs" />
+        <Compile Include="Core\ClassObject.cs" />
         <Compile Include="Bindings\MathTypes\Color.cs" />
         <Compile Include="Bindings\MathTypes\StringHash.cs" />
         <Compile Include="Bindings\ResourceTypes\Resource.cs" />

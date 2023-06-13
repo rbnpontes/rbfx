@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace JSBindTool.Bindings.UITypes
 {
     [Include("Urho3D/UI/UI.h")]
-    public class UI : EngineObject
+    public class UI : ClassObject
     {
         public UI() : base(typeof(UI)) { }
         public UI(Type type) : base(type) { }

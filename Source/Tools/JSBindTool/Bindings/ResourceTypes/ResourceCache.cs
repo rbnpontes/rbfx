@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace JSBindTool.Bindings.ResourceTypes
 {
     [Include("Urho3D/Resource/ResourceCache.h")]
-    public class ResourceCache : EngineObject
+    public class ResourceCache : ClassObject
     {
         public ResourceCache() : base(typeof(ResourceCache))
         {

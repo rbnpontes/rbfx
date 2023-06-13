@@ -59,7 +59,7 @@ namespace JSBindTool.Core
                 throw new Exception("function cannot be used as write value");
             if (type.IsEnum)
                 code.Add($"duk_push_int(ctx, {accessor});");
-            else if (type.IsSubclassOf(typeof(EngineObject)) || type.Name.StartsWith("SharedPtr"))
+            else if (type.IsSubclassOf(typeof(ClassObject)) || type.Name.StartsWith("SharedPtr"))
                 code.Add($"rbfx_push_object(ctx, {accessor});");
             else if(type.IsSubclassOf(typeof(TemplateObject)))
             {
@@ -120,7 +120,7 @@ namespace JSBindTool.Core
                 code.Add($"duk_idx_t {varName} = {accessor};");
             else if (type.IsEnum)
                 code.Add($"{type.Name} {varName} = ({type.Name})duk_get_int(ctx, {accessor});");
-            else if (type.IsSubclassOf(typeof(EngineObject)))
+            else if (type.IsSubclassOf(typeof(ClassObject)))
                 code.Add($"{type.Name}* {varName} = static_cast<{type.Name}*>(rbfx_get_instance(ctx, {accessor}));");
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {
@@ -174,7 +174,7 @@ namespace JSBindTool.Core
         {
             StringBuilder output = new StringBuilder();
 
-            if (type.IsSubclassOf(typeof(EngineObject)))
+            if (type.IsSubclassOf(typeof(ClassObject)))
                 output.Append(type.Name == "EngineObject" ? "Object" : type.Name).Append("*");
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {

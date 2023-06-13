@@ -10,10 +10,10 @@ namespace JSBindTool.Core
 {
     [Abstract]
     [Include("Urho3D/Core/Object.h")]
-    public class EngineObject
+    public class ClassObject
     {
         public Type Target { get; private set; }
-        public EngineObject(Type target)
+        public ClassObject(Type target)
         {
             Target = target;
         }
@@ -37,7 +37,7 @@ namespace JSBindTool.Core
             string typeName = Target.Name;
             HashSet<string> includes = new HashSet<string>();
             includes.Add($"{Target.Name}_Class.h");
-            if (Target.BaseType != null && Target.BaseType != typeof(EngineObject))
+            if (Target.BaseType != null && Target.BaseType != typeof(ClassObject))
                 includes.Add($"{Target.BaseType.Name}_Class.h");
             includes.Add("Urho3D/JavaScript/JavaScriptSystem.h");
             includes.Add("Urho3D/JavaScript/JavaScriptOperations.h");
@@ -50,7 +50,7 @@ namespace JSBindTool.Core
                         if (!includes.Contains(x))
                             includes.Add(x);
                     });
-                if(type.IsSubclassOf(typeof(EngineObject)))
+                if(type.IsSubclassOf(typeof(ClassObject)))
                 {
                     string include = $"{type.Name}_Class.h";
                     if (!includes.Contains(include))
@@ -178,7 +178,7 @@ namespace JSBindTool.Core
             code.Add($"void {Target.Name}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance)");
             code.Scope(scope =>
             {
-                if (Target.BaseType == typeof(EngineObject))
+                if (Target.BaseType == typeof(ClassObject))
                     scope.Add("rbfx_object_wrap(ctx, obj_idx, instance);");
                 else if(Target.BaseType != null)
                     scope.Add($"{Target.BaseType.Name}_wrap(ctx, obj_idx, instance);");
@@ -188,7 +188,7 @@ namespace JSBindTool.Core
 
         protected virtual void EmitProperties(CodeBuilder code)
         {
-            Target.GetProperties(BindingFlags.DeclaredOnly)
+            Target.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public)
                 .Where(x => AnnotationUtils.IsValidProperty(x))
                 .ToList()
                 .ForEach(prop => EmitProperty(prop, code));
@@ -199,9 +199,10 @@ namespace JSBindTool.Core
             enumFlags.Add("DUK_DEFPROP_HAVE_ENUMERABLE");
 
             code.AddNewLine();
-            code.Add($"duk_push_string(ctx, \"{CodeUtils.ToCamelCase(AnnotationUtils.GetPropertyName(prop))}\");");
+            code.Add($"duk_push_string(ctx, \"{CodeUtils.ToCamelCase(AnnotationUtils.GetJSPropertyName(prop))}\");");
 
-            if(prop.GetMethod != null)
+            var attr = AnnotationUtils.GetPropertyMap(prop);
+            if(prop.GetMethod != null && !string.IsNullOrEmpty(attr.GetterName))
             {
                 code.Function(getterScope =>
                 {
@@ -218,7 +219,7 @@ namespace JSBindTool.Core
 
                 enumFlags.Add("DUK_DEFPROP_HAVE_GETTER");
             }
-            if(prop.SetMethod != null)
+            if(prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName))
             {
                 code.Function(setterScope =>
                 {
@@ -247,11 +248,11 @@ namespace JSBindTool.Core
             code.Add($"duk_def_prop(ctx, obj_idx, {propFlags});");
         }
 
-        public static EngineObject Create(Type type)
+        public static ClassObject Create(Type type)
         {
-            if (!type.IsSubclassOf(typeof(EngineObject)))
+            if (!type.IsSubclassOf(typeof(ClassObject)))
                 throw new Exception("invalid engine object derived type.");
-            var engineObject = Activator.CreateInstance(type) as EngineObject;
+            var engineObject = Activator.CreateInstance(type) as ClassObject;
             if (engineObject is null)
                 throw new Exception("cannot instantiate engine object derived type.");
             return engineObject;
