@@ -68,6 +68,12 @@ namespace JSBindTool.Core
             code.Add($"void {Target.Name}_setup(duk_context* ctx)");
             code.Scope(scope =>
             {
+                if(!AnnotationUtils.IsAbstract(Target))
+                {
+                    scope
+                        .Add($"duk_push_c_function(ctx, {Target.Name}_ctor, DUK_VARARGS);")
+                        .Add($"duk_put_global_string(ctx, \"{AnnotationUtils.GetTypeName(Target)}\");");
+                }
             });
         }
         protected virtual void EmitSourceConstructor(CodeBuilder code)

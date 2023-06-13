@@ -47,7 +47,7 @@ namespace Urho3D
     }
     Context* JavaScriptSystem::GetContext() {
         URHO3D_ASSERTLOG(instance_, "must initializes JavaScriptSystem first.");
-        return instance_->GetContext();
+        return instance_->context_;
     }
     void* JavaScriptSystem::GetJSCtx()
     {
