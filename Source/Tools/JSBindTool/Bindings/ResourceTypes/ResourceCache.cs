@@ -16,6 +16,7 @@ namespace JSBindTool.Bindings.ResourceTypes
         {
         }
 
+        [Method("GetResource")]
         public Resource GetResource(StringHash type, string resourcePath)
         {
             return new Resource();
