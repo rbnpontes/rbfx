@@ -3,6 +3,7 @@
 #include "../Core/Context.h"
 #include "../Core/ObjectCategory.h"
 #include "JavaScriptLogging.h"
+#include "JavaScriptSystemBindings.h"
 #include "JavaScriptEvents.h"
 #include "JavaScriptOperations.h"
 
@@ -79,6 +80,7 @@ namespace Urho3D
         duk_pop(ctx);
 
         JavaScript_SetupLogger(ctx);
+        JavaScript_SetupSystemBindings(ctx);
 
         VariantMap args;
         args[JavaScriptSetup::P_DUKCTX] = ctx;
