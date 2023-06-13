@@ -42,14 +42,21 @@ namespace JSBindTool.Core
             includes.Add("#include <Urho3D/JavaScript/JavaScriptSystem.h>");
             includes.Add("#include <Urho3D/JavaScript/JavaScriptOperations.h>");
 
-            GetProperties().ForEach(prop =>
+            Action<Type> addInclude = (type) =>
             {
-                if (prop.PropertyType.IsSubclassOf(typeof(PrimitiveObject)))
-                    includes.Add($"#include \"{prop.PropertyType.Name}_Primitive.h\"");
-                else if (prop.PropertyType.IsSubclassOf(typeof(ClassObject)))
-                    includes.Add($"#include \"{prop.PropertyType.Name}_Class.h\"");
-                else if (prop.PropertyType.IsEnum)
-                    includes.Add($"#include \"{prop.PropertyType.Name}_Enum.h\"");
+                if(type.IsSubclassOf(typeof(PrimitiveObject)))
+                    includes.Add($"#include \"{type.Name}_Primitive.h\"");
+                else if (type.IsSubclassOf(typeof(ClassObject)))
+                    includes.Add($"#include \"{type.Name}_Class.h\"");
+                else if (type.IsEnum)
+                    includes.Add($"#include \"{type.Name}_Enum.h\"");
+            };
+
+            GetProperties().ForEach(prop => addInclude(prop.PropertyType));
+            GetMethods().ForEach(method =>
+            {
+                addInclude(method.ReturnType);
+                method.GetParameters().ToList().ForEach(x => addInclude(x.ParameterType));
             });
 
             code.Add(includes.ToArray()).AddNewLine();
@@ -149,15 +156,13 @@ namespace JSBindTool.Core
                 else if(Target.BaseType != null)
                     scope.Add($"{Target.BaseType.Name}_wrap(ctx, obj_idx, instance);");
                 EmitProperties(scope);
+                EmitMethods(scope);
             });
         }
 
         protected virtual void EmitProperties(CodeBuilder code)
         {
-            Target.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public)
-                .Where(x => AnnotationUtils.IsValidProperty(x))
-                .ToList()
-                .ForEach(prop => EmitProperty(prop, code));
+            GetProperties().ForEach(prop => EmitProperty(prop, code));
         }
         protected virtual void EmitProperty(PropertyInfo prop, CodeBuilder code)
         {
@@ -214,6 +219,45 @@ namespace JSBindTool.Core
             code.Add($"duk_def_prop(ctx, obj_idx, {propFlags});");
         }
 
+        protected virtual void EmitMethods(CodeBuilder code)
+        {
+            GetMethods().ForEach(method => EmitMethod(method, code));
+        }
+        protected virtual void EmitMethod(MethodInfo method, CodeBuilder code)
+        {
+            string nativeName = AnnotationUtils.GetMethodNativeName(method);
+            code.Function(scope =>
+            {
+                scope
+                    .Add("duk_push_this(ctx);")
+                    .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(rbfx_get_instance(ctx, -1));")
+                    .Add("duk_pop(ctx);");
+                var parameters = method.GetParameters();
+
+                StringBuilder argsCall = new StringBuilder();
+                for(int i =0; i < parameters.Length; ++i)
+                {
+                    CodeUtils.EmitValueRead(parameters[i].ParameterType, $"arg{i}", i.ToString(), scope);
+                    argsCall.Append($"arg{i}");
+                    if (i < parameters.Length - 1)
+                        argsCall.Append(", ");
+                }
+
+                if(method.ReturnType == typeof(void))
+                {
+                    scope
+                        .Add($"instance->{nativeName}({argsCall});")
+                        .Add("return 0;");
+                }
+                else
+                {
+                    scope.Add($"{CodeUtils.GetNativeDeclaration(method.ReturnType)} result = instance->{nativeName}({argsCall});");
+                    CodeUtils.EmitValueWrite(method.ReturnType, "result", scope);
+                    scope.Add("return 1;");
+                }
+            }, method.GetParameters().Length.ToString());
+            code.Add($"duk_put_prop_string(ctx, obj_idx, \"{AnnotationUtils.GetMethodName(method)}\");");
+        }
 
         private List<PropertyInfo> GetProperties()
         {
@@ -221,6 +265,13 @@ namespace JSBindTool.Core
                 .Where(x => AnnotationUtils.IsValidProperty(x))
                 .ToList();
         }
+        private List<MethodInfo> GetMethods()
+        {
+            return Target.GetMethods(BindingFlags.Public | BindingFlags.DeclaredOnly | BindingFlags.Instance)
+                .Where(x => AnnotationUtils.IsValidMethod(x))
+                .ToList();
+        }
+
         public static ClassObject Create(Type type)
         {
             if (!type.IsSubclassOf(typeof(ClassObject)))

@@ -32,7 +32,7 @@ namespace JSBindTool.Bindings.UITypes
         [Method("AddChild")]
         public void AddChild(UIElement arg) { }
         [Method("GetColor")]
-        public void GetColor(Corner corner) { }
+        public Color GetColor(Corner corner) { return new Color(); }
         [Method("SetColor")]
         public void SetColor(Corner corner, Color color) { }
     }
