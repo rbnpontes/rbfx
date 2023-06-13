@@ -61,7 +61,11 @@ if (WIN32)
 endif ()
 
 if (NOT WIN32 OR MINGW)
-    target_compile_options(crnlib PRIVATE -O3 -fomit-frame-pointer -ffast-math -fno-math-errno -fno-strict-aliasing -Wall -Wno-unused-value -Wno-unused -march=core2)
+    set (CRNLIB_COMPILE_OPTIONS -O3 -fomit-frame-pointer -ffast-math -fno-math-errno -fno-strict-aliasing -Wall -Wno-unused-value -Wno-unused)
+    if(NOT APPLE AND NOT CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
+        list (APPEND CRNLIB_COMPILE_OPTIONS "-march=core2")
+    endif()
+    target_compile_options(crnlib PRIVATE ${CRNLIB_COMPILE_OPTIONS})
     target_link_libraries(crnlib pthread)
 endif ()
 

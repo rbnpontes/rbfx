@@ -35,6 +35,9 @@ const bool c_crnlib_big_endian_platform = !c_crnlib_little_endian_platform;
 #if CRNLIB_USE_WIN32_API
 #define CRNLIB_BREAKPOINT DebugBreak();
 #define CRNLIB_BUILTIN_EXPECT(c, v) c
+#elif defined(__aarch64__)
+#define CRNLIB_BREAKPOINT asm(".inst 0xd4200000");
+#define CRNLIB_BUILTIN_EXPECT(c, v) __builtin_expect(c, v)
 #elif defined(__GNUC__)
 #define CRNLIB_BREAKPOINT asm("int $3");
 #define CRNLIB_BUILTIN_EXPECT(c, v) __builtin_expect(c, v)
