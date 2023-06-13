@@ -25,7 +25,21 @@ namespace Urho3D
                 case DUK_TYPE_OBJECT:
                 {
                     duk_dup(ctx, i);
-                    output.append(duk_json_encode(ctx, -1));
+                    if (duk_is_error(ctx, -1)) {
+                        output.append(duk_safe_to_string(ctx, -1));
+
+                        if (duk_get_prop_string(ctx, -1, "stack"))
+                        {
+                            output.append("\n");
+                            output.append(duk_safe_to_string(ctx, -1));
+                        }
+
+                        duk_pop(ctx);
+                    }
+                    else
+                    {
+                        output.append(duk_json_encode(ctx, -1));
+                    }
                     duk_pop(ctx);
                 }
                     break;
