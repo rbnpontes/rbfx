@@ -36,63 +36,23 @@ namespace JSBindTool.Core
         {
             string typeName = Target.Name;
             HashSet<string> includes = new HashSet<string>();
-            includes.Add($"{Target.Name}_Class.h");
+            includes.Add($"#include \"{Target.Name}_Class.h\"");
             if (Target.BaseType != null && Target.BaseType != typeof(ClassObject))
-                includes.Add($"{Target.BaseType.Name}_Class.h");
-            includes.Add("Urho3D/JavaScript/JavaScriptSystem.h");
-            includes.Add("Urho3D/JavaScript/JavaScriptOperations.h");
-            Action<Type> addInclude = (type) =>
-            {
-                AnnotationUtils
-                    .GetIncludes(type)
-                    .ForEach(x =>
-                    {
-                        if (!includes.Contains(x))
-                            includes.Add(x);
-                    });
-                if(type.IsSubclassOf(typeof(ClassObject)))
-                {
-                    string include = $"{type.Name}_Class.h";
-                    if (!includes.Contains(include))
-                        includes.Add(include);
-                }
-                else if (type.IsSubclassOf(typeof(PrimitiveObject)))
-                {
-                    string include = $"{type.Name}_Primitive.h";
-                    if (!includes.Contains(include))
-                        includes.Add(include);
-                }
-            };
-            // collect binding dependency
-            Target.GetProperties(BindingFlags.DeclaredOnly)
-                .ToList()
-                .ForEach(prop =>
-                {
-                    addInclude(prop.PropertyType);
-                });
-            Target.GetFields(BindingFlags.DeclaredOnly)
-                .Where(x => !AnnotationUtils.IsIgnored(x))
-                .ToList()
-                .ForEach(field =>
-                {
-                    addInclude(field.FieldType);
-                });
-            Target.GetMethods(BindingFlags.DeclaredOnly)
-                .Where(x => AnnotationUtils.IsValidMethod(x))
-                .ToList()
-                .ForEach(method =>
-                {
-                    method.GetParameters().ToList().ForEach(x => addInclude(x.ParameterType));
-                    addInclude(method.ReturnType);
-                });
+                includes.Add($"#include \"{Target.BaseType.Name}_Class.h\"");
+            includes.Add("#include <Urho3D/JavaScript/JavaScriptSystem.h>");
+            includes.Add("#include <Urho3D/JavaScript/JavaScriptOperations.h>");
 
-            includes.ToList().ForEach(include =>
+            GetProperties().ForEach(prop =>
             {
-                if (include.EndsWith("_Primitive.h") || include.EndsWith("_Class.h"))
-                    code.Add($"#include \"{include}\"");
-                else
-                    code.Add($"#include <{include}>");
+                if (prop.PropertyType.IsSubclassOf(typeof(PrimitiveObject)))
+                    includes.Add($"#include \"{prop.PropertyType.Name}_Primitive.h\"");
+                else if (prop.PropertyType.IsSubclassOf(typeof(ClassObject)))
+                    includes.Add($"#include \"{prop.PropertyType.Name}_Class.h\"");
+                else if (prop.PropertyType.IsEnum)
+                    includes.Add($"#include \"{prop.PropertyType.Name}_Enum.h\"");
             });
+
+            code.Add(includes.ToArray()).AddNewLine();
         }
 
         public virtual void EmitSource(CodeBuilder code)
@@ -248,6 +208,13 @@ namespace JSBindTool.Core
             code.Add($"duk_def_prop(ctx, obj_idx, {propFlags});");
         }
 
+
+        private List<PropertyInfo> GetProperties()
+        {
+            return Target.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public)
+                .Where(x => AnnotationUtils.IsValidProperty(x))
+                .ToList();
+        }
         public static ClassObject Create(Type type)
         {
             if (!type.IsSubclassOf(typeof(ClassObject)))
