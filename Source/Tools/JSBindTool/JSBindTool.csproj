@@ -9,6 +9,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="Bindings\SceneTypes\Component.cs" />
+        <Compile Include="Bindings\SceneTypes\Enums.cs" />
         <Compile Include="Core\Annotations\FieldAttribute.cs" />
         <Compile Include="Core\Annotations\MethodAttribute.cs" />
         <Compile Include="Core\ClassObject.cs" />

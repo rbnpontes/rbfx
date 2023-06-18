@@ -62,7 +62,8 @@ namespace JSBindTool.Core
         }
         public static string GetJSPropertyName(PropertyInfo prop)
         {
-            string propName = GetPropertyMap(prop).GetterName ?? prop.Name;
+            var attr = prop.GetCustomAttribute<PropertyNameAttribute>();
+            string propName = attr?.Name ?? prop.Name;
             propName = propName.Replace("Get", string.Empty).Replace("Set", string.Empty);
             return propName;
         }

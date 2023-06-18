@@ -14,7 +14,7 @@ namespace JSBindTool.Bindings.UITypes
     public class UIElement : Animatable
     {
         [PropertyMap("IsEnabled", "SetEnabled")]
-        public bool IsEnabled { get; set; }
+        public bool Enabled { get; set; }
         [PropertyMap("GetName", "SetName")]
         public string Name { get; set; } = string.Empty;
         [PropertyMap("GetChildren")]
