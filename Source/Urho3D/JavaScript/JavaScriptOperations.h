@@ -28,6 +28,8 @@
 
 #define JS_OBJECT_HEAPPTR_PROP "heapptr"
 #define JS_OBJ_HIDDEN_WRAP_CALL DUK_HIDDEN_SYMBOL("__wrapcall")
+#define JS_PROP_STRONG_REFS "__refs"
+
 namespace Urho3D
 {
     // This file is a set of operations used by the Binding and JavaScript api
@@ -70,4 +72,25 @@ namespace Urho3D
     /// remove heapptr from global stash, this usually called after object destruction
     /// @}
     URHO3D_API void rbfx_unlock_heapptr(duk_context* ctx, void* heapptr);
+
+    struct ScriptEventCallDesc
+    {
+        Object* instance_;
+        StringHash eventType_;
+        VariantMap& eventArgs_;
+    };
+    /// @{
+    /// call javascript event handler. this method is called when JS subscribes to event.
+    /// @}
+    URHO3D_API void rbfx_call_event(duk_context* ctx, const ScriptEventCallDesc& evtCall);
+    /// @{
+    /// move heapptr reference to global stash
+    /// making reference strong and not collectable from GC
+    /// @}
+    URHO3D_API void rbfx_make_strong(duk_context* ctx, void* heapptr);
+    /// @{
+    /// remove heapptr reference from global stash
+    /// making reference weak and collectable from GC
+    /// @}
+    URHO3D_API void rbfx_make_weak(duk_context* ctx, void* heapptr);
 }

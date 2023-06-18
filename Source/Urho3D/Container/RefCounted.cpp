@@ -33,6 +33,7 @@
 #endif
 #if URHO3D_JS
 #   include "../JavaScript/JavaScriptSystem.h"
+#   include "../JavaScript/JavaScriptOperations.h"
 #endif
 
 namespace Urho3D
@@ -103,6 +104,11 @@ int RefCounted::AddRef()
         scriptObject_ = api->RecreateGCHandle(scriptObject_, true);
     }
 #endif
+
+#if URHO3D_JS
+    if (refs > 1 && jsHeapptr_)
+        rbfx_make_strong(static_cast<duk_context*>(JavaScriptSystem::GetJSCtx()), jsHeapptr_);
+#endif
     return refs;
 }
 
@@ -127,8 +133,12 @@ int RefCounted::ReleaseRef()
     }
 #else
 #ifdef URHO3D_JS
-    JavaScriptSystem::ReleaseHeapptr(jsHeapptr_);
-    jsHeapptr_ = nullptr;
+    if (refs == 1 && jsHeapptr_)
+        rbfx_make_weak(static_cast<duk_context*>(JavaScriptSystem::GetJSCtx()), jsHeapptr_);
+    if (refs == 0) {
+        JavaScriptSystem::ReleaseHeapptr(jsHeapptr_);
+        jsHeapptr_ = nullptr;
+    }
 #endif
 
     if (refs == 0)
@@ -170,7 +180,7 @@ void RefCounted::ResetScriptObject()
 #if URHO3D_JS
 void RefCounted::SetJSHeapptr(void* heapptr)
 {
-    jsHeapptr_ = nullptr;
+    jsHeapptr_ = heapptr;
 }
 #endif
 }

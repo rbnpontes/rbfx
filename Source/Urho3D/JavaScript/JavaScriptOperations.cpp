@@ -4,6 +4,8 @@
 #include "../Container/Hash.h"
 
 #define JS_OBJ_HIDDEN_PTR DUK_HIDDEN_SYMBOL("__ptr")
+#define JS_OBJ_HIDDEN_EVENT_TABLE DUK_HIDDEN_SYMBOL("__events")
+
 namespace Urho3D
 {
     StringHash g_ref_counted_type   = StringHash("RefCounted");
@@ -502,6 +504,46 @@ namespace Urho3D
             return 1;
         }, 1);
         duk_def_prop(ctx, obj_idx, DUK_DEFPROP_HAVE_GETTER | DUK_DEFPROP_HAVE_ENUMERABLE);
+        // setup subscribeToEvent call
+        duk_push_c_function(ctx, [](duk_context* ctx) {
+            StringHash eventType = rbfx_require_string_hash(ctx, 0);
+            duk_require_function(ctx, 1);
+
+            duk_push_this(ctx);
+            duk_get_prop_string(ctx, -1, JS_OBJ_HIDDEN_EVENT_TABLE);
+            if (duk_get_prop_index(ctx, -1, eventType.Value()))
+            {
+                duk_dup(ctx, 1);
+                // store callback into table. note: use callback address as key
+                duk_put_prop_index(ctx, -2, (duk_uarridx_t)duk_get_heapptr(ctx, -1));
+                return 0;
+            }
+
+            duk_pop(ctx);
+
+            duk_push_object(ctx);
+            duk_dup(ctx, 1);
+            duk_put_prop_index(ctx, -2, (duk_uarridx_t)duk_get_heapptr(ctx, -1));
+            duk_put_prop_index(ctx, -2, eventType.Value());
+
+            duk_push_this(ctx);
+
+            // listen to event
+            Object* instance = static_cast<Object*>(rbfx_get_instance(ctx, duk_get_top(ctx) - 1));
+            instance->SubscribeToEvent(eventType, [=](Object* obj, StringHash evtType, VariantMap& evtArgs) {
+                ScriptEventCallDesc desc{
+                    instance,
+                    evtType,
+                    evtArgs
+                };
+                rbfx_call_event(ctx, desc);
+            });
+            return 0;
+        }, 2);
+        duk_put_prop_string(ctx, obj_idx, "subscribeToEvent");
+        // setup event table
+        duk_push_object(ctx);
+        duk_put_prop_string(ctx, obj_idx, JS_OBJ_HIDDEN_EVENT_TABLE);
     }
     RefCounted* rbfx_get_instance(duk_context* ctx, duk_idx_t obj_idx)
     {
@@ -565,5 +607,52 @@ namespace Urho3D
         duk_del_prop_index(ctx, -1, MakeHash(heapptr));
 
         duk_pop_2(ctx);
+    }
+    void rbfx_call_event(duk_context* ctx, const ScriptEventCallDesc& evtCall)
+    {
+        if (!evtCall.instance_->GetJSHeapptr())
+            return;
+
+        duk_idx_t thisIdx = duk_get_top(ctx);
+        duk_push_heapptr(ctx, evtCall.instance_->GetJSHeapptr());
+
+        if (!duk_get_prop_string(ctx, -1, JS_OBJ_HIDDEN_EVENT_TABLE))
+            return;
+        if (!duk_get_prop_index(ctx, -1, evtCall.eventType_.Value()))
+            return;
+
+        duk_idx_t eventsIdx = duk_get_top(ctx);
+        duk_enum(ctx, -1, 0);
+        while (duk_next(ctx, eventsIdx, 1))
+        {
+            // [this]
+            duk_dup(ctx, thisIdx);
+            // [this, event type]
+            duk_push_uint(ctx, evtCall.eventType_.Value());
+            // [this, event type, event args]
+            rbfx_push_variant(ctx, evtCall.eventArgs_);
+            // final result must be like: this.eventCall(eventType, eventArgs)
+            duk_call_method(ctx, 2);
+        }
+        // Reset stack, this prevent unexpected issues
+        duk_pop_n(ctx, duk_get_top(ctx) - thisIdx);
+    }
+    void rbfx_make_strong(duk_context* ctx, void* heapptr)
+    {
+        if (!heapptr) return;
+
+        duk_push_global_stash(ctx);
+        duk_get_prop_string(ctx, -1, JS_PROP_STRONG_REFS);
+        duk_push_heapptr(ctx, heapptr);
+        duk_put_prop_index(ctx, -2, (duk_uarridx_t)heapptr);
+    }
+    void rbfx_make_weak(duk_context* ctx, void* heapptr)
+    {
+        if (!heapptr) return;
+
+        duk_push_global_stash(ctx);
+        duk_get_prop_string(ctx, -1, JS_PROP_STRONG_REFS);
+        duk_push_null(ctx);
+        duk_put_prop_index(ctx, -2, (duk_uarridx_t)heapptr);
     }
 }

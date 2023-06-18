@@ -73,10 +73,13 @@ namespace Urho3D
         duk_context* ctx = duk_create_heap(nullptr, nullptr, nullptr, nullptr, HandleFatalError);
         dukCtx_ = ctx;
 
-        // create heapptr global stash object
         duk_push_global_stash(ctx);
+        // heapptr table
         duk_push_object(ctx);
         duk_put_prop_string(ctx, -2, JS_OBJECT_HEAPPTR_PROP);
+        // strong ref table
+        duk_push_object(ctx);
+        duk_put_prop_string(ctx, -2, JS_PROP_STRONG_REFS);
         duk_pop(ctx);
 
         JavaScript_SetupLogger(ctx);
