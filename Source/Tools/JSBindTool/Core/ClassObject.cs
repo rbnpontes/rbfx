@@ -27,8 +27,7 @@ namespace JSBindTool.Core
         public virtual void EmitHeaderSignatures(CodeBuilder code)
         {
             code.Add($"void {Target.Name}_setup(duk_context* ctx);");
-            if (!AnnotationUtils.IsAbstract(Target))
-                code.Add($"duk_idx_t {Target.Name}_ctor(duk_context* ctx);");
+            code.Add($"duk_idx_t {Target.Name}_ctor(duk_context* ctx);");
             code.Add($"void {Target.Name}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance);");
         }
 
@@ -63,8 +62,7 @@ namespace JSBindTool.Core
         public virtual void EmitSource(CodeBuilder code)
         {
             EmitSourceSetup(code);
-            if(!AnnotationUtils.IsAbstract(Target))
-                EmitSourceConstructor(code);
+            EmitSourceConstructor(code);
             EmitSourceWrap(code);
         }
 
@@ -73,7 +71,14 @@ namespace JSBindTool.Core
             code.Add($"void {Target.Name}_setup(duk_context* ctx)");
             code.Scope(scope =>
             {
-                if(!AnnotationUtils.IsAbstract(Target))
+                // Abstract methods must generate as wrapper instead of constructor like
+                if(AnnotationUtils.IsAbstract(Target))
+                {
+                    scope
+                        .Add($"duk_push_c_function(ctx, {Target.Name}_ctor, 1);")
+                        .Add($"duk_put_global_string(ctx, \"{AnnotationUtils.GetTypeName(Target)}\");");
+                }
+                else
                 {
                     scope
                         .Add($"duk_push_c_function(ctx, {Target.Name}_ctor, DUK_VARARGS);")
@@ -86,62 +91,74 @@ namespace JSBindTool.Core
             code.Add($"duk_idx_t {Target.Name}_ctor(duk_context* ctx)");
             code.Scope(scope =>
             {
-                scope.Add("if (!duk_is_constructor_call(ctx))");
-                scope.Scope(ifScope =>
+                if (AnnotationUtils.IsAbstract(Target))
                 {
-                    ifScope.Add("duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid constructor call. must call with 'new' keyword.\");");
-                    ifScope.Add("return duk_throw(ctx);");
-                }).AddNewLine();
-
-                scope.Add($"{AnnotationUtils.GetTypeName(Target)}* instance = nullptr;");
-                scope.Add("duk_idx_t obj_idx = duk_get_top(ctx);");
-                scope.Add("if(obj_idx > 1)");
-                scope.Scope(ifScope =>
+                    // generate wrapper code for abstract classes
+                    scope
+                        .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(duk_require_pointer(ctx, 0));")
+                        .Add($"duk_push_this(ctx);")
+                        .Add($"{Target.Name}_wrap(ctx, duk_get_top(ctx) - 1, instance);")
+                        .Add("return 1;");
+                }
+                else
                 {
-                    ifScope.Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid '{AnnotationUtils.GetTypeName(Target)}' constructor call.\");");
-                    ifScope.Add("return duk_throw(ctx);");
-                }).AddNewLine();
-
-
-                scope.Add("duk_push_this(ctx);");
-                scope.Add("// if has argument, the first argument must be a pointer to Object*");
-                scope.Add("if(obj_idx == 0)");
-                scope.Scope(ifScope => ifScope.Add($"instance = new {AnnotationUtils.GetTypeName(Target)}(JavaScriptSystem::GetContext());"));
-                scope.Add("else");
-                scope.Scope(ifScope =>
-                {
-                    ifScope.Add($"instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(duk_require_pointer(ctx, 0));");
-                    ifScope.Add("if(!instance)");
-                    ifScope.Scope(nestedIfScope =>
+                    scope.Add("if (!duk_is_constructor_call(ctx))");
+                    scope.Scope(ifScope =>
                     {
-                        nestedIfScope.Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"pointer argument is null\");");
-                        nestedIfScope.Add("return duk_throw(ctx);");
-                    });
-                }).AddNewLine();
+                        ifScope.Add("duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid constructor call. must call with 'new' keyword.\");");
+                        ifScope.Add("return duk_throw(ctx);");
+                    }).AddNewLine();
 
-                scope.Add("void* heapptr = instance->GetJSHeapptr();");
-                scope.Add("if(rbfx_is_valid_heapptr(ctx, heapptr))");
-                scope.Scope(ifScope =>
-                {
-                    ifScope.Add("duk_push_heapptr(ctx, heapptr);");
-                    ifScope.Add($"{Target.Name}_wrap(ctx, duk_get_top(ctx) - 1, instance);");
-                    ifScope.Add("return 1;");
-                }).AddNewLine();
+                    scope.Add($"{AnnotationUtils.GetTypeName(Target)}* instance = nullptr;");
+                    scope.Add("duk_idx_t obj_idx = duk_get_top(ctx);");
+                    scope.Add("if(obj_idx > 1)");
+                    scope.Scope(ifScope =>
+                    {
+                        ifScope.Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid '{AnnotationUtils.GetTypeName(Target)}' constructor call.\");");
+                        ifScope.Add("return duk_throw(ctx);");
+                    }).AddNewLine();
 
-                scope.Add(
-                    "heapptr = duk_get_heapptr(ctx, obj_idx);",
-                    "instance->SetJSHeapptr(heapptr);",
-                    "instance->AddRef();",
-                    "rbfx_lock_heapptr(ctx, heapptr);"
-                ).AddNewLine();
 
-                scope.Add(
-                    $"{Target.Name}_wrap(ctx, obj_idx, instance);",
-                    "rbfx_set_finalizer(ctx, obj_idx, instance);"
-                ).AddNewLine();
+                    scope.Add("duk_push_this(ctx);");
+                    scope.Add("// if has argument, the first argument must be a pointer to Object*");
+                    scope.Add("if(obj_idx == 0)");
+                    scope.Scope(ifScope => ifScope.Add($"instance = new {AnnotationUtils.GetTypeName(Target)}(JavaScriptSystem::GetContext());"));
+                    scope.Add("else");
+                    scope.Scope(ifScope =>
+                    {
+                        ifScope.Add($"instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(duk_require_pointer(ctx, 0));");
+                        ifScope.Add("if(!instance)");
+                        ifScope.Scope(nestedIfScope =>
+                        {
+                            nestedIfScope.Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"pointer argument is null\");");
+                            nestedIfScope.Add("return duk_throw(ctx);");
+                        });
+                    }).AddNewLine();
 
-                scope.Add("duk_push_this(ctx);");
-                scope.Add("return 1;");
+                    scope.Add("void* heapptr = instance->GetJSHeapptr();");
+                    scope.Add("if(rbfx_is_valid_heapptr(ctx, heapptr))");
+                    scope.Scope(ifScope =>
+                    {
+                        ifScope.Add("duk_push_heapptr(ctx, heapptr);");
+                        ifScope.Add($"{Target.Name}_wrap(ctx, duk_get_top(ctx) - 1, instance);");
+                        ifScope.Add("return 1;");
+                    }).AddNewLine();
+
+                    scope.Add(
+                        "heapptr = duk_get_heapptr(ctx, obj_idx);",
+                        "instance->SetJSHeapptr(heapptr);",
+                        "instance->AddRef();",
+                        "rbfx_lock_heapptr(ctx, heapptr);"
+                    ).AddNewLine();
+
+                    scope.Add(
+                        $"{Target.Name}_wrap(ctx, obj_idx, instance);",
+                        "rbfx_set_finalizer(ctx, obj_idx, instance);"
+                    ).AddNewLine();
+
+                    scope.Add("duk_push_this(ctx);");
+                    scope.Add("return 1;");
+                }
             });
         }
         protected virtual void EmitSourceWrap(CodeBuilder code)
