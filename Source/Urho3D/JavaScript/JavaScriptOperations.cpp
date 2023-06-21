@@ -618,11 +618,18 @@ namespace Urho3D
 
         if (!duk_get_prop_string(ctx, -1, JS_OBJ_HIDDEN_EVENT_TABLE))
             return;
+
+        duk_idx_t eventTableIdx = duk_get_top(ctx);
         if (!duk_get_prop_index(ctx, -1, evtCall.eventType_.Value()))
             return;
 
+
+        duk_idx_t evtArgsIdx = duk_get_top(ctx);
+        // push variant inside loop is slow, instead we just dup stack position into.
+        rbfx_push_variant(ctx, evtCall.eventArgs_);
+
         duk_idx_t eventsIdx = duk_get_top(ctx);
-        duk_enum(ctx, -1, 0);
+        duk_enum(ctx, eventTableIdx, 0);
         while (duk_next(ctx, eventsIdx, 1))
         {
             // [this]
@@ -630,7 +637,7 @@ namespace Urho3D
             // [this, event type]
             duk_push_uint(ctx, evtCall.eventType_.Value());
             // [this, event type, event args]
-            rbfx_push_variant(ctx, evtCall.eventArgs_);
+            duk_dup(ctx, evtArgsIdx);
             // final result must be like: this.eventCall(eventType, eventArgs)
             duk_call_method(ctx, 2);
         }
