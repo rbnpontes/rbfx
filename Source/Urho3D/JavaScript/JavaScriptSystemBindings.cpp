@@ -192,7 +192,6 @@ namespace Urho3D
         duk_put_prop_string(ctx, -2, "registerComponent");
 
         duk_put_global_string(ctx, "rbfx");
-        duk_pop(ctx);
 
         // setup factories stash table
         duk_push_global_stash(ctx);

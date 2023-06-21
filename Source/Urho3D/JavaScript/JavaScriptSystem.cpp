@@ -62,6 +62,7 @@ namespace Urho3D
     }
     void JavaScriptSystem::HandleFatalError(void* udata, const char* msg)
     {
+        URHO3D_ASSERTLOG(instance_, "must initializes JavaScriptSystem first.");
         ea::string errMsg(msg == nullptr ? "No message" : msg);
         URHO3D_LOGERROR("**FATAL ERROR** {}", errMsg);
         instance_->StopJS();
