@@ -9,9 +9,35 @@
 #include "JavaScriptProfiler.h"
 
 #include <duktape/duktape.h>
+#include <duktape/duk_internal.h>
+
+#if URHO3D_PROFILING
+#include <tracy/Tracy.hpp>
+#endif
 
 namespace Urho3D
 {
+#if URHO3D_PROFILING
+    void* JS_Alloc(void* udata, duk_size_t size)
+    {
+        void* data = duk_default_alloc_function(udata, size);
+        TracyAlloc(data, size);
+        return data;
+    }
+    void* JS_ReAlloc(void* udata, void* ptr, duk_size_t size)
+    {
+        TracyFree(ptr);
+        void* data = duk_default_realloc_function(udata, ptr, size);
+        TracyAlloc(data, size);
+        return data;
+    }
+    void JS_Free(void* udata, void* ptr)
+    {
+        duk_default_free_function(udata, ptr);
+        TracyFree(ptr);
+    }
+#endif
+
     JavaScriptSystem* JavaScriptSystem::instance_ = nullptr;
     JavaScriptSystem::JavaScriptSystem(Context* context) :
         Object(context),
@@ -72,7 +98,17 @@ namespace Urho3D
     {
         if (dukCtx_) return;
 
-        duk_context* ctx = duk_create_heap(nullptr, nullptr, nullptr, nullptr, HandleFatalError);
+        duk_alloc_function allocFn = nullptr;
+        duk_realloc_function reallocFn = nullptr;
+        duk_free_function freeFn = nullptr;
+
+#if URHO3D_PROFILING
+        allocFn = JS_Alloc;
+        reallocFn = JS_ReAlloc;
+        freeFn = JS_Free;
+#endif
+
+        duk_context* ctx = duk_create_heap(allocFn, reallocFn, freeFn, nullptr, HandleFatalError);
         dukCtx_ = ctx;
 
         duk_push_global_stash(ctx);
