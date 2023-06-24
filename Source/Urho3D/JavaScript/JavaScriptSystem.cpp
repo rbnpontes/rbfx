@@ -6,6 +6,7 @@
 #include "JavaScriptSystemBindings.h"
 #include "JavaScriptEvents.h"
 #include "JavaScriptOperations.h"
+#include "JavaScriptProfiler.h"
 
 #include <duktape/duktape.h>
 
@@ -85,6 +86,7 @@ namespace Urho3D
 
         JavaScript_SetupLogger(ctx);
         JavaScript_SetupSystemBindings(ctx);
+        JavaScript_SetupProfilerBindings(ctx);
 
         VariantMap args;
         args[JavaScriptSetup::P_DUKCTX] = ctx;
