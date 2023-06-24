@@ -119,14 +119,14 @@ namespace Urho3D
         duk_push_pointer(ctx, typeInfo);
         duk_put_prop_string(ctx, -2, JS_HIDDEN_COMPONENT_TYPE);
 
-        duk_push_c_function(ctx, [](duk_context* ctx) {
+        duk_push_c_lightfunc(ctx, [](duk_context* ctx) {
             duk_push_current_function(ctx);
             if (duk_get_prop_string(ctx, -1, JS_HIDDEN_COMPONENT_TYPE)) {
                 TypeInfo* typeInfo = static_cast<TypeInfo*>(duk_get_pointer(ctx, -1));
                 delete typeInfo;
             }
             return 0;
-        }, 0);
+        }, 0, 0, 0);
         duk_push_pointer(ctx, typeInfo);
         duk_put_prop_string(ctx, -2, JS_HIDDEN_COMPONENT_TYPE);
         duk_set_finalizer(ctx, -2);
@@ -182,13 +182,13 @@ namespace Urho3D
     {
         duk_push_object(ctx);
 
-        duk_push_c_function(ctx, GetSubsystem_Call, 1);
+        duk_push_c_lightfunc(ctx, GetSubsystem_Call, 2, 2, 0);
         duk_put_prop_string(ctx, -2, "getSubsystem");
 
-        duk_push_c_function(ctx, ComponentWrap_Call, 2);
+        duk_push_c_lightfunc(ctx, ComponentWrap_Call, 2, 2, 0);
         duk_put_prop_string(ctx, -2, "component");
 
-        duk_push_c_function(ctx, ComponentRegister_Call, 1);
+        duk_push_c_lightfunc(ctx, ComponentRegister_Call, 2, 2, 0);
         duk_put_prop_string(ctx, -2, "registerComponent");
 
         duk_put_global_string(ctx, "rbfx");

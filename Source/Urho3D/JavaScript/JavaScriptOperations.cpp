@@ -505,7 +505,7 @@ namespace Urho3D
         }, 1);
         duk_def_prop(ctx, obj_idx, DUK_DEFPROP_HAVE_GETTER | DUK_DEFPROP_HAVE_ENUMERABLE);
         // setup subscribeToEvent call
-        duk_push_c_function(ctx, [](duk_context* ctx) {
+        duk_push_c_lightfunc(ctx, [](duk_context* ctx) {
             StringHash eventType = rbfx_require_string_hash(ctx, 0);
             duk_require_function(ctx, 1);
 
@@ -539,7 +539,7 @@ namespace Urho3D
                 rbfx_call_event(ctx, desc);
             });
             return 0;
-        }, 2);
+        }, 2, 2, 0);
         duk_put_prop_string(ctx, obj_idx, "subscribeToEvent");
         // setup event table
         duk_push_object(ctx);
@@ -610,6 +610,7 @@ namespace Urho3D
     }
     void rbfx_call_event(duk_context* ctx, const ScriptEventCallDesc& evtCall)
     {
+        URHO3D_PROFILE("rbfx_call_event");
         if (!evtCall.instance_->GetJSHeapptr())
             return;
 
