@@ -119,14 +119,14 @@ namespace Urho3D
         duk_push_pointer(ctx, typeInfo);
         duk_put_prop_string(ctx, -2, JS_HIDDEN_COMPONENT_TYPE);
 
-        duk_push_c_lightfunc(ctx, [](duk_context* ctx) {
+        duk_push_c_function(ctx, [](duk_context* ctx) {
             duk_push_current_function(ctx);
             if (duk_get_prop_string(ctx, -1, JS_HIDDEN_COMPONENT_TYPE)) {
                 TypeInfo* typeInfo = static_cast<TypeInfo*>(duk_get_pointer(ctx, -1));
                 delete typeInfo;
             }
             return 0;
-        }, 0, 0, 0);
+        }, 0);
         duk_push_pointer(ctx, typeInfo);
         duk_put_prop_string(ctx, -2, JS_HIDDEN_COMPONENT_TYPE);
         duk_set_finalizer(ctx, -2);
