@@ -37,6 +37,11 @@ namespace JSBindTool.Core
         {
             code.Add($"{Target.Name} {Target.Name}_resolve(duk_context* ctx, duk_idx_t stack_idx);");
         }
+        public virtual void EmitSetSignature(CodeBuilder code)
+        {
+            code.Add($"void {Target.Name}_set(duk_context* ctx, duk_idx_t obj_idx, const {AnnotationUtils.GetTypeName(Target)}& target);");
+        }
+
         public virtual void EmitConstructorSignature(CodeBuilder code)
         {
             code.Add($"duk_idx_t {Target.Name}_constructor(duk_context* ctx);");
@@ -82,6 +87,22 @@ namespace JSBindTool.Core
                 resolveScope.Add("return result;");
             });
         }
+        public virtual void EmitSetSource(CodeBuilder code)
+        {
+            code
+                .Add($"void {Target.Name}_set(duk_context* ctx, duk_idx_t obj_idx, const {AnnotationUtils.GetTypeName(Target)}& target)")
+                .Scope(scope =>
+                {
+                    CollectVariables().ForEach(vary =>
+                    {
+                        scope.Scope(writeScope =>
+                        {
+                            CodeUtils.EmitValueWrite(vary.Type, $"target.{vary.NativeName}", writeScope);
+                            writeScope.Add($"duk_put_prop_string(ctx, obj_idx, \"{vary.JSName}\");");
+                        });
+                    });
+                });
+        }
         public virtual void EmitConstructorSource(CodeBuilder code)
         {
             code.Add($"duk_idx_t {Target.Name}_constructor(duk_context* ctx)");
@@ -105,14 +126,9 @@ namespace JSBindTool.Core
                     "duk_push_this(ctx);",
                     "duk_idx_t this_idx = duk_get_top(ctx) - 1;"
                 ).AddNewLine();
-                CollectVariables().ForEach(vary =>
-                {
-                    ctorScope.Scope(writeScope =>
-                    {
-                        CodeUtils.EmitValueWrite(vary.Type, $"instance.{vary.NativeName}", writeScope);
-                        writeScope.Add($"duk_put_prop_string(ctx, this_idx, \"{vary.JSName}\");");
-                    });
-                });
+
+                ctorScope
+                    .Add($"{Target.Name}_set(ctx, this_idx, instance);");
 
                 ctorScope.AddNewLine();
 
@@ -168,7 +184,6 @@ namespace JSBindTool.Core
             code.Add($"{Target.Name}_push(ctx, Color::{fieldAttr.NativeName});");
             code.Add($"duk_put_prop_string(ctx, {accessor}, \"{fieldAttr.JSName}\");");
         }
-
 
         private void EmitObjectRead(CodeBuilder code, string accessor)
         {
@@ -251,6 +266,8 @@ namespace JSBindTool.Core
                 if(method.ReturnType == typeof(void))
                 {
                     scope.Add($"value.{nativeName}({argsCall});");
+                    // when return type is void, must update JS properties instead.
+
                     scope.Add("return 0;");
                 }
                 else
@@ -262,6 +279,7 @@ namespace JSBindTool.Core
             }, method.GetParameters().Length.ToString());
             code.Add($"duk_put_prop_string(ctx, this_idx, \"{AnnotationUtils.GetMethodName(method)}\");");
         }
+
         private List<Variable> CollectVariables()
         {
             List<Variable> variables = new List<Variable>();

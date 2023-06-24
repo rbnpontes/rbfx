@@ -27,8 +27,9 @@ namespace JSBindTool.Core
             code.Namespace("Urho3D", signatures =>
             {
                 obj.EmitResolveSignature(signatures);
+                obj.EmitSetSignature(signatures);
                 obj.EmitConstructorSignature(signatures);
-                obj.EmitConstructorSignature(signatures);
+                obj.EmitPushSignature(signatures);
                 obj.EmitSetupSignature(signatures);
             });
 
@@ -49,6 +50,7 @@ namespace JSBindTool.Core
             code.Namespace("Urho3D", source =>
             {
                 obj.EmitResolveSource(source);
+                obj.EmitSetSource(source);
                 obj.EmitConstructorSource(source);
                 obj.EmitPushSource(source);
                 obj.EmitSetupSetupSource(source);
