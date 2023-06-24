@@ -267,7 +267,8 @@ namespace JSBindTool.Core
                 {
                     scope.Add($"value.{nativeName}({argsCall});");
                     // when return type is void, must update JS properties instead.
-
+                    scope.Add("duk_push_this(ctx);");
+                    scope.Add($"{Target.Name}_set(ctx, duk_get_top(ctx) - 1, value);");
                     scope.Add("return 0;");
                 }
                 else
