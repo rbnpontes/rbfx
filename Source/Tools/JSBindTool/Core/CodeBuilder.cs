@@ -83,6 +83,18 @@ namespace JSBindTool.Core
 
             return this;
         }
+        public CodeBuilder LightFunction(Action<CodeBuilder> body, string args)
+        {
+            CodeBuilder scope = new CodeBuilder();
+            body(scope);
+
+            Add("duk_push_c_lightfunc(ctx, [](duk_context* ctx)");
+            Add("{");
+            Add(scope);
+            Add($"}}, {args}, {args}, 0);");
+
+            return this;
+        }
 
         public CodeBuilder Clear()
         {

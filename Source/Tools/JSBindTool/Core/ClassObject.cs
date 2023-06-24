@@ -190,7 +190,7 @@ namespace JSBindTool.Core
             var attr = AnnotationUtils.GetPropertyMap(prop);
             if(prop.GetMethod != null && !string.IsNullOrEmpty(attr.GetterName))
             {
-                code.Function(getterScope =>
+                code.LightFunction(getterScope =>
                 {
                     getterScope.Add(
                         "duk_push_this(ctx);",
@@ -207,7 +207,7 @@ namespace JSBindTool.Core
             }
             if(prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName))
             {
-                code.Function(setterScope =>
+                code.LightFunction(setterScope =>
                 {
                     setterScope.Add(
                         "duk_push_this(ctx);",
@@ -241,7 +241,7 @@ namespace JSBindTool.Core
         protected virtual void EmitMethod(MethodInfo method, CodeBuilder code)
         {
             string nativeName = AnnotationUtils.GetMethodNativeName(method);
-            code.Function(scope =>
+            code.LightFunction(scope =>
             {
                 scope
                     .Add("duk_push_this(ctx);")

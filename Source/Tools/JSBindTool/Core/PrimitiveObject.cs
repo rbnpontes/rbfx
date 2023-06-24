@@ -218,7 +218,7 @@ namespace JSBindTool.Core
         }
         private void EmitOperatorMethod(string methodName, string operatorSignal, CodeBuilder code)
         {
-            code.Function(scope =>
+            code.LightFunction(scope =>
             {
                 scope.Add("duk_push_this(ctx);");
                 scope.Add($"{AnnotationUtils.GetTypeName(Target)} value = {Target.Name}_resolve(ctx, 0);");
@@ -247,7 +247,7 @@ namespace JSBindTool.Core
         private void EmitMethod(MethodInfo method, CodeBuilder code)
         {
             string nativeName = AnnotationUtils.GetMethodNativeName(method);
-            code.Function(scope =>
+            code.LightFunction(scope =>
             {
                 scope.Add("duk_push_this(ctx);");
                 scope.Add($"{AnnotationUtils.GetTypeName(Target)} value = {Target.Name}_resolve(ctx, -1);");
