@@ -8,84 +8,141 @@
 
 namespace Urho3D
 {
+#define JS_BEGIN(ctx) \
+    duk_idx_t __top = duk_get_top(ctx);
+#define JS_END(ctx) \
+    duk_pop_n(ctx, duk_get_top(ctx) - __top);
+
     JavaScriptComponent::JavaScriptComponent(Context* context) :
         Component(context) {}
+
+    void JavaScriptComponent::SetProperty(const ea::string& key, const Variant& value)
+    {
+        duk_context* ctx = static_cast<duk_context*>(JavaScriptSystem::GetDukCtx());
+        JS_BEGIN(ctx)
+        {
+            if (GetJSProperty(key.c_str()))
+            {
+                duk_dup(ctx, -2);
+                rbfx_push_variant(ctx, value);
+                duk_put_prop_string(ctx, -2, key.c_str());
+            }
+        }
+        JS_END(ctx)
+    }
+
+    Variant JavaScriptComponent::GetProperty(const ea::string& key)
+    {
+        duk_context* ctx = static_cast<duk_context*>(JavaScriptSystem::GetDukCtx());
+        Variant result;
+        JS_BEGIN(ctx)
+        {
+            if (GetJSProperty(key.c_str()))
+                result = rbfx_get_variant(ctx, -1);
+        }
+        JS_END(ctx)
+        return result;
+    }
 
     void JavaScriptComponent::OnSetEnabled()
     {
         duk_context* ctx = static_cast<duk_context*>(JavaScriptSystem::GetDukCtx());
-        if (GetJSProperty("onSetEnabled"))
+        JS_BEGIN(ctx)
         {
-            duk_dup(ctx, -2);
-            duk_call_method(ctx, 0);
+            if (GetJSProperty("onSetEnabled"))
+            {
+                duk_dup(ctx, -2);
+                duk_call_method(ctx, 0);
+            }
         }
+        JS_END(ctx)
     }
 
     void JavaScriptComponent::GetDependencyNode(ea::vector<Node*>& desc)
     {
         duk_context* ctx = static_cast<duk_context*>(JavaScriptSystem::GetDukCtx());
-        if (GetJSProperty("getDependencyNode"))
+        JS_BEGIN(ctx)
         {
-            duk_dup(ctx, -2);
-            duk_push_array(ctx);
-            for (unsigned i = 0; i < desc.size(); ++i) {
-                Node* node = desc.at(i);
-                rbfx_push_object(ctx, node);
-                duk_put_prop_index(ctx, -2, i);
+            if (GetJSProperty("getDependencyNode"))
+            {
+                duk_dup(ctx, -2);
+                duk_push_array(ctx);
+                for (unsigned i = 0; i < desc.size(); ++i) {
+                    Node* node = desc.at(i);
+                    rbfx_push_object(ctx, node);
+                    duk_put_prop_index(ctx, -2, i);
+                }
+                duk_call_method(ctx, 1);
             }
-            duk_call_method(ctx, 1);
         }
+        JS_END(ctx)
     }
 
     void JavaScriptComponent::DrawDebugGeometry(DebugRenderer* debug, bool depthTest)
     {
         duk_context* ctx = static_cast<duk_context*>(JavaScriptSystem::GetDukCtx());
-        if (GetJSProperty("drawDebugGeometry"))
+        JS_BEGIN(ctx)
         {
-            duk_dup(ctx, -2);
+            if (GetJSProperty("drawDebugGeometry"))
+            {
+                duk_dup(ctx, -2);
 
-            rbfx_push_object(ctx, debug);
-            duk_push_boolean(ctx, depthTest);
+                rbfx_push_object(ctx, debug);
+                duk_push_boolean(ctx, depthTest);
 
-            duk_call_method(ctx, 2);
+                duk_call_method(ctx, 2);
+            }
         }
+        JS_END(ctx)
     }
 
     void JavaScriptComponent::OnNodeSet(Node* previousNode, Node* currentNode)
     {
         duk_context* ctx = static_cast<duk_context*>(JavaScriptSystem::GetDukCtx());
-        if (GetJSProperty("onNodeSet"))
+        JS_BEGIN(ctx)
         {
-            duk_dup(ctx, -2);
-            rbfx_push_object(ctx, previousNode);
-            rbfx_push_object(ctx, currentNode);
+            if (GetJSProperty("onNodeSet"))
+            {
+                duk_dup(ctx, -2);
+                rbfx_push_object(ctx, previousNode);
+                rbfx_push_object(ctx, currentNode);
 
-            duk_call_method(ctx, 2);
+                duk_call_method(ctx, 2);
+            }
         }
+        JS_END(ctx)
     }
 
     void JavaScriptComponent::OnSceneSet(Scene* scene)
     {
         duk_context* ctx = static_cast<duk_context*>(JavaScriptSystem::GetDukCtx());
-        if (GetJSProperty("onSceneSet"))
+        JS_BEGIN(ctx)
         {
-            duk_dup(ctx, -2);
+            if (GetJSProperty("onSceneSet"))
+            {
+                duk_dup(ctx, -2);
 
-            rbfx_push_object(ctx, scene);
-            duk_call_method(ctx, 1);
+                rbfx_push_object(ctx, scene);
+                duk_call_method(ctx, 1);
+            }
         }
+        JS_END(ctx)
     }
 
     void JavaScriptComponent::OnMarkedDirty(Node* node)
     {
         duk_context* ctx = static_cast<duk_context*>(JavaScriptSystem::GetDukCtx());
-        if (GetJSProperty("onMarkedDirty"))
+        JS_BEGIN(ctx)
         {
-            duk_dup(ctx, -2);
+            if (GetJSProperty("onMarkedDirty"))
+            {
+                duk_dup(ctx, -2);
 
-            rbfx_push_object(ctx, node);
-            duk_call_method(ctx, 1);
+                rbfx_push_object(ctx, node);
+                duk_call_method(ctx, 1);
+            }
         }
+        JS_END(ctx)
     }
 
     void JavaScriptComponent::OnNodeSetEnabled(Node* node)

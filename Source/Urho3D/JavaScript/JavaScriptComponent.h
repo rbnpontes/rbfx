@@ -29,6 +29,9 @@ namespace Urho3D
         URHO3D_OBJECT(JavaScriptComponent, Component);
     public:
         JavaScriptComponent(Context* context);
+        void SetProperty(const ea::string& key, const Variant& value);
+        Variant GetProperty(const ea::string& key);
+
         virtual void OnSetEnabled();
         virtual void GetDependencyNode(ea::vector<Node*>& desc);
         virtual void DrawDebugGeometry(DebugRenderer* debug, bool depthTest);
