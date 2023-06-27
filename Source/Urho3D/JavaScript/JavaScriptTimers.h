@@ -25,8 +25,25 @@
 
 namespace Urho3D
 {
-    void JavaScript_SetupTimerBindings(duk_context* ctx);
-    void JavaScript_ResolveTimers(duk_context* ctx);
-    void JavaScript_ClearAllTimers();
-    void JavaScript_ClearInternalTimers(duk_context* ctx);
+    /// @{
+    /// add setTimeout, setInterval, clearTimeout, clearInterval
+    /// and rbfx.clearAllTimers methods to JS environment.
+    /// @}
+    void js_setup_timer_bindings(duk_context* ctx);
+    /// @{
+    /// execute scheduled timers
+    /// @}
+    void js_resolve_timers(duk_context* ctx);
+    /// @{
+    /// clear scheduled timers. this method doesn't remove
+    /// pointers from global stash.
+    /// to remove then, call js_clear_internal_timers instead
+    /// @}
+    void js_clear_all_timers();
+    /// @{
+    /// clear stored timers on global stash.
+    /// this method doesn't free scheduled timers
+    /// to do this, call js_clear_all_timers instead
+    /// @}
+    void js_clear_internal_timers(duk_context* ctx);
 }

@@ -157,7 +157,7 @@ namespace Urho3D
         return 0;
     }
 
-    void JavaScript_SetupTimerBindings(duk_context* ctx)
+    void js_setup_timer_bindings(duk_context* ctx)
     {
         duk_push_c_lightfunc(ctx, js_set_timeout_call, 2, 2, 0);
         duk_put_global_string(ctx, "setTimeout");
@@ -181,9 +181,9 @@ namespace Urho3D
         duk_put_prop_string(ctx, -2, JS_TIMER_CALLS_PROP);
         duk_pop(ctx);
     }
-    void JavaScript_ResolveTimers(duk_context* ctx)
+    void js_resolve_timers(duk_context* ctx)
     {
-        URHO3D_PROFILE("JavaScript->ResolveTimers");
+        URHO3D_PROFILE("js_resolve_timers");
         // g_timers always point to the last element
         JSTimer* prev = g_timers;
 
@@ -225,11 +225,11 @@ namespace Urho3D
 
         duk_pop_2(ctx);
     }
-    void JavaScript_ClearAllTimers()
+    void js_clear_all_timers()
     {
         js_free_timers();
     }
-    void JavaScript_ClearInternalTimers(duk_context* ctx)
+    void js_clear_internal_timers(duk_context* ctx)
     {
         js_destroy_all_js_timers(ctx);
     }

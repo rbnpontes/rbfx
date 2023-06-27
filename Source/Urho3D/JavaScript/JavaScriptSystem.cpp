@@ -20,20 +20,20 @@
 namespace Urho3D
 {
 #if URHO3D_PROFILING
-    void* JS_Alloc(void* udata, duk_size_t size)
+    void* js_alloc(void* udata, duk_size_t size)
     {
         void* data = duk_default_alloc_function(udata, size);
         TracyAlloc(data, size);
         return data;
     }
-    void* JS_ReAlloc(void* udata, void* ptr, duk_size_t size)
+    void* js_realloc(void* udata, void* ptr, duk_size_t size)
     {
         TracyFree(ptr);
         void* data = duk_default_realloc_function(udata, ptr, size);
         TracyAlloc(data, size);
         return data;
     }
-    void JS_Free(void* udata, void* ptr)
+    void js_free(void* udata, void* ptr)
     {
         duk_default_free_function(udata, ptr);
         TracyFree(ptr);
@@ -77,7 +77,7 @@ namespace Urho3D
     void JavaScriptSystem::Stop() {
         URHO3D_ASSERTLOG(instance_, "must initializes JavaScriptSystem first.");
 
-        JavaScript_ClearInternalTimers(static_cast<duk_context*>(instance_->dukCtx_));
+        js_clear_internal_timers(static_cast<duk_context*>(instance_->dukCtx_));
         instance_->StopJS();
     }
     Context* JavaScriptSystem::GetContext() {
@@ -111,9 +111,9 @@ namespace Urho3D
         duk_free_function freeFn = nullptr;
 
 #if URHO3D_PROFILING
-        allocFn = JS_Alloc;
-        reallocFn = JS_ReAlloc;
-        freeFn = JS_Free;
+        allocFn = js_alloc;
+        reallocFn = js_realloc;
+        freeFn = js_free;
 #endif
 
         duk_context* ctx = duk_create_heap(allocFn, reallocFn, freeFn, nullptr, HandleFatalError);
@@ -131,7 +131,7 @@ namespace Urho3D
         JavaScript_SetupLogger(ctx);
         JavaScript_SetupSystemBindings(ctx);
         JavaScript_SetupProfilerBindings(ctx);
-        JavaScript_SetupTimerBindings(ctx);
+        js_setup_timer_bindings(ctx);
 
         VariantMap args;
         args[JavaScriptSetup::P_DUKCTX] = ctx;
@@ -152,7 +152,7 @@ namespace Urho3D
         if (!ctx)
             return;
 
-        JavaScript_ResolveTimers(ctx);
+        js_resolve_timers(ctx);
     }
     void JavaScriptSystem::StopJS()
     {
@@ -161,6 +161,6 @@ namespace Urho3D
         duk_destroy_heap(static_cast<duk_context*>(dukCtx_));
         dukCtx_ = nullptr;
 
-        JavaScript_ClearAllTimers();
+        js_clear_all_timers();
     }
 }
