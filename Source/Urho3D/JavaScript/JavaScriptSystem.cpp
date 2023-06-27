@@ -7,6 +7,8 @@
 #include "JavaScriptEvents.h"
 #include "JavaScriptOperations.h"
 #include "JavaScriptProfiler.h"
+#include "JavaScriptTimers.h"
+#include "../Core/CoreEvents.h"
 
 #include <duktape/duktape.h>
 #include <duktape/duk_internal.h>
@@ -41,7 +43,10 @@ namespace Urho3D
     JavaScriptSystem* JavaScriptSystem::instance_ = nullptr;
     JavaScriptSystem::JavaScriptSystem(Context* context) :
         Object(context),
-        dukCtx_(nullptr) {}
+        dukCtx_(nullptr)
+    {
+        SubscribeToEvent(E_UPDATE, URHO3D_HANDLER(JavaScriptSystem, HandleUpdate));
+    }
     JavaScriptSystem::~JavaScriptSystem()
     {
     }
@@ -71,6 +76,8 @@ namespace Urho3D
 
     void JavaScriptSystem::Stop() {
         URHO3D_ASSERTLOG(instance_, "must initializes JavaScriptSystem first.");
+
+        JavaScript_ClearInternalTimers(static_cast<duk_context*>(instance_->dukCtx_));
         instance_->StopJS();
     }
     Context* JavaScriptSystem::GetContext() {
@@ -92,6 +99,7 @@ namespace Urho3D
         URHO3D_ASSERTLOG(instance_, "must initializes JavaScriptSystem first.");
         ea::string errMsg(msg == nullptr ? "No message" : msg);
         URHO3D_LOGERROR("**FATAL ERROR** {}", errMsg);
+
         instance_->StopJS();
     }
     void JavaScriptSystem::SetupJS()
@@ -123,6 +131,7 @@ namespace Urho3D
         JavaScript_SetupLogger(ctx);
         JavaScript_SetupSystemBindings(ctx);
         JavaScript_SetupProfilerBindings(ctx);
+        JavaScript_SetupTimerBindings(ctx);
 
         VariantMap args;
         args[JavaScriptSetup::P_DUKCTX] = ctx;
@@ -135,11 +144,23 @@ namespace Urho3D
         duk_context* ctx = static_cast<duk_context*>(dukCtx_);
         duk_eval_string_noresult(ctx, jsCode.c_str());
     }
+    void JavaScriptSystem::HandleUpdate(StringHash eventType, const VariantMap& eventArgs)
+    {
+        URHO3D_PROFILE("JavaScriptSystem->HandleUpdate");
+        duk_context* ctx = static_cast<duk_context*>(dukCtx_);
+
+        if (!ctx)
+            return;
+
+        JavaScript_ResolveTimers(ctx);
+    }
     void JavaScriptSystem::StopJS()
     {
         SendEvent(E_JAVASCRIPT_STOP);
 
         duk_destroy_heap(static_cast<duk_context*>(dukCtx_));
         dukCtx_ = nullptr;
+
+        JavaScript_ClearAllTimers();
     }
 }

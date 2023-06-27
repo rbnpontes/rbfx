@@ -21,36 +21,12 @@
 //
 
 #pragma once
-
-#include "../Core/Object.h"
+#include <duktape/duktape.h>
 
 namespace Urho3D
 {
-    class JavaScriptAsset;
-    class URHO3D_API JavaScriptSystem : public Object {
-        friend class JavaScriptComponent;
-        URHO3D_OBJECT(JavaScriptSystem, Object);
-    public:
-        JavaScriptSystem(Context* context);
-        ~JavaScriptSystem();
-        void Initialize();
-        static void Run(const JavaScriptAsset* asset);
-        static void Run(const ea::string& jsCode);
-        static void Stop();
-        static void RegisterObject(Context* context);
-        static void ReleaseHeapptr(void* heapptr);
-        static Context* GetContext();
-        static void* GetJSCtx();
-    private:
-        static void* GetDukCtx() { return instance_->dukCtx_; }
-        static void HandleFatalError(void* udata, const char* msg);
-        void StopJS();
-        void SetupJS();
-        void RunCode(const ea::string& jsCode);
-        void HandleUpdate(StringHash eventType, const VariantMap& eventArgs);
-
-        static JavaScriptSystem* instance_;
-
-        void* dukCtx_;
-    };
+    void JavaScript_SetupTimerBindings(duk_context* ctx);
+    void JavaScript_ResolveTimers(duk_context* ctx);
+    void JavaScript_ClearAllTimers();
+    void JavaScript_ClearInternalTimers(duk_context* ctx);
 }
