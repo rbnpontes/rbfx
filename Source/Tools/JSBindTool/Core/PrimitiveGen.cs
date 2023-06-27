@@ -24,7 +24,7 @@ namespace JSBindTool.Core
             obj.EmitHeaderIncludes(code);
             code.AddNewLine();
 
-            code.Namespace("Urho3D", signatures =>
+            code.Namespace(Constants.Namespace, signatures =>
             {
                 obj.EmitResolveSignature(signatures);
                 obj.EmitSetSignature(signatures);
@@ -47,7 +47,7 @@ namespace JSBindTool.Core
             obj.EmitSourceIncludes(code);
 
             code.AddNewLine();
-            code.Namespace("Urho3D", source =>
+            code.Namespace(Constants.Namespace, source =>
             {
                 obj.EmitResolveSource(source);
                 obj.EmitSetSource(source);

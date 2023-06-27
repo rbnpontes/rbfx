@@ -10,6 +10,6 @@ extern "C" URHO3D_EXPORT_API PluginApplication * PluginApplicationMain(Context *
 JavaScriptPlugin::JavaScriptPlugin(Context* context) : MainPluginApplication(context)
 {
     JavaScriptSystem* system = GetSubsystem<JavaScriptSystem>();
-    Bindings_setup(static_cast<duk_context*>(system->GetJSCtx()));
+    jsbind_bindings_setup(static_cast<duk_context*>(system->GetJSCtx()));
     URHO3D_LOGDEBUG("JavaScript Bindings has been initialized.");
 }

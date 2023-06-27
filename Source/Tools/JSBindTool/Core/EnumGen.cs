@@ -20,14 +20,10 @@ namespace JSBindTool.Core
             header.Add("#pragma once");
             header.AddNewLine();
             header.Add(GetIncludes());
-            header.Add("namespace Urho3D");
-            header.Add("{");
+            header.Namespace(Constants.Namespace, scope =>
             {
-                CodeBuilder headerSignatures = new CodeBuilder();
-                headerSignatures.Add($"void {Target.Name}_setup(duk_context* ctx);");
-                header.Add(headerSignatures);
-            }
-            header.Add("}");
+                scope.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);");
+            });
 
             return header;
         }
@@ -39,22 +35,14 @@ namespace JSBindTool.Core
             HeaderUtils.EmitNotice(source);
             source.Add($"#include \"{HeaderName}.h\"");
             source.AddNewLine();
-            source.Add("namespace Urho3D");
-            source.Add("{");
+            source.Namespace(Constants.Namespace, sourceBody =>
             {
-                CodeBuilder sourceBody = new CodeBuilder();
-                sourceBody.Add($"void {Target.Name}_setup(duk_context* ctx)");
-                sourceBody.Add("{");
+                sourceBody.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx)");
+                sourceBody.Scope(scope =>
                 {
-                    CodeBuilder scope = new CodeBuilder();
                     BuildSourceBody(scope);
-                    sourceBody.Add(scope);
-                }
-                sourceBody.Add("}");
-
-                source.Add(sourceBody);
-            }
-            source.Add("}");
+                });
+            });
             return source;
         }
 

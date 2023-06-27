@@ -55,17 +55,14 @@ namespace JSBindTool.Core
                 header.IndentationSize = 0;
                 HeaderUtils.EmitNotice(header);
                 header.Add("#pragma once");
-                header.Add("#include \"EnumBindings.h\"");
-                header.Add("#include \"PrimitiveBindings.h\"");
-                header.Add("#include \"ClassBindings.h\"");
+                header.Add("#include \"enum_bindings.h\"");
+                header.Add("#include \"primitive_bindings.h\"");
+                header.Add("#include \"class_bindings.h\"");
                 header.AddNewLine(2);
-                header.Add("namespace Urho3D {");
+                header.Namespace(Constants.Namespace, scope =>
                 {
-                    CodeBuilder setupSignature = new CodeBuilder();
-                    setupSignature.Add("void Bindings_setup(duk_context* ctx);");
-                    header.Add(setupSignature);
-                }
-                header.Add("}");
+                    scope.Add($"void {Constants.MethodPrefix}_bindings_setup(duk_context* ctx);");
+                });
                 File.WriteAllText(Path.Join(outputPath, "Bindings.h"), header.ToString());
             }
             // Generate bindings setup source
@@ -75,25 +72,18 @@ namespace JSBindTool.Core
                 HeaderUtils.EmitNotice(source);
                 source.Add("#include \"Bindings.h\"");
                 source.AddNewLine();
-                source.Add("namespace Urho3D");
-                source.Add("{");
+                source.Namespace(Constants.Namespace, scope =>
                 {
-                    CodeBuilder setupBody = new CodeBuilder();
-                    setupBody.Add("void Bindings_setup(duk_context* ctx)");
-                    setupBody.Add("{");
+                    scope.Add($"void {Constants.MethodPrefix}_bindings_setup(duk_context* ctx)");
+                    scope.Scope(setupScope =>
                     {
-                        CodeBuilder scope = new CodeBuilder();
-                        scope.Add(
-                            "EnumBindings_setup(ctx);",
-                            "PrimitiveBindings_setup(ctx);",
-                            "ClassBindings_setup(ctx);"
+                        setupScope.Add(
+                            $"{Constants.MethodPrefix}_enum_bindings_setup(ctx);",
+                            $"{Constants.MethodPrefix}_primitive_bindings_setup(ctx);",
+                            $"{Constants.MethodPrefix}_class_bindings_setup(ctx);"
                         );
-                        setupBody.Add(scope);
-                    }
-                    setupBody.Add("}");
-                    source.Add(setupBody);
-                }
-                source.Add("}");
+                    });
+                });
                 File.WriteAllText(Path.Join(outputPath, "Bindings.cpp"), source.ToString());
             }
 
@@ -102,29 +92,29 @@ namespace JSBindTool.Core
             Console.WriteLine("-- Generating Enumerators");
             {
                 var enums = BindingState.GetEnums().ToList();
-                GenerateSetupHeader(outputPath, "EnumBindings", "Enum", enums);
-                GenerateSetupSource(outputPath, "EnumBindings", "Enum", enums);
+                GenerateSetupHeader(outputPath, "enum_bindings", Constants.EnumIncludeSuffix, enums);
+                GenerateSetupSource(outputPath, "enum_bindings", enums);
             }
 
-            WorkerUtils.ForEach(BindingState.GetEnums(), type => GenerateBindingFiles<EnumGen>(type, outputPath, "_Enum"));
+            WorkerUtils.ForEach(BindingState.GetEnums(), type => GenerateBindingFiles<EnumGen>(type, outputPath, Constants.EnumIncludeSuffix));
 
             Console.WriteLine("------------------------------------------------");
             Console.WriteLine("-- Generating Primitives");
             {
                 var primitives = BindingState.GetPrimitives().ToList();
-                GenerateSetupHeader(outputPath, "PrimitiveBindings", "Primitive", primitives);
-                GenerateSetupSource(outputPath, "PrimitiveBindings", "Primitive", primitives);
+                GenerateSetupHeader(outputPath, "primitive_bindings", Constants.PrimitiveIncludeSuffix, primitives);
+                GenerateSetupSource(outputPath, "primitive_bindings", primitives);
             }
-            WorkerUtils.ForEach(BindingState.GetPrimitives(), type => GenerateBindingFiles<PrimitiveGen>(type, outputPath, "_Primitive"));
+            WorkerUtils.ForEach(BindingState.GetPrimitives(), type => GenerateBindingFiles<PrimitiveGen>(type, outputPath, Constants.PrimitiveIncludeSuffix));
 
             Console.WriteLine("------------------------------------------------");
             Console.WriteLine("-- Generating Classes");
             {
                 var classes = BindingState.GetClasses().ToList();
-                GenerateSetupHeader(outputPath, "ClassBindings", "Class", classes);
-                GenerateSetupSource(outputPath, "ClassBindings", "Class", classes);
+                GenerateSetupHeader(outputPath, "class_bindings", Constants.ClassIncludeSuffix, classes);
+                GenerateSetupSource(outputPath, "class_bindings", classes);
             }
-            WorkerUtils.ForEach(BindingState.GetClasses(), type => GenerateBindingFiles<ClassGen>(type, outputPath, "_Class"));
+            WorkerUtils.ForEach(BindingState.GetClasses(), type => GenerateBindingFiles<ClassGen>(type, outputPath, Constants.ClassIncludeSuffix));
             Console.WriteLine("------------------------------------------------");
             Console.WriteLine("--- Bindings has been Generated with Success ---");
         }
@@ -132,43 +122,44 @@ namespace JSBindTool.Core
         private static void GenerateBindingFiles<TCodeGen>(Type type, string outputPath, string headerSuffix)
         {
             Console.WriteLine($"- {type.Name}");
-#pragma warning disable IDE0059 // Unnecessary assignment of a value
-            CodeGen builder = (CodeGen)Activator.CreateInstance(typeof(TCodeGen), type);
+            CodeGen? builder = Activator.CreateInstance(typeof(TCodeGen), type) as CodeGen;
+            if (builder is null)
+                throw new NullReferenceException("could not possible to create code gen type");
             builder.HeaderName = type.Name + headerSuffix;
 
             File.WriteAllText(Path.Join(outputPath, builder.HeaderName + ".h"), builder.BuildHeader().ToString());
             File.WriteAllText(Path.Join(outputPath, builder.HeaderName + ".cpp"), builder.BuildSource().ToString());
-#pragma warning restore IDE0059 // Unnecessary assignment of a value
         }
         private static void GenerateSetupHeader(string outputPath, string prefix, string headerSuffix, List<Type> types)
         {
             CodeBuilder header = new CodeBuilder();
-            header.Add($"void {prefix}_setup(duk_context* ctx);");
+            header.IndentationSize = 0;
+            header.Add($"void {Constants.MethodPrefix}_{prefix}_setup(duk_context* ctx);");
 
             CodeBuilder builder = new CodeBuilder();
             builder.IndentationSize = 0;
             HeaderUtils.EmitNotice(builder);
 
-            types.ForEach(type => builder.Add($"#include \"{type.Name}_{headerSuffix}.h\""));
-            builder.Namespace("Urho3D", scope => scope.Add(header));
+            types.ForEach(type => builder.Add($"#include \"{type.Name}{headerSuffix}.h\""));
+            builder.Namespace(Constants.Namespace, scope => scope.Add(header));
 
             File.WriteAllText(Path.Join(outputPath, prefix+".h"), builder.ToString());
         }
-        private static void GenerateSetupSource(string outputPath, string prefix, string headerSuffix, List<Type> types)
+        private static void GenerateSetupSource(string outputPath, string prefix, List<Type> types)
         {
             CodeBuilder builder = new CodeBuilder();
             builder.IndentationSize = 0;
             HeaderUtils.EmitNotice(builder);
 
-            builder.Add($"#include \"{prefix}.h\"");
-            builder.Namespace("Urho3D", source =>
+            builder.Add($"#include \"{prefix}.h\"").AddNewLine();
+            builder.Namespace(Constants.Namespace, source =>
             {
-                source.Add($"void {prefix}_setup(duk_context* ctx)");
+                source.Add($"void {Constants.MethodPrefix}_{prefix}_setup(duk_context* ctx)");
                 source.Scope(scope =>
                 {
                     types.ForEach(type =>
                     {
-                        scope.Add($"{type.Name}_setup(ctx);");
+                        scope.Add($"{CodeUtils.GetMethodPrefix(type)}_setup(ctx);");
                     });
                 });
             });

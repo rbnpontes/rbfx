@@ -40,6 +40,7 @@
         <Compile Include="Core\CodeBuilder.cs" />
         <Compile Include="Core\CodeGen.cs" />
         <Compile Include="Core\CodeUtils.cs" />
+        <Compile Include="Core\Constants.cs" />
         <Compile Include="Core\EnumGen.cs" />
         <Compile Include="Core\HeaderUtils.cs" />
         <Compile Include="Core\JSFunction.cs" />

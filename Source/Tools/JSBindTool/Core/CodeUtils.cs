@@ -57,6 +57,33 @@ namespace JSBindTool.Core
                 output.Append(type.Name);
             return output.ToString();
         }
+        public static string ToSnakeCase(string input)
+        {
+            var output = new StringBuilder();
+
+            bool isUpper = false;
+            for(int i =0;i < input.Length; ++i)
+            {
+                if (char.IsUpper(input[i]) && !isUpper)
+                {
+                    if(i > 0)
+                        output.Append('_');
+                    isUpper = true;
+                }
+                else if (char.IsLower(input[i]))
+                {
+                    isUpper = false;
+                }
+
+                output.Append(char.ToLowerInvariant(input[i]));
+            }
+
+            return output.ToString();
+        }
+        public static string GetMethodPrefix(Type type)
+        {
+            return $"{Constants.MethodPrefix}_{ToSnakeCase(AnnotationUtils.GetTypeName(type))}";
+        }
 
         private static int pDeepValueCount = 0;
 
@@ -184,7 +211,7 @@ namespace JSBindTool.Core
                 }
             }
             else if (type.IsSubclassOf(typeof(PrimitiveObject)))
-                code.Add($"{AnnotationUtils.GetTypeName(type)} {varName} = {type.Name}_resolve(ctx, {accessor});");
+                code.Add($"{AnnotationUtils.GetTypeName(type)} {varName} = {GetMethodPrefix(type)}_resolve(ctx, {accessor});");
             else throw new NotImplementedException();
         }
     }

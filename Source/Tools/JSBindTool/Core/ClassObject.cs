@@ -26,27 +26,27 @@ namespace JSBindTool.Core
         }
         public virtual void EmitHeaderSignatures(CodeBuilder code)
         {
-            code.Add($"void {Target.Name}_setup(duk_context* ctx);");
-            code.Add($"duk_idx_t {Target.Name}_ctor(duk_context* ctx);");
-            code.Add($"void {Target.Name}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance);");
+            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);");
+            code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_ctor(duk_context* ctx);");
+            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance);");
         }
 
         public virtual void EmitSourceIncludes(CodeBuilder code)
         {
             string typeName = Target.Name;
             HashSet<string> includes = new HashSet<string>();
-            includes.Add($"#include \"{Target.Name}_Class.h\"");
+            includes.Add($"#include \"{Target.Name}{Constants.ClassIncludeSuffix}.h\"");
             if (Target.BaseType != null && Target.BaseType != typeof(ClassObject))
-                includes.Add($"#include \"{Target.BaseType.Name}_Class.h\"");
+                includes.Add($"#include \"{Target.BaseType.Name}{Constants.ClassIncludeSuffix}.h\"");
             includes.Add("#include <Urho3D/JavaScript/JavaScriptSystem.h>");
             includes.Add("#include <Urho3D/JavaScript/JavaScriptOperations.h>");
 
             Action<Type> addInclude = (type) =>
             {
                 if(type.IsSubclassOf(typeof(PrimitiveObject)))
-                    includes.Add($"#include \"{type.Name}_Primitive.h\"");
+                    includes.Add($"#include \"{type.Name}{Constants.PrimitiveIncludeSuffix}.h\"");
                 else if (type.IsSubclassOf(typeof(ClassObject)))
-                    includes.Add($"#include \"{type.Name}_Class.h\"");
+                    includes.Add($"#include \"{type.Name}{Constants.ClassIncludeSuffix}.h\"");
             };
 
             GetProperties().ForEach(prop => addInclude(prop.PropertyType));
@@ -68,27 +68,27 @@ namespace JSBindTool.Core
 
         protected virtual void EmitSourceSetup(CodeBuilder code)
         {
-            code.Add($"void {Target.Name}_setup(duk_context* ctx)");
+            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx)");
             code.Scope(scope =>
             {
                 // Abstract methods must generate as wrapper instead of constructor like
                 if(AnnotationUtils.IsAbstract(Target))
                 {
                     scope
-                        .Add($"duk_push_c_function(ctx, {Target.Name}_ctor, 1);")
+                        .Add($"duk_push_c_function(ctx, {CodeUtils.GetMethodPrefix(Target)}_ctor, 1);")
                         .Add($"duk_put_global_string(ctx, \"{AnnotationUtils.GetTypeName(Target)}\");");
                 }
                 else
                 {
                     scope
-                        .Add($"duk_push_c_function(ctx, {Target.Name}_ctor, DUK_VARARGS);")
+                        .Add($"duk_push_c_function(ctx, {CodeUtils.GetMethodPrefix(Target)}_ctor, DUK_VARARGS);")
                         .Add($"duk_put_global_string(ctx, \"{AnnotationUtils.GetTypeName(Target)}\");");
                 }
             });
         }
         protected virtual void EmitSourceConstructor(CodeBuilder code)
         {
-            code.Add($"duk_idx_t {Target.Name}_ctor(duk_context* ctx)");
+            code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_ctor(duk_context* ctx)");
             code.Scope(scope =>
             {
                 if (AnnotationUtils.IsAbstract(Target))
@@ -97,7 +97,7 @@ namespace JSBindTool.Core
                     scope
                         .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(duk_require_pointer(ctx, 0));")
                         .Add($"duk_push_this(ctx);")
-                        .Add($"{Target.Name}_wrap(ctx, duk_get_top(ctx) - 1, instance);")
+                        .Add($"{CodeUtils.GetMethodPrefix(Target)}_wrap(ctx, duk_get_top(ctx) - 1, instance);")
                         .Add("return 1;");
                 }
                 else
@@ -140,7 +140,7 @@ namespace JSBindTool.Core
                     scope.Scope(ifScope =>
                     {
                         ifScope.Add("duk_push_heapptr(ctx, heapptr);");
-                        ifScope.Add($"{Target.Name}_wrap(ctx, duk_get_top(ctx) - 1, instance);");
+                        ifScope.Add($"{CodeUtils.GetMethodPrefix(Target)}_wrap(ctx, duk_get_top(ctx) - 1, instance);");
                         ifScope.Add("return 1;");
                     }).AddNewLine();
 
@@ -152,7 +152,7 @@ namespace JSBindTool.Core
                     ).AddNewLine();
 
                     scope.Add(
-                        $"{Target.Name}_wrap(ctx, obj_idx, instance);",
+                        $"{CodeUtils.GetMethodPrefix(Target)}_wrap(ctx, obj_idx, instance);",
                         "rbfx_set_finalizer(ctx, obj_idx, instance);"
                     ).AddNewLine();
 
@@ -163,13 +163,13 @@ namespace JSBindTool.Core
         }
         protected virtual void EmitSourceWrap(CodeBuilder code)
         {
-            code.Add($"void {Target.Name}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance)");
+            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance)");
             code.Scope(scope =>
             {
                 if (Target.BaseType == typeof(ClassObject))
                     scope.Add("rbfx_object_wrap(ctx, obj_idx, instance);");
                 else if(Target.BaseType != null)
-                    scope.Add($"{Target.BaseType.Name}_wrap(ctx, obj_idx, instance);");
+                    scope.Add($"{CodeUtils.GetMethodPrefix(Target.BaseType)}_wrap(ctx, obj_idx, instance);");
                 EmitProperties(scope);
                 EmitMethods(scope);
             });

@@ -22,7 +22,7 @@ namespace JSBindTool.Core
         }
         public override void EmitSetupSignature(CodeBuilder code)
         {
-            code.Add($"void {Target.Name}_setup(duk_context* ctx);");
+            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);");
         }
 
         public override void EmitConstructorSource(CodeBuilder code)
@@ -33,8 +33,7 @@ namespace JSBindTool.Core
         }
         public override void EmitSetupSetupSource(CodeBuilder code)
         {
-            code.Add($"void {Target.Name}_setup(duk_context* ctx)");
-            code.Add("{").Add("}");
+            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx)").Scope(x => { });
         }
     }
 }

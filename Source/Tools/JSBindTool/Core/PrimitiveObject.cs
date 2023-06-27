@@ -35,34 +35,33 @@ namespace JSBindTool.Core
         }
         public virtual void EmitResolveSignature(CodeBuilder code)
         {
-            code.Add($"{Target.Name} {Target.Name}_resolve(duk_context* ctx, duk_idx_t stack_idx);");
+            code.Add($"{Target.Name} {CodeUtils.GetMethodPrefix(Target)}_resolve(duk_context* ctx, duk_idx_t stack_idx);");
         }
         public virtual void EmitSetSignature(CodeBuilder code)
         {
-            code.Add($"void {Target.Name}_set(duk_context* ctx, duk_idx_t obj_idx, const {AnnotationUtils.GetTypeName(Target)}& target);");
+            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_set(duk_context* ctx, duk_idx_t obj_idx, const {AnnotationUtils.GetTypeName(Target)}& target);");
         }
-
         public virtual void EmitConstructorSignature(CodeBuilder code)
         {
-            code.Add($"duk_idx_t {Target.Name}_constructor(duk_context* ctx);");
+            code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_ctor(duk_context* ctx);");
         }
         public virtual void EmitPushSignature(CodeBuilder code)
         {
-            code.Add($"void {Target.Name}_push(duk_context* ctx, const Color& color);");
+            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_push(duk_context* ctx, const Color& color);");
         }
         public virtual void EmitSetupSignature(CodeBuilder code)
         {
-            code.Add($"void {Target.Name}_setup(duk_context* ctx);");
+            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);");
         }
 
         public virtual void EmitSourceIncludes(CodeBuilder code)
         {
-            code.Add($"#include \"{Target.Name}_Primitive.h\"");
+            code.Add($"#include \"{Target.Name}{Constants.PrimitiveIncludeSuffix}.h\"");
             code.Add($"#include <Urho3D/IO/Log.h>");
         }
         public virtual void EmitResolveSource(CodeBuilder code)
         {
-            code.Add($"{Target.Name} {Target.Name}_resolve(duk_context* ctx, duk_idx_t stack_idx)");
+            code.Add($"{Target.Name} {CodeUtils.GetMethodPrefix(Target)}_resolve(duk_context* ctx, duk_idx_t stack_idx)");
             code.Scope(resolveScope =>
             {
                 resolveScope.Add($"{Target.Name} result;").AddNewLine();
@@ -90,7 +89,7 @@ namespace JSBindTool.Core
         public virtual void EmitSetSource(CodeBuilder code)
         {
             code
-                .Add($"void {Target.Name}_set(duk_context* ctx, duk_idx_t obj_idx, const {AnnotationUtils.GetTypeName(Target)}& target)")
+                .Add($"void {CodeUtils.GetMethodPrefix(Target)}_set(duk_context* ctx, duk_idx_t obj_idx, const {AnnotationUtils.GetTypeName(Target)}& target)")
                 .Scope(scope =>
                 {
                     CollectVariables().ForEach(vary =>
@@ -105,7 +104,7 @@ namespace JSBindTool.Core
         }
         public virtual void EmitConstructorSource(CodeBuilder code)
         {
-            code.Add($"duk_idx_t {Target.Name}_constructor(duk_context* ctx)");
+            code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_ctor(duk_context* ctx)");
             code.Scope(ctorScope =>
             {
                 ctorScope.Add("duk_idx_t argc = duk_get_top(ctx);");
@@ -128,7 +127,7 @@ namespace JSBindTool.Core
                 ).AddNewLine();
 
                 ctorScope
-                    .Add($"{Target.Name}_set(ctx, this_idx, instance);");
+                    .Add($"{CodeUtils.GetMethodPrefix(Target)}_set(ctx, this_idx, instance);");
 
                 ctorScope.AddNewLine();
 
@@ -144,7 +143,7 @@ namespace JSBindTool.Core
         }
         public virtual void EmitPushSource(CodeBuilder code)
         {
-            code.Add($"void {Target.Name}_push(duk_context* ctx, const Color& color)");
+            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_push(duk_context* ctx, const Color& color)");
             code.Scope(scope =>
             {
                 scope.Add($"duk_get_global_string(ctx, \"{AnnotationUtils.GetTypeName(Target)}\");");
@@ -158,11 +157,11 @@ namespace JSBindTool.Core
         }
         public virtual void EmitSetupSetupSource(CodeBuilder code)
         {
-            code.Add($"void {Target.Name}_setup(duk_context* ctx)");
+            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx)");
             code.Scope(setupScope =>
             {
                 setupScope.Add("duk_idx_t top = duk_get_top(ctx);");
-                setupScope.Add($"duk_push_c_function(ctx, {Target.Name}_constructor, DUK_VARARGS);");
+                setupScope.Add($"duk_push_c_function(ctx, {CodeUtils.GetMethodPrefix(Target)}_ctor, DUK_VARARGS);");
                 setupScope.Add("duk_dup(ctx, -1);");
                 setupScope.Add($"duk_put_global_string(ctx, \"{AnnotationUtils.GetTypeName(Target)}\");");
                 setupScope.Add("// setup static fields");
@@ -181,7 +180,7 @@ namespace JSBindTool.Core
         {
             FieldAttribute fieldAttr = AnnotationUtils.GetFieldAttribute(field);
 
-            code.Add($"{Target.Name}_push(ctx, Color::{fieldAttr.NativeName});");
+            code.Add($"{CodeUtils.GetMethodPrefix(Target)}_push(ctx, Color::{fieldAttr.NativeName});");
             code.Add($"duk_put_prop_string(ctx, {accessor}, \"{fieldAttr.JSName}\");");
         }
 
@@ -221,15 +220,15 @@ namespace JSBindTool.Core
             code.LightFunction(scope =>
             {
                 scope.Add("duk_push_this(ctx);");
-                scope.Add($"{AnnotationUtils.GetTypeName(Target)} value = {Target.Name}_resolve(ctx, 0);");
+                scope.Add($"{AnnotationUtils.GetTypeName(Target)} value ={CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, 0);");
                 if (string.Equals(operatorSignal, "=="))
                 {
-                    scope.Add($"duk_push_boolean(ctx, {Target.Name}_resolve(ctx, 1) == value);");
+                    scope.Add($"duk_push_boolean(ctx, {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, 1) == value);");
                     scope.Add("return 1;");
                 }
                 else
                 {
-                    scope.Add($"{AnnotationUtils.GetTypeName(Target)} result = {Target.Name}_resolve(ctx, 1) {operatorSignal} value;").AddNewLine();
+                    scope.Add($"{AnnotationUtils.GetTypeName(Target)} result = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, 1) {operatorSignal} value;").AddNewLine();
 
                     scope.Add($"duk_get_global_string(ctx, \"{Target.Name}\");");
                     var variables = CollectVariables();
@@ -250,7 +249,7 @@ namespace JSBindTool.Core
             code.LightFunction(scope =>
             {
                 scope.Add("duk_push_this(ctx);");
-                scope.Add($"{AnnotationUtils.GetTypeName(Target)} value = {Target.Name}_resolve(ctx, -1);");
+                scope.Add($"{AnnotationUtils.GetTypeName(Target)} value = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, -1);");
                 scope.Add("duk_pop(ctx);");
                 var parameters = method.GetParameters();
 
@@ -268,7 +267,7 @@ namespace JSBindTool.Core
                     scope.Add($"value.{nativeName}({argsCall});");
                     // when return type is void, must update JS properties instead.
                     scope.Add("duk_push_this(ctx);");
-                    scope.Add($"{Target.Name}_set(ctx, duk_get_top(ctx) - 1, value);");
+                    scope.Add($"{CodeUtils.GetMethodPrefix(Target)}_set(ctx, duk_get_top(ctx) - 1, value);");
                     scope.Add("return 0;");
                 }
                 else

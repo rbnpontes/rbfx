@@ -25,7 +25,7 @@ namespace JSBindTool.Core
 
             obj.EmitHeaderIncludes(header);
 
-            header.Namespace("Urho3D", (signatures) =>
+            header.Namespace(Constants.Namespace, (signatures) =>
             {
                 obj.EmitHeaderSignatures(signatures);
             });
@@ -42,7 +42,7 @@ namespace JSBindTool.Core
             HeaderUtils.EmitNotice(source);
             obj.EmitSourceIncludes(source);
 
-            source.Namespace("Urho3D", (sourceScope) =>
+            source.Namespace(Constants.Namespace, (sourceScope) =>
             {
                 obj.EmitSource(sourceScope);
             });
@@ -58,7 +58,7 @@ namespace JSBindTool.Core
                 if (Target.BaseType == typeof(ClassObject))
                     includes.Add("#include <Urho3D/Core/Object.h>");
                 else
-                    includes.Add($"#include \"{Target.BaseType.Name}_Class.h\"");
+                    includes.Add($"#include \"{Target.BaseType.Name}{Constants.ClassIncludeSuffix}.h\"");
             }
 
             return includes;
