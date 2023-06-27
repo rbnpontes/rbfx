@@ -10,7 +10,7 @@
 
 namespace Urho3D
 {
-    duk_ret_t GetSubsystem_Call(duk_context* ctx)
+    duk_ret_t js_get_subsystem_call(duk_context* ctx)
     {
         StringHash type = rbfx_require_string_hash(ctx, 0);
         Object* obj = JavaScriptSystem::GetContext()->GetSubsystem(type);
@@ -18,7 +18,7 @@ namespace Urho3D
         return 1;
     }
 
-    duk_ret_t ComponenCreation_Call(duk_context* ctx) {
+    duk_ret_t js_component_creation_call(duk_context* ctx) {
         duk_idx_t argc = duk_get_top(ctx);
         duk_push_current_function(ctx);
         duk_get_prop_string(ctx, -1, JS_HIDDEN_COMPONENT_TYPE);
@@ -81,7 +81,7 @@ namespace Urho3D
         duk_push_this(ctx);
         return 1;
     }
-    duk_ret_t ComponentWrap_Call(duk_context* ctx)
+    duk_ret_t js_component_wrap_call(duk_context* ctx)
     {
         ea::string typeName = duk_require_string(ctx, 1);
         auto reflection = JavaScriptSystem::GetContext()->GetReflection(typeName);
@@ -111,7 +111,7 @@ namespace Urho3D
 
         TypeInfo* typeInfo = new TypeInfo(typeName.c_str(), JavaScriptComponent::GetTypeInfoStatic());
 
-        duk_push_c_function(ctx, ComponenCreation_Call, DUK_VARARGS);
+        duk_push_c_function(ctx, js_component_creation_call, DUK_VARARGS);
         // store constructor call into wrapper call
         duk_dup(ctx, 0);
         duk_put_prop_string(ctx, -2, JS_HIDDEN_COMPONENT_CTOR);
@@ -133,7 +133,7 @@ namespace Urho3D
         return 1;
     }
 
-    SharedPtr<Object> Component_Factory(const TypeInfo* type, Context* context)
+    SharedPtr<Object> js_component_factory(const TypeInfo* type, Context* context)
     {
         duk_context* ctx = static_cast<duk_context*>(JavaScriptSystem::GetJSCtx());
         duk_idx_t top = duk_get_top(ctx);
@@ -152,8 +152,9 @@ namespace Urho3D
         duk_pop_n(ctx, duk_get_top(ctx) - top);
         return result;
     }
-    duk_ret_t ComponentRegister_Call(duk_context* ctx)
+    duk_ret_t js_component_reg_call(duk_context* ctx)
     {
+        URHO3D_PROFILE("js_component_reg_call");
         duk_require_function(ctx, 0);
 
         if (!duk_get_prop_string(ctx, 0, JS_HIDDEN_COMPONENT_TYPE))
@@ -173,22 +174,22 @@ namespace Urho3D
 
         Context* engineCtx = JavaScriptSystem::GetContext();
         ObjectReflection* componentReflection = engineCtx->AddFactoryReflection<JavaScriptComponent>("Component/JavaScript");
-        componentReflection->SetObjectFactory(Component_Factory);
+        componentReflection->SetObjectFactory(js_component_factory);
 
         return 0;
     }
 
-    void JavaScript_SetupSystemBindings(duk_context* ctx)
+    void js_setup_sys_bindings(duk_context* ctx)
     {
         duk_push_object(ctx);
 
-        duk_push_c_lightfunc(ctx, GetSubsystem_Call, 2, 2, 0);
+        duk_push_c_lightfunc(ctx, js_get_subsystem_call, 2, 2, 0);
         duk_put_prop_string(ctx, -2, "getSubsystem");
 
-        duk_push_c_lightfunc(ctx, ComponentWrap_Call, 2, 2, 0);
+        duk_push_c_lightfunc(ctx, js_component_wrap_call, 2, 2, 0);
         duk_put_prop_string(ctx, -2, "component");
 
-        duk_push_c_lightfunc(ctx, ComponentRegister_Call, 2, 2, 0);
+        duk_push_c_lightfunc(ctx, js_component_reg_call, 2, 2, 0);
         duk_put_prop_string(ctx, -2, "registerComponent");
 
         duk_put_global_string(ctx, "rbfx");

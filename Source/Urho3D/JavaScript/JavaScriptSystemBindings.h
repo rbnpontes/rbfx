@@ -25,5 +25,5 @@
 
 namespace Urho3D
 {
-    void JavaScript_SetupSystemBindings(duk_context* ctx);
+    void js_setup_sys_bindings(duk_context* ctx);
 }

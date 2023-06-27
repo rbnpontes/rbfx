@@ -3,7 +3,7 @@
 
 namespace Urho3D
 {
-    void Console_Print(duk_context* ctx, unsigned argc, LogLevel logLvl) {
+    void js_console_print(duk_context* ctx, unsigned argc, LogLevel logLvl) {
         ea::string output = "[JavaScript]: ";
         for (unsigned i = 0; i < argc; ++i)
         {
@@ -60,28 +60,36 @@ namespace Urho3D
 
         Log::GetLogger().Write(logLvl, output);
     }
-    void JavaScript_SetupLogger(duk_context* ctx)
+
+    duk_idx_t js_log_call(duk_context* ctx)
+    {
+        js_console_print(ctx, duk_get_top(ctx), LOG_DEBUG);
+        return 0;
+    }
+    duk_idx_t js_warn_call(duk_context* ctx)
+    {
+        js_console_print(ctx, duk_get_top(ctx), LOG_WARNING);
+            return 0;
+    }
+    duk_idx_t js_err_call(duk_context* ctx)
+    {
+        js_console_print(ctx, duk_get_top(ctx), LOG_ERROR);
+        return 0;
+    }
+
+    void js_setup_logger(duk_context* ctx)
     {
         duk_push_object(ctx);
 
-        duk_push_c_function(ctx, [](duk_context* ctx) {
-            Console_Print(ctx, duk_get_top(ctx), LOG_DEBUG);
-            return 0;
-        }, DUK_VARARGS);
+        duk_push_c_function(ctx, js_log_call, DUK_VARARGS);
         duk_dup(ctx, -1);
         duk_put_prop_string(ctx, -3, "log");
         duk_put_prop_string(ctx, -2, "debug");
 
-        duk_push_c_function(ctx, [](duk_context* ctx) {
-            Console_Print(ctx, duk_get_top(ctx), LOG_WARNING);
-            return 0;
-        }, DUK_VARARGS);
+        duk_push_c_function(ctx, js_warn_call, DUK_VARARGS);
         duk_put_prop_string(ctx, -2, "warn");
 
-        duk_push_c_function(ctx, [](duk_context* ctx) {
-            Console_Print(ctx, duk_get_top(ctx), LOG_ERROR);
-            return 0;
-        }, DUK_VARARGS);
+        duk_push_c_function(ctx, js_err_call, DUK_VARARGS);
         duk_put_prop_string(ctx, -2, "error");
 
         duk_put_global_string(ctx, "console");

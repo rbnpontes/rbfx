@@ -25,5 +25,5 @@
 
 namespace Urho3D
 {
-    void JavaScript_SetupProfilerBindings(duk_context* ctx);
+    void js_setup_profiler_bindings(duk_context* ctx);
 }

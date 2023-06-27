@@ -128,9 +128,9 @@ namespace Urho3D
         duk_put_prop_string(ctx, -2, JS_PROP_STRONG_REFS);
         duk_pop(ctx);
 
-        JavaScript_SetupLogger(ctx);
-        JavaScript_SetupSystemBindings(ctx);
-        JavaScript_SetupProfilerBindings(ctx);
+        js_setup_logger(ctx);
+        js_setup_sys_bindings(ctx);
+        js_setup_profiler_bindings(ctx);
         js_setup_timer_bindings(ctx);
 
         VariantMap args;
