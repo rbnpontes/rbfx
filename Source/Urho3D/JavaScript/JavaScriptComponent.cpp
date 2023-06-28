@@ -44,6 +44,41 @@ namespace Urho3D
         return result;
     }
 
+    Variant JavaScriptComponent::CallFunction(const ea::string& key)
+    {
+        VariantVector args;
+        return CallFunction(key, args);
+    }
+
+    Variant JavaScriptComponent::CallFunction(const ea::string& key, const Variant& value)
+    {
+        VariantVector args;
+        args.push_back(value);
+        return CallFunction(key, args);
+    }
+
+    Variant JavaScriptComponent::CallFunction(const ea::string& key, const VariantVector& args)
+    {
+        duk_context* ctx = static_cast<duk_context*>(JavaScriptSystem::GetDukCtx());
+        Variant result;
+        JS_BEGIN(ctx)
+        {
+            if (GetJSProperty(key.c_str()))
+            {
+                duk_dup(ctx, -2);
+                for (unsigned i = 0; i < args.size(); ++i)
+                    rbfx_push_variant(ctx, args.at(i));
+
+                duk_call_method(ctx, args.size());
+
+                if (!duk_is_null_or_undefined(ctx, -1))
+                    result = rbfx_get_variant(ctx, -1);
+            }
+        }
+        JS_END(ctx)
+        return result;
+    }
+
     void JavaScriptComponent::OnSetEnabled()
     {
         duk_context* ctx = static_cast<duk_context*>(JavaScriptSystem::GetDukCtx());

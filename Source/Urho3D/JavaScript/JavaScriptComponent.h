@@ -31,6 +31,9 @@ namespace Urho3D
         JavaScriptComponent(Context* context);
         void SetProperty(const ea::string& key, const Variant& value);
         Variant GetProperty(const ea::string& key);
+        Variant CallFunction(const ea::string& key);
+        Variant CallFunction(const ea::string& key, const Variant& value);
+        Variant CallFunction(const ea::string& key, const VariantVector& args);
 
         virtual void OnSetEnabled();
         virtual void GetDependencyNode(ea::vector<Node*>& desc);
