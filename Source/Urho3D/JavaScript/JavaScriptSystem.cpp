@@ -8,6 +8,7 @@
 #include "JavaScriptOperations.h"
 #include "JavaScriptProfiler.h"
 #include "JavaScriptTimers.h"
+#include "JavaScriptWorker.h"
 #include "../Core/CoreEvents.h"
 
 #include <duktape/duktape.h>
@@ -39,6 +40,36 @@ namespace Urho3D
         TracyFree(ptr);
     }
 #endif
+    duk_context* js_create_context(js_fatal_error_function fatal_error_fn, void* userdata = nullptr) {
+                duk_alloc_function allocFn = nullptr;
+        duk_realloc_function reallocFn = nullptr;
+        duk_free_function freeFn = nullptr;
+
+#if URHO3D_PROFILING
+        allocFn = js_alloc;
+        reallocFn = js_realloc;
+        freeFn = js_free;
+#endif
+
+        duk_context* ctx = duk_create_heap(allocFn, reallocFn, freeFn, userdata, fatal_error_fn);
+
+        duk_push_global_stash(ctx);
+        // heapptr table
+        duk_push_object(ctx);
+        duk_put_prop_string(ctx, -2, JS_OBJECT_HEAPPTR_PROP);
+        // strong ref table
+        duk_push_object(ctx);
+        duk_put_prop_string(ctx, -2, JS_PROP_STRONG_REFS);
+        duk_pop(ctx);
+
+        js_setup_logger(ctx);
+        js_setup_sys_bindings(ctx);
+        js_setup_profiler_bindings(ctx);
+        js_setup_timer_bindings(ctx);
+        js_setup_worker_bindings(ctx);
+
+        return ctx;
+    }
 
     JavaScriptSystem* JavaScriptSystem::instance_ = nullptr;
     JavaScriptSystem::JavaScriptSystem(Context* context) :
@@ -74,6 +105,10 @@ namespace Urho3D
             rbfx_unlock_heapptr(ctx, heapptr);
     }
 
+    void* JavaScriptSystem::CreateThreadContext(js_fatal_error_function fatalErrFn, void* userdata) {
+        return js_create_context(fatalErrFn, userdata);
+    }
+
     void JavaScriptSystem::Stop() {
         URHO3D_ASSERTLOG(instance_, "must initializes JavaScriptSystem first.");
 
@@ -97,7 +132,7 @@ namespace Urho3D
     void JavaScriptSystem::HandleFatalError(void* udata, const char* msg)
     {
         URHO3D_ASSERTLOG(instance_, "must initializes JavaScriptSystem first.");
-        ea::string errMsg(msg == nullptr ? "No message" : msg);
+        ea::string errMsg(msg == nullptr ? "no message" : msg);
         URHO3D_LOGERROR("**FATAL ERROR** {}", errMsg);
 
         instance_->StopJS();
@@ -106,35 +141,10 @@ namespace Urho3D
     {
         if (dukCtx_) return;
 
-        duk_alloc_function allocFn = nullptr;
-        duk_realloc_function reallocFn = nullptr;
-        duk_free_function freeFn = nullptr;
-
-#if URHO3D_PROFILING
-        allocFn = js_alloc;
-        reallocFn = js_realloc;
-        freeFn = js_free;
-#endif
-
-        duk_context* ctx = duk_create_heap(allocFn, reallocFn, freeFn, nullptr, HandleFatalError);
-        dukCtx_ = ctx;
-
-        duk_push_global_stash(ctx);
-        // heapptr table
-        duk_push_object(ctx);
-        duk_put_prop_string(ctx, -2, JS_OBJECT_HEAPPTR_PROP);
-        // strong ref table
-        duk_push_object(ctx);
-        duk_put_prop_string(ctx, -2, JS_PROP_STRONG_REFS);
-        duk_pop(ctx);
-
-        js_setup_logger(ctx);
-        js_setup_sys_bindings(ctx);
-        js_setup_profiler_bindings(ctx);
-        js_setup_timer_bindings(ctx);
+        dukCtx_ = js_create_context(HandleFatalError);
 
         VariantMap args;
-        args[JavaScriptSetup::P_DUKCTX] = ctx;
+        args[JavaScriptSetup::P_DUKCTX] = dukCtx_;
         SendEvent(E_JAVASCRIPT_SETUP, args);
     }
     void JavaScriptSystem::RunCode(const ea::string& jsCode)

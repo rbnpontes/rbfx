@@ -27,6 +27,8 @@
 namespace Urho3D
 {
     class JavaScriptAsset;
+    typedef void (*js_fatal_error_function) (void *udata, const char *msg);
+
     class URHO3D_API JavaScriptSystem : public Object {
         friend class JavaScriptComponent;
         URHO3D_OBJECT(JavaScriptSystem, Object);
@@ -38,9 +40,19 @@ namespace Urho3D
         static void Run(const ea::string& jsCode);
         static void Stop();
         static void RegisterObject(Context* context);
+        /// this method is used by the RefCount object
         static void ReleaseHeapptr(void* heapptr);
         static Context* GetContext();
         static void* GetJSCtx();
+        /// @{
+        /// create a new js context. this pointer must be freed manually
+        /// no bindings will be added to this context.
+        /// only basic bindings like loggers, profilers and timers
+        /// will be added to this context.
+        /// memory allocation will be monitored by the profiler.
+        /// this method is used by the workers to allocate heap contexts
+        /// @}
+        static void* CreateThreadContext(js_fatal_error_function fatalErrorFn, void* userdata = nullptr);
     private:
         static void* GetDukCtx() { return instance_->dukCtx_; }
         static void HandleFatalError(void* udata, const char* msg);
