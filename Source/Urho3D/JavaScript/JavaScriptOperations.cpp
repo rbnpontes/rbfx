@@ -354,45 +354,51 @@ namespace Urho3D
                 vary = static_cast<RefCounted*>(duk_get_pointer(ctx, -1));
                 duk_pop(ctx);
             }
-            else if (duk_get_prop_string(ctx, -1, "type")) {
-                StringHash type = duk_get_string(ctx, -1);
+            else
+            {
                 duk_pop(ctx);
-
-                if (type == g_vector2_type)
-                    vary = rbfx_vector2_resolve(ctx, stack_idx);
-                else if (type == g_int_vector2_type)
-                    vary = rbfx_int_vector2_resolve(ctx, stack_idx);
-                else if (type == g_vector3_type)
-                    vary = rbfx_vector3_resolve(ctx, stack_idx);
-                else if (type == g_vector4_type)
-                    vary = rbfx_int_vector3_resolve(ctx, stack_idx);
-                else if (type == g_vector4_type)
-                    vary = rbfx_vector4_resolve(ctx, stack_idx);
-                else if (type == g_quaternion_type)
-                    vary = rbfx_quaternion_resolve(ctx, stack_idx);
-                else if (type == g_quaternion_type)
-                    vary = rbfx_color_resolve(ctx, stack_idx);
-                else if (type == g_rect_type)
-                    vary = rbfx_rect_resolve(ctx, stack_idx);
-                else if (type == g_int_rect_type)
-                    vary = rbfx_int_rect_resolve(ctx, stack_idx);
-                else if (type == g_matrix2_type)
+                if (duk_get_prop_string(ctx, -1, "type"))
                 {
-                    // unfortunally Variant does not support Matrix2
-                    // in this case we use Vector4 instead
-                    Matrix2 m = rbfx_matrix2_resolve(ctx, stack_idx);
-                    vary = Vector4(m.m00_, m.m01_, m.m10_, m.m11_);
+                    StringHash type = duk_get_string(ctx, -1);
+                    duk_pop(ctx);
+
+                    if (type == g_vector2_type)
+                        vary = rbfx_vector2_resolve(ctx, stack_idx);
+                    else if (type == g_int_vector2_type)
+                        vary = rbfx_int_vector2_resolve(ctx, stack_idx);
+                    else if (type == g_vector3_type)
+                        vary = rbfx_vector3_resolve(ctx, stack_idx);
+                    else if (type == g_vector4_type)
+                        vary = rbfx_int_vector3_resolve(ctx, stack_idx);
+                    else if (type == g_vector4_type)
+                        vary = rbfx_vector4_resolve(ctx, stack_idx);
+                    else if (type == g_quaternion_type)
+                        vary = rbfx_quaternion_resolve(ctx, stack_idx);
+                    else if (type == g_quaternion_type)
+                        vary = rbfx_color_resolve(ctx, stack_idx);
+                    else if (type == g_rect_type)
+                        vary = rbfx_rect_resolve(ctx, stack_idx);
+                    else if (type == g_int_rect_type)
+                        vary = rbfx_int_rect_resolve(ctx, stack_idx);
+                    else if (type == g_matrix2_type)
+                    {
+                        // unfortunally Variant does not support Matrix2
+                        // in this case we use Vector4 instead
+                        Matrix2 m = rbfx_matrix2_resolve(ctx, stack_idx);
+                        vary = Vector4(m.m00_, m.m01_, m.m10_, m.m11_);
+                    }
+                    else if (type == g_matrix3_type)
+                        vary = rbfx_matrix3_resolve(ctx, stack_idx);
+                    else if (type == g_matrix3x4_type)
+                        vary = rbfx_matrix3x4_resolve(ctx, stack_idx);
+                    else if (type == g_matrix4_type)
+                        vary = rbfx_matrix4_resolve(ctx, stack_idx);
                 }
-                else if (type == g_matrix3_type)
-                    vary = rbfx_matrix3_resolve(ctx, stack_idx);
-                else if (type == g_matrix3x4_type)
-                    vary = rbfx_matrix3x4_resolve(ctx, stack_idx);
-                else if (type == g_matrix4_type)
-                    vary = rbfx_matrix4_resolve(ctx, stack_idx);
-            }
-            else {
-                duk_pop_2(ctx);
-                vary = rbfx_get_variant_map(ctx, stack_idx);
+                else
+                {
+                    duk_pop(ctx);
+                    vary = rbfx_get_variant_map(ctx, stack_idx);
+                }
             }
         }
             break;
@@ -416,17 +422,13 @@ namespace Urho3D
     VariantMap rbfx_get_variant_map(duk_context* ctx, duk_idx_t stack_idx)
     {
         VariantMap result;
-        duk_enum(ctx, stack_idx, DUK_ENUM_INCLUDE_NONENUMERABLE);
+        duk_enum(ctx, stack_idx, 0);
 
-        while (duk_next(ctx, stack_idx + 1, 0)) {
-            const char* key = duk_get_string(ctx, -1);
-            duk_pop(ctx);
-
-            duk_idx_t obj_prop_idx = duk_get_top(ctx);
-            duk_get_prop_string(ctx, stack_idx, key);
-
-            result[key] = rbfx_get_variant(ctx, obj_prop_idx);
-            duk_pop(ctx);
+        while (duk_next(ctx, stack_idx + 1, 1)) {
+            const char* key = duk_get_string(ctx, -2);
+            duk_idx_t value_idx = duk_get_top_index(ctx);
+            result[key] = rbfx_get_variant(ctx, value_idx);
+            duk_pop_2(ctx);
         }
 
         return result;
