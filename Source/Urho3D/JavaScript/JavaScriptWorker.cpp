@@ -58,16 +58,12 @@ namespace Urho3D
 
         // add thread object to rbfx global object
         duk_get_global_string(ctx, "rbfx");
-        {
-            duk_push_object(ctx);
-            {
-                duk_push_boolean(ctx, false);
-                duk_put_prop_string(ctx, -2, "isMainThread");
-            }
-            duk_put_prop_string(ctx, -2, "thread");
-        }
-        duk_pop(ctx);
+        duk_get_prop_string(ctx, -1, "thread");
 
+        duk_push_boolean(ctx, false);
+        duk_put_prop_string(ctx, -2, "isMainThread");
+
+        duk_pop_2(ctx);
 
         duk_push_pointer(ctx, data);
         duk_put_global_string(ctx, JS_WORKER_DATA_PROP);
@@ -439,6 +435,9 @@ namespace Urho3D
     {
         duk_require_constructor_call(ctx);
 
+        if (!Thread::IsMainThread())
+            return duk_error(ctx, DUK_ERR_ERROR, "Workers must be created at main thread. is not allowed to create a worker inside a worker.");
+
         if (duk_is_string(ctx, 0))
             return js_worker_file_create(ctx);
         else if (duk_is_function(ctx, 0))
@@ -456,6 +455,20 @@ namespace Urho3D
         duk_push_global_stash(ctx);
         duk_push_object(ctx);
         duk_put_prop_string(ctx, -2, JS_WORKERS_TABLE_PROP);
+        duk_pop(ctx);
+
+        duk_get_global_string(ctx, "rbfx");
+        {
+            duk_push_object(ctx);
+            {
+                duk_push_boolean(ctx, true);
+                duk_put_prop_string(ctx, -2, "isMainThread");
+
+                duk_push_int(ctx, -1);
+                duk_put_prop_string(ctx, -2, "index");
+            }
+            duk_put_prop_string(ctx, -2, "thread");
+        }
         duk_pop(ctx);
 #endif
     }
