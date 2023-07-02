@@ -499,6 +499,22 @@ namespace Urho3D
         return duk_error(ctx, DUK_ERR_TYPE_ERROR, "Worker constructor requires script file path or function.");
     }
 
+    unsigned js_worker_get_thread_idx(duk_context* ctx)
+    {
+        unsigned thread_idx = M_MAX_UNSIGNED;
+        WorkerData* data = nullptr;
+        if (duk_get_global_string(ctx, JS_WORKER_DATA_PROP))
+            data = static_cast<WorkerData*>(duk_get_pointer(ctx, -1));
+        duk_pop(ctx);
+
+        if (js_worker_lock(data)) {
+            thread_idx = data->thread_idx_;
+            js_worker_unlock();
+        }
+
+        return thread_idx;
+    }
+
     void js_setup_worker_bindings(duk_context* ctx)
     {
 #if URHO3D_THREADING

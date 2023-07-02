@@ -1,7 +1,17 @@
 #include "JavaScriptTimers.h"
 #include "../Core/Profiler.h"
+#include "../Core/Thread.h"
+#include "../Core/WorkQueue.h"
+#include "../Core/Context.h"
+#include "../Core/Mutex.h"
+#include "JavaScriptWorker.h"
+#include "JavaScriptSystem.h"
+
+#include <future>
 
 #define JS_TIMER_CALLS_PROP "__timers"
+#define JS_TIMER_HIDDEN_DUMMY_FINALIZER DUK_HIDDEN_SYMBOL("timer_dummy")
+
 namespace Urho3D
 {
     struct JSTimer
@@ -13,9 +23,26 @@ namespace Urho3D
         JSTimer* next_;
         JSTimer* prev_;
     };
+    struct JSTimerContext
+    {
+        duk_context* ctx_;
+        unsigned thread_idx_;
+        JSTimer* timers_;
+        JSTimer* timers_2_delete_;
+    };
 
-    static JSTimer* g_timers = nullptr;
-    static JSTimer* g_timers_2_delete = nullptr;
+    static Mutex g_timer_sync_;
+    static ea::unordered_map<duk_context*, ea::shared_ptr<JSTimerContext>> g_timer_contexts_;
+
+    // acquire mutex
+    void js_timer_lock()
+    {
+        g_timer_sync_.Acquire();
+    }
+    void js_timer_unlock()
+    {
+        g_timer_sync_.Release();
+    }
 
     JSTimer* js_create_timer(duk_context* ctx, duk_idx_t call_idx, duk_idx_t timeout_idx, bool isInterval)
     {
@@ -31,15 +58,15 @@ namespace Urho3D
 
         return timer;
     }
-    void js_add_timer(duk_context* ctx, JSTimer* timer)
+    void js_add_timer(duk_context* ctx, ea::shared_ptr<JSTimerContext> timer_ctx, JSTimer* timer)
     {
         if (!timer) return;
 
         // add timer to timers list
-        timer->prev_ = g_timers;
-        if (g_timers)
-            g_timers->next_ = timer;
-        g_timers = timer;
+        timer->prev_ = timer_ctx->timers_;
+        if (timer_ctx->timers_)
+            timer_ctx->timers_->next_ = timer;
+        timer_ctx->timers_ = timer;
 
         duk_push_global_stash(ctx);
         duk_get_prop_string(ctx, -1, JS_TIMER_CALLS_PROP);
@@ -50,9 +77,9 @@ namespace Urho3D
 
         duk_pop_2(ctx);
     }
-    void js_destroy_native_timer(JSTimer* timer)
+    void js_destroy_native_timer(ea::shared_ptr<JSTimerContext> timer_ctx, JSTimer* timer)
     {
-        if (!timer) return;
+        if (!timer_ctx || !timer) return;
 
         JSTimer* prev = timer->prev_;
         JSTimer* next = timer->next_;
@@ -61,11 +88,11 @@ namespace Urho3D
             prev->next_ = next;
         if (next)
             next->prev_ = prev;
-        if (timer == g_timers)
-            g_timers = prev;
+        if (timer == timer_ctx->timers_)
+            timer_ctx->timers_ = prev;
 
-        timer->prev_ = g_timers_2_delete;
-        g_timers_2_delete = timer;
+        timer->prev_ = timer_ctx->timers_2_delete_;
+        timer_ctx->timers_2_delete_ = timer;
     }
     bool js_destroy_js_timer(duk_context* ctx, duk_idx_t timers_idx, JSTimer* timer)
     {
@@ -91,9 +118,9 @@ namespace Urho3D
 
         duk_pop(ctx);
     }
-    void js_free_timers()
+    void js_free_timers(ea::shared_ptr<JSTimerContext> timer_ctx)
     {
-        JSTimer* prev = g_timers_2_delete;
+        JSTimer* prev = timer_ctx->timers_2_delete_;
         while (prev != nullptr)
         {
             JSTimer* curr = prev;
@@ -101,13 +128,56 @@ namespace Urho3D
 
             delete curr;
         }
-        g_timers_2_delete = nullptr;
+        timer_ctx->timers_2_delete_ = nullptr;
     }
 
+    duk_idx_t js_timer_ctx_finalizer(duk_context* ctx)
+    {
+        js_timer_lock();
+        g_timer_contexts_.erase(ctx);
+        js_timer_unlock();
+        return 0;
+    }
+    void js_add_timer_ctx_finalizer(duk_context* ctx)
+    {
+        // little hack
+        // if worker context goes to destroy
+        // remove then timer context from g_timer_contexts and free some memory.
+        duk_push_object(ctx);
+        duk_push_c_function(ctx, js_timer_ctx_finalizer, 0);
+        duk_set_finalizer(ctx, -2);
+
+        duk_put_global_string(ctx, JS_TIMER_HIDDEN_DUMMY_FINALIZER);
+    }
     duk_idx_t js_add_timer_call(duk_context* ctx, bool is_interval)
     {
         JSTimer* timer = js_create_timer(ctx, 0, 1, is_interval);
-        js_add_timer(ctx, timer);
+
+        js_timer_lock();
+
+        ea::shared_ptr<JSTimerContext> timer_ctx;
+        auto timer_ctx_it = g_timer_contexts_.find(ctx);
+        if (timer_ctx_it == g_timer_contexts_.end())
+        {
+            timer_ctx = ea::make_shared<JSTimerContext>();
+            timer_ctx->ctx_ = ctx;
+            timer_ctx->timers_ = nullptr;
+            timer_ctx->timers_2_delete_ = nullptr;
+            if (Thread::IsMainThread())
+                timer_ctx->thread_idx_ = M_MAX_UNSIGNED;
+            else
+            {
+                timer_ctx->thread_idx_ = js_worker_get_thread_idx(ctx);
+                js_add_timer_ctx_finalizer(ctx);
+            }
+
+
+            g_timer_contexts_[ctx] = timer_ctx;
+        }
+
+        js_add_timer(ctx, timer_ctx, timer);
+
+        js_timer_unlock();        
 
         duk_push_pointer(ctx, timer);
         return 1;
@@ -116,6 +186,7 @@ namespace Urho3D
     duk_idx_t js_set_timeout_call(duk_context* ctx)
     {
         URHO3D_PROFILE("setTimeout");
+
         return js_add_timer_call(ctx, false);
     }
     duk_idx_t js_set_interval_call(duk_context* ctx)
@@ -127,12 +198,18 @@ namespace Urho3D
     duk_idx_t js_clear_timer(duk_context* ctx)
     {
         JSTimer* timer = static_cast<JSTimer*>(duk_require_pointer(ctx, 0));
-
         duk_push_global_stash(ctx);
         duk_get_prop_string(ctx, -1, JS_TIMER_CALLS_PROP);
 
-        if(js_destroy_js_timer(ctx, duk_get_top(ctx) - 1, timer))
-            js_destroy_native_timer(timer);
+        if (js_destroy_js_timer(ctx, duk_get_top(ctx) - 1, timer))
+        {
+            js_timer_lock();
+            auto timer_ctx_it = g_timer_contexts_.find(ctx);
+            URHO3D_ASSERTLOG(timer_ctx_it != g_timer_contexts_.end(), "can´t clear timer that has not yet registered. it seems timer context has not been created.");
+
+            js_destroy_native_timer(timer_ctx_it->second, timer);
+            js_timer_unlock();
+        }
 
         duk_pop_2(ctx);
         return 0;
@@ -147,12 +224,23 @@ namespace Urho3D
     }
     duk_idx_t js_clear_all_timers_call(duk_context* ctx)
     {
-        js_free_timers();
+        js_timer_lock();
+        auto timer_ctx_it = g_timer_contexts_.find(ctx);
+        if (timer_ctx_it == g_timer_contexts_.end())
+        {
+            js_timer_unlock();
+            return 0;
+        }
 
-        g_timers_2_delete = g_timers;
-        g_timers = nullptr;
+        js_free_timers(timer_ctx_it->second);
 
-        js_free_timers();
+        timer_ctx_it->second->timers_2_delete_ = timer_ctx_it->second->timers_;
+        timer_ctx_it->second->timers_ = nullptr;
+
+        js_free_timers(timer_ctx_it->second);
+
+        js_timer_unlock();
+
         js_destroy_all_js_timers(ctx);
         return 0;
     }
@@ -181,11 +269,12 @@ namespace Urho3D
         duk_put_prop_string(ctx, -2, JS_TIMER_CALLS_PROP);
         duk_pop(ctx);
     }
-    void js_resolve_timers(duk_context* ctx)
+
+    void js_resolve_timer(ea::shared_ptr<JSTimerContext> timer_ctx)
     {
-        URHO3D_PROFILE("js_resolve_timers");
+        duk_context* ctx = timer_ctx->ctx_;
         // g_timers always point to the last element
-        JSTimer* prev = g_timers;
+        JSTimer* prev = timer_ctx->timers_;
 
         duk_push_global_stash(ctx);
         duk_get_prop_string(ctx, -1, JS_TIMER_CALLS_PROP);
@@ -197,25 +286,24 @@ namespace Urho3D
         // collect timer callbacks and add to delete list timeout timers
         while (prev != nullptr)
         {
-            JSTimer* currTimer = prev;
+            JSTimer* curr_timer = prev;
             prev = prev->prev_;
             
-            if (now >= currTimer->scheduleTime_)
-            {
-                duk_push_heapptr(ctx, currTimer->heapptr_);
-                ++call_count;
-                if (currTimer->isInterval_)
-                    currTimer->scheduleTime_ = now + currTimer->timeout_; // calculate next exec time.
-                else
-                {
-                    js_destroy_js_timer(ctx, timers_idx, currTimer);
-                    js_destroy_native_timer(currTimer);
-                }
-            }
+            if (now < curr_timer->scheduleTime_)
+                continue;
 
+            duk_push_heapptr(ctx, curr_timer->heapptr_);
+            ++call_count;
+            if (curr_timer->isInterval_)
+                curr_timer->scheduleTime_ = now + curr_timer->timeout_; // calculate next exec time.
+            else
+            {
+                js_destroy_js_timer(ctx, timers_idx, curr_timer);
+                js_destroy_native_timer(timer_ctx, curr_timer);
+            }
         }
 
-        js_free_timers();
+        js_free_timers(timer_ctx);
         // execute callbacks
         for (unsigned i = 0; i < call_count; ++i)
         {
@@ -225,9 +313,36 @@ namespace Urho3D
 
         duk_pop_2(ctx);
     }
+    void js_resolve_timers()
+    {
+        URHO3D_PROFILE("js_resolve_timers");
+        URHO3D_ASSERTLOG(Thread::IsMainThread(), "js_resolve_timers must called on main thread.");
+
+        WorkQueue* work_queue = JavaScriptSystem::GetContext()->GetSubsystem<WorkQueue>();
+        js_timer_lock();
+        auto values = g_timer_contexts_.values();
+        js_timer_unlock();
+
+        for (auto timer_ctx : values)
+        {
+            if (!timer_ctx)
+                return;
+            if (timer_ctx->thread_idx_ == M_MAX_UNSIGNED)
+                js_resolve_timer(timer_ctx);
+            else
+                work_queue->PostTaskForThread([timer_ctx]() { js_resolve_timer(timer_ctx); }, TaskPriority::Medium, timer_ctx->thread_idx_);
+        }
+    }
     void js_clear_all_timers()
     {
-        js_free_timers();
+        js_timer_lock();
+        auto contexts = g_timer_contexts_.values();
+        for (auto timer_ctx : contexts)
+        {
+            js_free_timers(timer_ctx);
+        }
+        g_timer_contexts_.clear();
+        js_timer_unlock();
     }
     void js_clear_internal_timers(duk_context* ctx)
     {

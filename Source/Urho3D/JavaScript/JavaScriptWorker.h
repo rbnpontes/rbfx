@@ -25,5 +25,6 @@
 
 namespace Urho3D
 {
+    unsigned js_worker_get_thread_idx(duk_context* ctx);
     void js_setup_worker_bindings(duk_context* ctx);
 }

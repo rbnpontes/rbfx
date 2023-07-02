@@ -162,7 +162,7 @@ namespace Urho3D
         if (!ctx)
             return;
 
-        js_resolve_timers(ctx);
+        js_resolve_timers();
     }
     void JavaScriptSystem::StopJS()
     {

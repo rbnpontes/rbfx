@@ -33,7 +33,7 @@ namespace Urho3D
     /// @{
     /// execute scheduled timers
     /// @}
-    void js_resolve_timers(duk_context* ctx);
+    void js_resolve_timers();
     /// @{
     /// clear scheduled timers. this method doesn't remove
     /// pointers from global stash.
