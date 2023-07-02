@@ -1,10 +1,12 @@
 #include "JavaScriptWorker.h"
 #include "JavaScriptSystem.h"
 #include "JavaScriptOperations.h"
+#include "JavaScriptAsset.h"
 #include "../Core/WorkQueue.h"
 #include "../Core/Context.h"
 #include "../IO/Log.h"
 #include "../Core/Mutex.h"
+#include "../Resource/ResourceCache.h"
 #include "../Core/Thread.h"
 #include <EASTL/atomic.h>
 #include <future>
@@ -33,6 +35,7 @@ namespace Urho3D
     void js_worker_emit_error_evt(const char* msg, void* heapptr);
     void js_worker_post_message(duk_context* ctx, WorkerData* worker_data, const char* evtName, Variant value);
     duk_idx_t js_worker_post_message_call(duk_context* ctx);
+    void js_worker_store_data_at_obj(duk_context* ctx, duk_idx_t obj_idx, WorkerData* data);
 
     void js_worker_fatal_error(void* udata, const char* msg)
     {
@@ -141,10 +144,18 @@ namespace Urho3D
         }
     }
 
+    // store worker data at global map
+    void js_worker_data_set(WorkerData* data)
+    {
+        g_thread_sync_.Acquire();
+        g_thread_data_[data] = data;
+        g_thread_sync_.Release();
+    }
+
     void js_worker_thread_call(unsigned threadIdx, WorkerData* data)
     {
         duk_context* ctx = data->ctx_;
-        duk_idx_t func_idx = duk_get_top(ctx) - 1;
+        duk_idx_t func_idx = duk_get_top_index(ctx);
         URHO3D_ASSERTLOG(!duk_is_null_or_undefined(ctx, func_idx), "error at execute worker thread. function call is null or undefined!");
 
         // setup thread index before call
@@ -160,24 +171,26 @@ namespace Urho3D
         duk_call_method(ctx, 0);
     }
 
+    void js_worker_push_bytecode(duk_context* thread_ctx, void* bytecode, duk_size_t bytecode_len)
+    {
+        void* dst = duk_push_buffer(thread_ctx, bytecode_len, false);
+        memcpy(dst, bytecode, bytecode_len);
+
+        duk_load_function(thread_ctx);
+    }
     void js_worker_push_function(duk_context* ctx, duk_context* thread_ctx, duk_idx_t function_idx)
     {
         // compile function into bytecode
         duk_dup(ctx, function_idx);
         duk_dump_function(ctx);
 
-        // read buffer and copy to thread context
-        duk_size_t buff_size = 0;
-        void* buff_data = duk_get_buffer(ctx, -1, &buff_size);
+        duk_size_t bytecode_len = 0;
+        void* bytecode = duk_get_buffer(ctx, -1, &bytecode_len);
 
-        void* thread_buff_data = duk_push_buffer(thread_ctx, buff_size, false);
-        memcpy(thread_buff_data, buff_data, buff_size);
+        js_worker_push_bytecode(thread_ctx, bytecode, bytecode_len);
 
-        // free function bytecode
+        // free function bytecode from main context.
         duk_pop(ctx);
-
-        // load bytecode function on thread context
-        duk_load_function(thread_ctx);
     }
 
     duk_idx_t js_worker_finalizer(duk_context* ctx) {
@@ -372,43 +385,38 @@ namespace Urho3D
         duk_push_c_function(ctx, js_worker_post_message_call, 2);
         duk_put_prop_string(ctx, obj_idx, "postMessage");
     }
-
-    duk_idx_t js_worker_file_create(duk_context* ctx)
+    void* js_worker_store_heapptr(duk_context* ctx, duk_idx_t obj_idx)
     {
-        const char* file = duk_get_string(ctx, 0);
-
-        return 1;
-    }
-    duk_idx_t js_worker_func_create(duk_context* ctx)
-    {
-        duk_push_this(ctx);
-        duk_idx_t push_idx = duk_get_top(ctx) - 1;
-        void* heapptr = duk_get_heapptr(ctx, push_idx);
-
+        void* heapptr = duk_get_heapptr(ctx, obj_idx);
         duk_push_global_stash(ctx);
         duk_get_prop_string(ctx, -1, JS_WORKERS_TABLE_PROP);
 
         // store workers at global stash, this will prevent
         // worker to be collected by the GC.
         duk_push_pointer(ctx, heapptr);
-        duk_dup(ctx, push_idx);
+        duk_dup(ctx, obj_idx);
         duk_put_prop(ctx, -3);
         duk_pop_2(ctx);
 
-        WorkerData* data = new WorkerData();
-        data->heapptr_ = heapptr;
-        data->refs_ = 1;
-        js_create_worker_heap(data);
-
-        // store worker data at global map
-        g_thread_sync_.Acquire();
-        g_thread_data_[data] = data;
-        g_thread_sync_.Release();
-
-        js_worker_push_function(ctx, data->ctx_, 0);
-
+        return heapptr;
+    }
+    void js_worker_store_data_at_obj(duk_context* ctx, duk_idx_t obj_idx, WorkerData* data)
+    {
         duk_push_pointer(ctx, data);
-        duk_put_prop_string(ctx, push_idx, JS_WORKER_DATA_PROP);
+        duk_put_prop_string(ctx, obj_idx, JS_WORKER_DATA_PROP);
+    }
+
+    void js_worker_load_and_compile(duk_context* ctx, JavaScriptAsset* asset, ByteVector& bytecode)
+    {
+        duk_push_string(ctx, asset->GetSource().c_str());
+        duk_push_string(ctx, asset->GetName().c_str());
+
+        duk_compile(ctx, 0);
+    }
+
+    void js_worker_setup_instance(duk_context* ctx, duk_idx_t push_idx, WorkerData* data)
+    {
+        js_worker_store_data_at_obj(ctx, push_idx, data);
 
         js_worker_set_finalizer(ctx, push_idx, data);
         js_worker_setup_methods(ctx, push_idx);
@@ -426,8 +434,54 @@ namespace Urho3D
                 js_worker_thread_call(threadIdx, data);
         });
 
+        // wait worker setup thread index before leaves control
         barrier_future.wait();
         delete barrier;
+    }
+
+    duk_idx_t js_worker_file_create(duk_context* ctx)
+    {
+        const char* file = duk_get_string(ctx, 0);
+        ResourceCache* cache = JavaScriptSystem::GetContext()->GetSubsystem<ResourceCache>();
+        JavaScriptAsset* asset = cache->GetResource<JavaScriptAsset>(file);
+
+        if (!asset)
+            return duk_error(ctx, DUK_ERR_ERROR, "failed to create Worker, script file was not found. Name=%s", file);
+
+        duk_push_this(ctx);
+        duk_idx_t push_idx = duk_get_top_index(ctx);
+        void* heapptr = js_worker_store_heapptr(ctx, push_idx);
+
+        WorkerData* data = new WorkerData();
+        data->heapptr_ = heapptr;
+        data->refs_ = 1;
+        js_create_worker_heap(data);
+
+        js_worker_data_set(data);
+
+        ByteVector bytecode;
+        js_worker_load_and_compile(data->ctx_, asset, bytecode);
+
+        js_worker_setup_instance(ctx, push_idx, data);
+
+        return 1;
+    }
+    duk_idx_t js_worker_func_create(duk_context* ctx)
+    {
+        duk_push_this(ctx);
+        duk_idx_t push_idx = duk_get_top_index(ctx);
+        void* heapptr = js_worker_store_heapptr(ctx, push_idx);
+
+        WorkerData* data = new WorkerData();
+        data->heapptr_ = heapptr;
+        data->refs_ = 1;
+        js_create_worker_heap(data);
+
+        js_worker_data_set(data);
+
+        js_worker_push_function(ctx, data->ctx_, 0);
+
+        js_worker_setup_instance(ctx, push_idx, data);
 
         return 1;
     }
