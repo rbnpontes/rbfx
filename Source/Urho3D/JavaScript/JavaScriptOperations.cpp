@@ -692,4 +692,18 @@ namespace Urho3D
         duk_dup(ctx, this_idx);
         duk_put_prop_string(ctx, -2, JS_BIND_HIDDEN_TARGET_PROP);
     }
+
+    void rbfx_try_catch(duk_context* ctx, duk_idx_t func_idx, duk_idx_t catch_call_idx)
+    {
+        duk_require_function(ctx, func_idx);
+        duk_require_function(ctx, catch_call_idx);
+
+        duk_eval_string(ctx, "(function(caller, reject) { try { caller(); } catch(e) { reject(e); } })");
+        URHO3D_ASSERTLOG(duk_is_function(ctx, -1), "Evaluated try catch wrapper is not a function");
+
+        duk_dup(ctx, func_idx);
+        duk_dup(ctx, catch_call_idx);
+
+        duk_call(ctx, 2);
+    }
 }
