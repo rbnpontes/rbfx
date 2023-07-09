@@ -1,6 +1,7 @@
 #include "JavaScriptProfiler.h"
 #include "../Math/StringHash.h"
 #include "../IO/Log.h"
+#include "../Core/Mutex.h"
 #include <tracy/TracyC.h>
 #include <EASTL/vector.h>
 
@@ -8,6 +9,7 @@ namespace Urho3D
 {
 #if URHO3D_PROFILING
     static ea::unordered_map<StringHash, TracyCZoneCtx> g_zones;
+    static Mutex g_sync;
 #endif
     duk_idx_t js_console_profile_call(duk_context* ctx)
     {
@@ -18,8 +20,11 @@ namespace Urho3D
         // between these gaps.
         ea::string name = duk_require_string(ctx, 0);
         StringHash key = name;
+
+        g_sync.Acquire();
         if (g_zones.contains(key))
         {
+            g_sync.Release();
             URHO3D_LOGWARNING("A profile with name '{}' has been declared. Did you call console.profileEnd(name) ?", name);
             return 0;
         }
@@ -29,6 +34,7 @@ namespace Urho3D
         TracyCZoneColor(profile, 0xFF0000FF);
         TracyCZoneName(profile, name.c_str(), name.size());
         g_zones[key] = profile;
+        g_sync.Release();
 #endif
         return 0;
     }
@@ -40,8 +46,12 @@ namespace Urho3D
         // between profile and profileEnd
         ea::string name = duk_require_string(ctx, 0);
 
+        g_sync.Acquire();
+
         auto profileIt = g_zones.find(name);
         if (profileIt == g_zones.end()) {
+            g_sync.Release();
+
             URHO3D_LOGWARNING("This profile name '{}' has not been declared. Did you call console.profile(name) ?", name);
             return 0;
         }
@@ -50,6 +60,7 @@ namespace Urho3D
         TracyCZoneEnd(profile);
 
         g_zones.erase(profileIt);
+        g_sync.Release();
 #endif
         return 0;
     }
