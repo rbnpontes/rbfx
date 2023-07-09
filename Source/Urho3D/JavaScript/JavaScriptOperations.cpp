@@ -5,6 +5,8 @@
 
 #define JS_OBJ_HIDDEN_PTR DUK_HIDDEN_SYMBOL("__ptr")
 #define JS_OBJ_HIDDEN_EVENT_TABLE DUK_HIDDEN_SYMBOL("__events")
+#define JS_BIND_HIDDEN_CALL_PROP DUK_HIDDEN_SYMBOL("__call")
+#define JS_BIND_HIDDEN_TARGET_PROP DUK_HIDDEN_SYMBOL("__target")
 
 namespace Urho3D
 {
@@ -664,5 +666,30 @@ namespace Urho3D
         duk_get_prop_string(ctx, -1, JS_PROP_STRONG_REFS);
         duk_push_null(ctx);
         duk_put_prop_index(ctx, -2, (duk_uarridx_t)heapptr);
+    }
+
+    void rbfx_bind(duk_context* ctx, duk_idx_t func_idx, duk_idx_t this_idx)
+    {
+        duk_push_c_function(ctx, [](duk_context* ctx) {
+            duk_idx_t argc = duk_get_top(ctx);
+            duk_push_current_function(ctx);
+
+            // get call and this bind
+            duk_get_prop_string(ctx, -1, JS_BIND_HIDDEN_CALL_PROP);
+            duk_get_prop_string(ctx, -2, JS_BIND_HIDDEN_TARGET_PROP);
+
+            // duplicate arguments to top
+            for (duk_idx_t i = 0; i < argc; ++i)
+                duk_dup(ctx, i);
+
+            duk_call_method(ctx, argc);
+            return 1;
+        }, DUK_VARARGS);
+
+        duk_dup(ctx, func_idx);
+        duk_put_prop_string(ctx, -2, JS_BIND_HIDDEN_CALL_PROP);
+
+        duk_dup(ctx, this_idx);
+        duk_put_prop_string(ctx, -2, JS_BIND_HIDDEN_TARGET_PROP);
     }
 }

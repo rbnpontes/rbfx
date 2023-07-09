@@ -93,4 +93,9 @@ namespace Urho3D
     /// making reference weak and collectable from GC
     /// @}
     URHO3D_API void rbfx_make_weak(duk_context* ctx, void* heapptr);
+    /// @{
+    /// create function with 'this' binding
+    /// this method is a low level like ECMA script [Function].bind(this)
+    /// @}
+    URHO3D_API void rbfx_bind(duk_context* ctx, duk_idx_t func_idx, duk_idx_t this_idx);
 }
