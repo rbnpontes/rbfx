@@ -1,0 +1,490 @@
+#include "JavaScriptPromise.h"
+#include "JavaScriptOperations.h"
+
+/// @{
+/// Promise implementation is heavily inspired on promise-polyfill
+/// npm package: https://github.com/taylorhakes/promise-polyfill/blob/master/src/index.js
+/// @}
+
+#define JS_PROMISE_MAGIC_ID DUK_HIDDEN_SYMBOL("__promise__") // used to identify promise objects
+
+#define JS_PROMISE_STATE_PROP DUK_HIDDEN_SYMBOL("state")
+#define JS_PROMISE_HANDLED_PROP DUK_HIDDEN_SYMBOL("handled")
+#define JS_PROMISE_VALUE_PROP DUK_HIDDEN_SYMBOL("value")
+#define JS_PROMISE_DEFERREDS_PROP DUK_HIDDEN_SYMBOL("deferreds")
+#define JS_PROMISE_DONE_PROP DUK_HIDDEN_SYMBOL("done")
+
+#define JS_PROMISE_RESOLVE DUK_HIDDEN_SYMBOL("Promise_resolve")
+#define JS_PROMISE_REJECT DUK_HIDDEN_SYMBOL("Promise_reject")
+
+#define JS_PROMISE_HANDLER_ONFULFILLED_PROP "onFulfilled"
+#define JS_PROMISE_HANDLER_ONREJECTED_PROP "onRejected"
+#define JS_PROMISE_HANDLER_PROMISE_PROP "promise"
+
+#define JS_PROMISE_INTERNAL_SELF_PROP "self"
+
+namespace Urho3D
+{
+    enum class PromiseState
+    {
+        pending = 0u,
+        fulfilled = 1u,
+        rejected = 2u,
+        waiting = 3u /*special state, used when is waiting nested promise*/
+    };
+
+    bool js_promise_handle_done(duk_context* ctx);
+    void js_promise_handle(duk_context* ctx, duk_idx_t self_idx, duk_idx_t deferred_idx);
+    void js_promise_resolve(duk_context* ctx, duk_idx_t self_idx, duk_idx_t value_idx);
+    void js_promise_reject(duk_context* ctx, duk_idx_t self_idx, duk_idx_t error_idx);
+    void js_promise_do_resolve(duk_context* ctx, duk_idx_t func_idx, duk_idx_t self_idx);
+
+    PromiseState js_promise_get_state(duk_context* ctx, duk_idx_t promise_idx)
+    {
+        duk_get_prop_string(ctx, promise_idx, JS_PROMISE_STATE_PROP);
+        PromiseState state = (PromiseState)duk_get_uint(ctx, -1);
+        duk_pop(ctx);
+        return state;
+    }
+    bool js_promise_is_handled(duk_context* ctx, duk_idx_t promise_idx)
+    {
+        duk_get_prop_string(ctx, promise_idx, JS_PROMISE_HANDLED_PROP);
+        bool result = duk_get_boolean(ctx, -1);
+        duk_pop(ctx);
+        return result;
+    }
+    bool js_promise_is_promise(duk_context* ctx, duk_idx_t promise_idx)
+    {
+        bool exists = duk_get_prop_string(ctx, promise_idx, JS_PROMISE_MAGIC_ID);
+        duk_pop(ctx);
+        return exists;
+    }
+
+    void js_promise_handle(duk_context* ctx, duk_idx_t self_idx, duk_idx_t deferred_idx)
+    {
+        duk_idx_t top = duk_get_top(ctx);
+        while (js_promise_get_state(ctx, self_idx) == PromiseState::waiting)
+        {
+            duk_get_prop_string(ctx, self_idx, JS_PROMISE_VALUE_PROP);
+            self_idx = duk_get_top_index(ctx);
+        }
+
+        if (js_promise_get_state(ctx, self_idx) == PromiseState::pending)
+        {
+            duk_get_prop_string(ctx, self_idx, JS_PROMISE_DEFERREDS_PROP);
+            duk_idx_t len = duk_get_length(ctx, -1);
+            duk_dup(ctx, deferred_idx);
+            duk_put_prop_index(ctx, -2, len);
+
+            duk_pop_n(ctx, duk_get_top(ctx) - top);
+            return;
+        }
+
+        duk_push_boolean(ctx, true);
+        duk_put_prop_string(ctx, self_idx, JS_PROMISE_HANDLED_PROP);
+
+
+        duk_get_global_string(ctx, "setImmediate");
+        duk_push_c_function(ctx, [](duk_context* ctx) {
+            duk_push_current_function(ctx);
+
+            duk_get_prop_string(ctx, -1, JS_PROMISE_INTERNAL_SELF_PROP);
+            duk_idx_t self_idx = duk_get_top_index(ctx);
+
+            duk_get_prop_string(ctx, -2, "deferred");
+            duk_idx_t deferred_idx = duk_get_top_index(ctx);
+
+            duk_idx_t callback_idx = 0;
+            PromiseState state = js_promise_get_state(ctx, self_idx);
+            if (state == PromiseState::fulfilled)
+            {
+                duk_get_prop_string(ctx, deferred_idx, JS_PROMISE_HANDLER_ONFULFILLED_PROP);
+                callback_idx = duk_get_top_index(ctx);
+            }
+            else
+            {
+                duk_get_prop_string(ctx, deferred_idx, JS_PROMISE_HANDLER_ONREJECTED_PROP);
+                callback_idx = duk_get_top_index(ctx);
+            }
+
+            duk_get_prop_string(ctx, deferred_idx, JS_PROMISE_HANDLER_PROMISE_PROP);
+            duk_idx_t promise_idx = duk_get_top_index(ctx);
+            duk_get_prop_string(ctx, self_idx, JS_PROMISE_VALUE_PROP);
+            duk_idx_t value_idx = duk_get_top_index(ctx);
+
+            if (duk_is_null_or_undefined(ctx, callback_idx))
+            {
+                if (state == PromiseState::fulfilled)
+                    js_promise_resolve(ctx, promise_idx, value_idx);
+                else
+                    js_promise_reject(ctx, promise_idx, value_idx);
+                return 0;
+            }
+
+            // try call
+            duk_idx_t try_call_idx = duk_get_top(ctx);
+            {
+                duk_push_c_function(ctx, [](duk_context* ctx) {
+                    duk_push_current_function(ctx);
+                    duk_idx_t this_idx = duk_get_top_index(ctx);
+
+                    duk_get_prop_string(ctx, this_idx, JS_PROMISE_INTERNAL_SELF_PROP);
+                    duk_idx_t promise_idx = duk_get_top_index(ctx);
+
+                    duk_get_prop_string(ctx, this_idx, "cb");
+                    duk_get_prop_string(ctx, this_idx, "value");
+                    duk_call(ctx, 1);
+
+                    js_promise_resolve(ctx, promise_idx, duk_get_top_index(ctx));
+                    return 0;
+                }, 0);
+                duk_dup(ctx, callback_idx);
+                duk_put_prop_string(ctx, try_call_idx, "cb");
+                duk_dup(ctx, value_idx);
+                duk_put_prop_string(ctx, try_call_idx, "value");
+                duk_dup(ctx, promise_idx);
+                duk_put_prop_string(ctx, try_call_idx, JS_PROMISE_INTERNAL_SELF_PROP);
+            }
+            // catch call
+            duk_idx_t catch_call_idx = duk_get_top(ctx);
+            {
+                duk_push_c_function(ctx, [](duk_context* ctx) {
+                    duk_push_current_function(ctx);
+                    duk_get_prop_string(ctx, -1, JS_PROMISE_HANDLER_PROMISE_PROP);
+
+                    js_promise_reject(ctx, duk_get_top_index(ctx), 0);
+                    return 0;
+                }, 0);
+                duk_dup(ctx, promise_idx);
+                duk_put_prop_string(ctx, catch_call_idx, JS_PROMISE_HANDLER_PROMISE_PROP);
+            }
+
+            rbfx_try_catch(ctx, try_call_idx, catch_call_idx);
+            return 0;
+        }, 0);
+        duk_dup(ctx, self_idx);
+        duk_put_prop_string(ctx, -2, JS_PROMISE_INTERNAL_SELF_PROP);
+        duk_dup(ctx, deferred_idx);
+        duk_put_prop_string(ctx, -2, "deferred");
+        // execute setImmediate
+        duk_call(ctx, 1);
+
+        duk_pop_n(ctx, duk_get_top(ctx) - top);
+
+    }
+    void js_promise_finale(duk_context* ctx, duk_idx_t self_idx)
+    {
+        PromiseState state = js_promise_get_state(ctx, self_idx);
+        duk_idx_t deferreds_idx = 0;
+        duk_idx_t deferreds_len = 0;
+        {
+            duk_get_prop_string(ctx, self_idx, JS_PROMISE_DEFERREDS_PROP);
+            deferreds_idx = duk_get_top_index(ctx);
+            deferreds_len = duk_get_length(ctx, deferreds_idx);
+        }
+
+        if (state == PromiseState::rejected && deferreds_len == 0)
+        {
+            duk_get_global_string(ctx, "setImmediate");
+            duk_push_c_function(ctx, [](duk_context* ctx) {
+                duk_push_current_function(ctx);
+                duk_get_prop_string(ctx, -1, JS_PROMISE_INTERNAL_SELF_PROP);
+                bool handled = js_promise_is_handled(ctx, duk_get_top_index(ctx));
+                duk_get_prop_string(ctx, -1, JS_PROMISE_VALUE_PROP);
+                duk_idx_t value_idx = duk_get_top_index(ctx);
+
+                if (!handled)
+                {
+                    duk_get_global_string(ctx, "console");
+                    duk_get_prop_string(ctx, -1, "error");
+
+                    duk_push_string(ctx, "Uncaught Promise. Possible Unhandled Promise Rejection:");
+                    duk_dup(ctx, value_idx);
+
+                    duk_call(ctx, 2);
+                }
+                return 0;
+            }, 0);
+            duk_dup(ctx, self_idx);
+            duk_put_prop_string(ctx, -2, JS_PROMISE_INTERNAL_SELF_PROP);
+
+            duk_call(ctx, 1);
+        }
+
+        for (duk_idx_t i = 0; i < deferreds_len; ++i)
+        {
+            duk_idx_t top = duk_get_top(ctx);
+
+            duk_get_prop_index(ctx, deferreds_idx, i);
+            js_promise_handle(ctx, self_idx, duk_get_top_index(ctx));
+
+            duk_pop_n(ctx, duk_get_top(ctx) - top);
+        }
+        duk_push_array(ctx);
+        duk_put_prop_string(ctx, self_idx, JS_PROMISE_DEFERREDS_PROP);
+    }
+
+    void js_promise_resolve(duk_context* ctx, duk_idx_t self_idx, duk_idx_t value_idx)
+    {
+        // try call
+        duk_idx_t try_idx = duk_get_top(ctx);
+        {
+            duk_push_c_function(ctx, [](duk_context* ctx) {
+                // Promise Resolution Procedure: https://github.com/promises-aplus/promises-spec#the-promise-resolution-procedure
+                duk_push_current_function(ctx);
+                duk_get_prop_string(ctx, -1, JS_PROMISE_INTERNAL_SELF_PROP);
+                duk_idx_t self_idx = duk_get_top_index(ctx);
+                duk_get_prop_string(ctx, -2, "value");
+                duk_idx_t value_idx = duk_get_top_index(ctx);
+
+                if (duk_equals(ctx, self_idx, value_idx))
+                {
+                    duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, "A promise cannot be resolve with itself.");
+                    return duk_throw(ctx);
+                }
+
+                if (!duk_is_null_or_undefined(ctx, value_idx) &&
+                    (duk_is_object(ctx, value_idx) || duk_is_function(ctx, value_idx)))
+                {
+                    duk_idx_t then_idx = duk_get_top(ctx);
+                    duk_get_prop_string(ctx, value_idx, "then");
+                    if (js_promise_is_promise(ctx, value_idx)) {
+                        duk_pop(ctx);
+
+                        duk_push_uint(ctx, (unsigned)PromiseState::waiting);
+                        duk_put_prop_string(ctx, self_idx, JS_PROMISE_STATE_PROP);
+
+                        duk_dup(ctx, value_idx);
+                        duk_put_prop_string(ctx, self_idx, JS_PROMISE_VALUE_PROP);
+
+                        js_promise_finale(ctx, self_idx);
+                        return 0;
+                    }
+                    else if (duk_is_function(ctx, then_idx))
+                    {
+                        rbfx_bind(ctx, then_idx, value_idx);
+                        js_promise_do_resolve(ctx, duk_get_top_index(ctx), self_idx);
+                        return 0;
+                    }
+                }
+
+                duk_push_uint(ctx, (unsigned)PromiseState::fulfilled);
+                duk_put_prop_string(ctx, self_idx, JS_PROMISE_STATE_PROP);
+
+                duk_dup(ctx, value_idx);
+                duk_put_prop_string(ctx, self_idx, JS_PROMISE_VALUE_PROP);
+
+                js_promise_finale(ctx, self_idx);
+
+                return 0;
+            }, 0);
+            duk_dup(ctx, self_idx);
+            duk_put_prop_string(ctx, -2, JS_PROMISE_INTERNAL_SELF_PROP);
+            // copy value to try call
+            duk_dup(ctx, value_idx);
+            duk_put_prop_string(ctx, -2, "value");
+        }
+        // catch call
+        duk_idx_t catch_idx = duk_get_top(ctx);
+        {
+            duk_push_c_function(ctx, [](duk_context* ctx) {
+                if(!js_promise_handle_done(ctx))
+                    return 0;
+                js_promise_reject(ctx, duk_get_top_index(ctx), 0);
+                return 0;
+            }, 0);
+            duk_dup(ctx, self_idx);
+            duk_put_prop_string(ctx, -2, JS_PROMISE_INTERNAL_SELF_PROP);
+        }
+
+        rbfx_try_catch(ctx, try_idx, catch_idx);
+    }
+
+    void js_promise_reject(duk_context* ctx, duk_idx_t self_idx, duk_idx_t error_idx)
+    {
+        duk_push_uint(ctx, (unsigned)PromiseState::rejected);
+        duk_put_prop_string(ctx, self_idx, JS_PROMISE_STATE_PROP);
+        duk_dup(ctx, error_idx);
+        duk_put_prop_string(ctx, self_idx, JS_PROMISE_VALUE_PROP);
+
+        js_promise_finale(ctx, self_idx);
+    }
+
+    bool js_promise_handle_done(duk_context* ctx)
+    {
+        duk_push_current_function(ctx);
+        duk_get_prop_string(ctx, -1, JS_PROMISE_INTERNAL_SELF_PROP);
+        duk_get_prop_string(ctx, -1, JS_PROMISE_DONE_PROP);
+
+        bool done = duk_get_boolean(ctx, -1);
+        duk_pop(ctx);
+
+        if (done)
+            return false;
+
+        duk_push_boolean(ctx, true);
+        duk_put_prop_string(ctx, -2, JS_PROMISE_DONE_PROP);
+
+        return true;
+    }
+    void js_promise_do_resolve(duk_context* ctx, duk_idx_t func_idx, duk_idx_t self_idx)
+    {
+        // try call
+        duk_idx_t try_idx = duk_get_top(ctx);
+        duk_push_c_function(ctx, [](duk_context* ctx) {
+            duk_push_current_function(ctx);
+            duk_get_prop_string(ctx, 0, "call");
+
+            duk_get_prop_string(ctx, 0, "resolve");
+            duk_get_prop_string(ctx, 0, "reject");
+
+            duk_call(ctx, 2);
+            return 0;
+        }, 0);
+        duk_dup(ctx, func_idx);
+        duk_put_prop_string(ctx, -2, "call");
+        {   // resolve call
+            duk_push_c_function(ctx, [](duk_context* ctx) {
+                if (duk_get_top(ctx) == 0)
+                    duk_push_null(ctx);
+                if (!js_promise_handle_done(ctx))
+                    return 0;
+                // do resolve call
+                js_promise_resolve(ctx, duk_get_top_index(ctx), 0);
+                return 0;
+            }, 1);
+            duk_dup(ctx, self_idx);
+            duk_put_prop_string(ctx, -2, JS_PROMISE_INTERNAL_SELF_PROP);
+            duk_put_prop_string(ctx, try_idx, "resolve");
+        }
+        {   // reject call
+            duk_push_c_function(ctx, [](duk_context* ctx) {
+                if (!js_promise_handle_done(ctx))
+                    return 0;
+                // do reject call
+                js_promise_reject(ctx, duk_get_top_index(ctx), 0);
+                return 0;
+            }, 1);
+            duk_dup(ctx, self_idx);
+            duk_put_prop_string(ctx, -2, JS_PROMISE_INTERNAL_SELF_PROP);
+            duk_put_prop_string(ctx, try_idx, "reject");
+        }
+
+        // catch call
+        duk_idx_t catch_idx = duk_get_top(ctx);
+        duk_push_c_function(ctx, [](duk_context* ctx) {
+            if (!js_promise_handle_done(ctx))
+                return 0;
+            // do reject call
+            js_promise_reject(ctx, duk_get_top_index(ctx), 0);
+            return 0;
+        }, 1);
+        duk_dup(ctx, self_idx);
+        duk_put_prop_string(ctx, -2, JS_PROMISE_INTERNAL_SELF_PROP);
+
+        rbfx_try_catch(ctx, try_idx, catch_idx);
+    }
+
+    duk_idx_t js_promise_noop(duk_context* ctx)
+    {
+        return 0;
+    }
+    duk_idx_t js_promise_listen(duk_context* ctx, duk_idx_t fulfill_idx, duk_idx_t reject_idx)
+    {
+        duk_push_object(ctx);
+        duk_idx_t deferred_idx = duk_get_top_index(ctx);
+
+        duk_dup(ctx, fulfill_idx);
+        duk_put_prop_string(ctx, deferred_idx, JS_PROMISE_HANDLER_ONFULFILLED_PROP);
+
+        duk_dup(ctx, reject_idx);
+        duk_put_prop_string(ctx, deferred_idx, JS_PROMISE_HANDLER_ONREJECTED_PROP);
+
+        duk_get_global_string(ctx, "Promise");
+        duk_push_c_function(ctx, js_promise_noop, 2);
+        duk_new(ctx, 1);
+        duk_idx_t promise_idx = duk_get_top_index(ctx);
+        duk_dup(ctx, promise_idx);
+        duk_put_prop_string(ctx, deferred_idx, JS_PROMISE_HANDLER_PROMISE_PROP);
+
+        duk_push_this(ctx);
+        js_promise_handle(ctx, duk_get_top_index(ctx), deferred_idx);
+
+        duk_dup(ctx, promise_idx);
+        return 1;
+    }
+
+    duk_idx_t js_promise_then(duk_context* ctx) {
+        duk_idx_t top = duk_get_top(ctx);
+        if (top == 0)
+        {
+            duk_push_null(ctx);
+            duk_push_null(ctx);
+        }
+        else if (top == 1)
+        {
+            duk_require_function(ctx, 0);
+            duk_push_null(ctx);
+        }
+        else if (top == 2)
+        {
+            duk_require_function(ctx, 0);
+            duk_require_function(ctx, 1);
+        }
+        else
+        {
+            duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, "invalid arguments");
+            return duk_throw(ctx);
+        }
+
+        return js_promise_listen(ctx, 0, 1);
+    }
+    duk_idx_t js_promise_catch(duk_context* ctx) {
+        duk_require_function(ctx, 0);
+        duk_push_null(ctx);
+        return js_promise_listen(ctx, 1, 0);
+    }
+
+    duk_idx_t js_promise_ctor(duk_context* ctx)
+    {
+        duk_require_constructor_call(ctx);
+        duk_require_function(ctx, 0);
+
+        duk_push_this(ctx);
+        duk_idx_t this_idx = duk_get_top_index(ctx);
+        // setup promies magic id
+        duk_push_boolean(ctx, true);
+        duk_put_prop_string(ctx, this_idx, JS_PROMISE_MAGIC_ID);
+        // setup state prop
+        duk_push_uint(ctx, 0);
+        duk_put_prop_string(ctx, this_idx, JS_PROMISE_STATE_PROP);
+        // setup handled prop
+        duk_push_boolean(ctx, false);
+        duk_put_prop_string(ctx, this_idx, JS_PROMISE_HANDLED_PROP);
+        // setup value prop
+        duk_push_null(ctx); // polyfill uses undefined instead of null
+        duk_put_prop_string(ctx, this_idx, JS_PROMISE_VALUE_PROP);
+        // setup deferreds prop
+        duk_push_array(ctx);
+        duk_put_prop_string(ctx, this_idx, JS_PROMISE_DEFERREDS_PROP);
+        // done prop. this property is only used on doResolve call
+        duk_push_boolean(ctx, false);
+        duk_put_prop_string(ctx, this_idx, JS_PROMISE_DONE_PROP);
+
+        duk_push_c_function(ctx, js_promise_then, DUK_VARARGS);
+        duk_put_prop_string(ctx, this_idx, "then");
+
+        duk_push_c_function(ctx, js_promise_catch, 1);
+        duk_put_prop_string(ctx, this_idx, "catch");
+
+        js_promise_do_resolve(ctx, 0, this_idx);
+
+        duk_dup(ctx, this_idx);
+        return 1;
+    }
+    void js_setup_promise_bindings(duk_context* ctx)
+    {
+        duk_push_c_function(ctx, js_promise_ctor, 1);
+        duk_put_global_string(ctx, "Promise");
+    }
+}

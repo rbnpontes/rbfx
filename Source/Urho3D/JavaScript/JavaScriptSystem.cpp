@@ -1,7 +1,9 @@
-#include "JavaScriptSystem.h"
-#include "JavaScriptAsset.h"
 #include "../Core/Context.h"
 #include "../Core/ObjectCategory.h"
+#include "../Core/CoreEvents.h"
+
+#include "JavaScriptSystem.h"
+#include "JavaScriptAsset.h"
 #include "JavaScriptLogging.h"
 #include "JavaScriptSystemBindings.h"
 #include "JavaScriptEvents.h"
@@ -9,7 +11,7 @@
 #include "JavaScriptProfiler.h"
 #include "JavaScriptTimers.h"
 #include "JavaScriptWorker.h"
-#include "../Core/CoreEvents.h"
+#include "JavaScriptPromise.h"
 
 #include <duktape/duktape.h>
 #include <duktape/duk_internal.h>
@@ -67,6 +69,7 @@ namespace Urho3D
         js_setup_profiler_bindings(ctx);
         js_setup_timer_bindings(ctx);
         js_setup_worker_bindings(ctx);
+        js_setup_promise_bindings(ctx);
 
         return ctx;
     }

@@ -174,6 +174,10 @@ namespace Urho3D
 
             g_timer_contexts_[ctx] = timer_ctx;
         }
+        else
+        {
+            timer_ctx = timer_ctx_it->second;
+        }
 
         js_add_timer(ctx, timer_ctx, timer);
 
