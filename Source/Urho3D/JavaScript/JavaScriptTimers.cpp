@@ -194,6 +194,16 @@ namespace Urho3D
         URHO3D_PROFILE("setInterval");
         return js_add_timer_call(ctx, true);
     }
+    duk_idx_t js_set_immediate_call(duk_context* ctx)
+    {
+        URHO3D_PROFILE("setImmediate");
+        // immediate works like setTimeout
+        // in this case, immediate has timeout zero
+        // this means that immediate calls must be
+        // called on next frame.
+        duk_push_uint(ctx, 0);
+        return js_add_timer_call(ctx, false);
+    }
 
     duk_idx_t js_clear_timer(duk_context* ctx)
     {
@@ -219,6 +229,10 @@ namespace Urho3D
         return js_clear_timer(ctx);
     }
     duk_idx_t js_clear_interval_call(duk_context* ctx)
+    {
+        return js_clear_timer(ctx);
+    }
+    duk_idx_t js_clear_immediate_call(duk_context* ctx)
     {
         return js_clear_timer(ctx);
     }
@@ -253,8 +267,14 @@ namespace Urho3D
         duk_push_c_lightfunc(ctx, js_set_interval_call, 2, 2, 0);
         duk_put_global_string(ctx, "setInterval");
 
+        duk_push_c_lightfunc(ctx, js_set_immediate_call, 1, 1, 0);
+        duk_put_global_string(ctx, "setImmediate");
+
         duk_push_c_lightfunc(ctx, js_clear_timeout_call, 1, 1, 0);
         duk_put_global_string(ctx, "clearTimeout");
+
+        duk_push_c_lightfunc(ctx, js_clear_immediate_call, 1, 1, 0);
+        duk_put_global_string(ctx, "clearImmediate");
 
         duk_push_c_lightfunc(ctx, js_clear_interval_call, 1, 1, 0);
         duk_put_global_string(ctx, "clearInterval");
