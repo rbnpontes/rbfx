@@ -25,5 +25,5 @@
 
 namespace Urho3D
 {
-    void js_setup_logger_bindings(duk_context* ctx);
+    void js_setup_error_bindings(duk_context* ctx);
 }

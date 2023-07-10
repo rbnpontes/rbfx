@@ -77,7 +77,7 @@ namespace Urho3D
         return 0;
     }
 
-    void js_setup_logger(duk_context* ctx)
+    void js_setup_logger_bindings(duk_context* ctx)
     {
         duk_push_object(ctx);
 
