@@ -1,5 +1,6 @@
 #include "JavaScriptPromise.h"
 #include "JavaScriptOperations.h"
+#include "JavaScriptErrors.h"
 
 /// @{
 /// Promise implementation is heavily inspired on promise-polyfill
@@ -452,7 +453,7 @@ namespace Urho3D
             if (!duk_is_array(ctx, value_idx))
             {
                 duk_dup(ctx, 1);
-                duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, "Invalid argument. Promise.race argument must be Iterable(Array).");
+                duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, "Invalid argument. Promise.race argument must be Iterable(such Array).");
                 duk_call(ctx, 1);
                 return 0;
             }
@@ -567,7 +568,7 @@ namespace Urho3D
             if (!duk_is_array(ctx, value_idx))
             {
                 duk_dup(ctx, 1);
-                duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, "Invalid argument. Promise.all argument must be Iterable(Array).");
+                duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, "Invalid argument. Promise.all argument must be Iterable(such Array).");
                 duk_call(ctx, 1);
                 return 0;
             }
@@ -599,6 +600,96 @@ namespace Urho3D
         duk_put_prop_string(ctx, -2, "value");
         duk_new(ctx, 1);
 
+        return 1;
+    }
+
+    duk_idx_t js_promise_any(duk_context* ctx)
+    {
+        duk_get_global_string(ctx, "Promise");
+        duk_push_c_function(ctx, [](duk_context* ctx) {
+            duk_push_current_function(ctx);
+            duk_get_prop_string(ctx, -1, "values");
+            duk_idx_t values_idx = duk_get_top_index(ctx);
+
+            if (duk_is_null_or_undefined(ctx, values_idx) || !duk_is_array(ctx, values_idx))
+            {
+                duk_dup(ctx, 1);
+                duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, "Invalid argument. Promise.any argument must be Iterable(such Array).");
+                duk_call(ctx, 1);
+                return 0;
+            }
+
+            duk_idx_t values_length = duk_get_length(ctx, values_idx);
+            if (values_length == 0)
+            {
+                duk_dup(ctx, 1);
+                js_push_aggregate_error(ctx, "All promises were rejected");
+                duk_call(ctx, 1);
+                return 0;
+            }
+
+            // reject call
+            duk_idx_t reject_call_idx = duk_get_top(ctx);
+            {
+                duk_push_c_function(ctx, [](duk_context* ctx)
+                {
+                    duk_push_current_function(ctx);
+                    duk_idx_t this_idx, errors_idx;
+                    duk_uidx_t values_length, errors_length;
+                    {
+                        this_idx = duk_get_top_index(ctx);
+
+                        duk_get_prop_string(ctx, this_idx, "errors");
+                        errors_idx = duk_get_top_index(ctx);
+
+                        duk_get_prop_string(ctx, this_idx, "values_length");
+                        values_length = duk_get_uint(ctx, -1);
+                    }
+
+                    errors_length = duk_get_length(ctx, errors_idx);
+                    // store rejection error
+                    duk_dup(ctx, 0);
+                    duk_put_prop_index(ctx, errors_idx, errors_length++);
+
+
+                    if (errors_length == values_length)
+                    {
+                        duk_get_prop_string(ctx, this_idx, "reject");
+                        duk_idx_t top = duk_get_top(ctx);
+                        js_push_aggregate_error(ctx, errors_idx, "All promises were rejected");
+                        top = duk_get_top(ctx);
+                        duk_call(ctx, 1);
+                    }
+                    return 0;
+                }, 1);
+                duk_dup(ctx, 1);
+                duk_put_prop_string(ctx, -2, "reject");
+                duk_push_array(ctx);
+                duk_put_prop_string(ctx, -2, "errors");
+                duk_push_uint(ctx, values_length);
+                duk_put_prop_string(ctx, -2, "values_length");
+            }
+
+            for (duk_idx_t i = 0; i < values_length; ++i)
+            {
+                duk_idx_t top = duk_get_top(ctx);
+                duk_get_global_string(ctx, "Promise");
+                duk_push_string(ctx, "resolve");
+                duk_get_prop_index(ctx, values_idx, i);
+                duk_call_prop(ctx, -3, 1);
+
+                duk_push_string(ctx, "then");
+                duk_dup(ctx, 0);
+                duk_dup(ctx, reject_call_idx);
+                duk_call_prop(ctx, -4, 2);
+
+                duk_pop_n(ctx, duk_get_top(ctx) - top);
+            }
+            return 0;
+        }, 2);
+        duk_dup(ctx, 0);
+        duk_put_prop_string(ctx, -2, "values");
+        duk_new(ctx, 1);
         return 1;
     }
     /********************************
@@ -717,6 +808,9 @@ namespace Urho3D
 
         duk_push_c_lightfunc(ctx, js_promise_all, 1, 1, 0);
         duk_put_prop_string(ctx, -2, "all");
+
+        duk_push_c_lightfunc(ctx, js_promise_any, 1, 1, 0);
+        duk_put_prop_string(ctx, -2, "any");
 
         duk_put_global_string(ctx, "Promise");
     }
