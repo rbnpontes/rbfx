@@ -24,21 +24,38 @@ namespace Urho3D
                     break;
                 case DUK_TYPE_OBJECT:
                 {
-                    duk_dup(ctx, i);
-                    if (duk_is_error(ctx, -1)) {
+                    if (duk_is_error(ctx, i)) {
+                        duk_dup(ctx, i);
                         output.append(duk_safe_to_string(ctx, -1));
+                        duk_pop(ctx);
 
-                        if (duk_get_prop_string(ctx, -1, "stack"))
+                        if (duk_get_prop_string(ctx, i, "stack"))
                         {
                             output.append("\n");
                             output.append(duk_safe_to_string(ctx, -1));
                         }
+                        duk_pop(ctx);
 
+                        output.append(" ");
+
+                        duk_dup(ctx, i);
+                        const char* json = duk_json_encode(ctx, -1);
+                        output.append("\n");
+                        output.append(json ? json : "{}");
                         duk_pop(ctx);
                     }
                     else
                     {
-                        output.append(duk_json_encode(ctx, -1));
+                        duk_dup(ctx, i);
+                        const char* out = duk_json_encode(ctx, -1);
+
+                        if (!out)
+                        {
+                            duk_pop(ctx);
+                            out = duk_safe_to_string(ctx, -1);
+                        }
+
+                        output.append(out ? out : "{}");
                     }
                     duk_pop(ctx);
                 }
