@@ -25,5 +25,9 @@
 
 namespace Urho3D
 {
+    void js_push_aggregate_error(duk_context* ctx, duk_idx_t errors_idx);
+    void js_push_aggregate_error(duk_context* ctx, duk_idx_t errors_idx, duk_idx_t msg_idx);
+    void js_push_aggregate_error(duk_context* ctx, duk_idx_t errors_idx, const char* message);
+    void js_push_aggregate_error(duk_context* ctx, const char* message);
     void js_setup_error_bindings(duk_context* ctx);
 }
