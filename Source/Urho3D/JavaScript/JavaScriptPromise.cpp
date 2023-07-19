@@ -871,6 +871,19 @@ namespace Urho3D
         return 1;
     }
 
+    duk_idx_t js_promise_finally(duk_context* ctx)
+    {
+        duk_require_function(ctx, 0);
+        duk_push_this(ctx);
+        duk_push_string(ctx, "then");
+
+        duk_dup(ctx, 0);
+        duk_dup(ctx, 0);
+
+        duk_call_prop(ctx, -4, 2);
+
+        return 1;
+    }
     duk_idx_t js_promise_then(duk_context* ctx) {
         duk_idx_t top = duk_get_top(ctx);
         if (top == 0)
@@ -933,6 +946,9 @@ namespace Urho3D
 
         duk_push_c_function(ctx, js_promise_catch, 1);
         duk_put_prop_string(ctx, this_idx, "catch");
+
+        duk_push_c_function(ctx, js_promise_finally, 1);
+        duk_put_prop_string(ctx, this_idx, "finally");
 
         js_promise_do_resolve(ctx, 0, this_idx);
 
