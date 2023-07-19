@@ -398,15 +398,12 @@ namespace Urho3D
     /// @{
     /// this method is implementation of Promise.resolve
     /// but a method with this name exists, and wrap makes
-    /// more sense
+    /// sense.
     /// @}
     duk_idx_t js_promise_wrap(duk_context* ctx)
     {
         if (js_promise_is_promise(ctx, 0))
-        {
-            duk_dup(ctx, 0);
             return 1;
-        }
 
         duk_get_global_string(ctx, "Promise");
         duk_push_c_function(ctx, [](duk_context* ctx) {
@@ -692,6 +689,155 @@ namespace Urho3D
         duk_new(ctx, 1);
         return 1;
     }
+
+    duk_idx_t js_promise_all_settled_resolution(duk_context* ctx)
+    {
+        duk_push_current_function(ctx);
+
+        duk_idx_t data_idx, values_idx, resolve_idx;
+        duk_uidx_t idx, remainings;
+        duk_bool_t is_err = false;
+        {
+            duk_get_prop_string(ctx, -1, "idx");
+            idx = duk_get_uint(ctx, -1);
+            duk_pop(ctx);
+
+            duk_get_prop_string(ctx, -1, "isErr");
+            is_err = duk_get_boolean(ctx, -1);
+            duk_pop(ctx);
+
+            duk_get_prop_string(ctx, -1, "data");
+            data_idx = duk_get_top_index(ctx);
+
+            duk_get_prop_string(ctx, data_idx, "values");
+            values_idx = duk_get_top_index(ctx);
+
+            duk_get_prop_string(ctx, data_idx, "remainings");
+            remainings = duk_get_uint(ctx, -1);
+
+            duk_get_prop_string(ctx, data_idx, "resolve");
+            resolve_idx = duk_get_top_index(ctx);
+        }
+
+        // check for error first
+        if (is_err)
+        {
+            duk_push_object(ctx);
+            duk_push_string(ctx, "rejected");
+            duk_put_prop_string(ctx, -2, "status");
+
+            duk_dup(ctx, 0);
+            duk_put_prop_string(ctx, -2, "reason");
+
+            duk_put_prop_index(ctx, values_idx, idx);
+        }
+        else
+        {
+            duk_push_object(ctx);
+            duk_push_string(ctx, "fulfilled");
+            duk_put_prop_string(ctx, -2, "status");
+
+            duk_dup(ctx, 0);
+            duk_put_prop_string(ctx, -2, "value");
+
+            duk_put_prop_index(ctx, values_idx, idx);
+        }
+
+        --remainings;
+
+        if (remainings == 0)
+        {
+            duk_dup(ctx, resolve_idx);
+            duk_dup(ctx, values_idx);
+            duk_call(ctx, 1);
+            return 0;
+        }
+
+        duk_push_uint(ctx, remainings);
+        duk_put_prop_string(ctx, data_idx, "remainings");
+
+        return 0;
+    }
+    duk_idx_t js_promise_all_settled(duk_context* ctx) {
+        duk_get_global_string(ctx, "Promise");
+        duk_push_c_function(ctx, [](duk_context* ctx) {
+            duk_push_current_function(ctx);
+            duk_get_prop_string(ctx, -1, "values");
+            duk_idx_t values_idx = duk_get_top_index(ctx);
+
+            if (duk_is_null_or_undefined(ctx, values_idx) || !duk_is_array(ctx, values_idx))
+            {
+                duk_dup(ctx, 1);
+                duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, "Invalid argument. Promise.allSettled argument must be Iterable(such Array).");
+                duk_call(ctx, 1);
+                return 0;
+            }
+
+            duk_idx_t values_length = duk_get_length(ctx, values_idx);
+            if (values_length == 0)
+            {
+                duk_dup(ctx, 0);
+                duk_push_array(ctx);
+                duk_call(ctx, 1);
+                return 0;
+            }
+
+            duk_idx_t data_idx = duk_get_top(ctx);
+            {
+                duk_push_object(ctx);
+
+                duk_dup(ctx, values_idx);
+                duk_push_string(ctx, "slice");
+                duk_call_prop(ctx, -2, 0);
+
+                duk_put_prop_string(ctx, data_idx, "values");
+
+                duk_push_uint(ctx, values_length);
+                duk_put_prop_string(ctx, data_idx, "remainings");
+
+                duk_dup(ctx, 0);
+                duk_put_prop_string(ctx, data_idx, "resolve");
+            }
+
+            duk_get_global_string(ctx, "Promise");
+            for (duk_idx_t idx = 0; idx < values_length; ++idx)
+            {
+                duk_idx_t top = duk_get_top(ctx);
+                duk_push_string(ctx, "resolve");
+                duk_get_prop_index(ctx, values_idx, idx);
+                duk_call_prop(ctx, -3, 1);
+
+                duk_idx_t promise_idx = duk_get_top_index(ctx);
+
+                duk_push_string(ctx, "then");
+
+                duk_push_c_function(ctx, js_promise_all_settled_resolution, 1);
+                duk_dup(ctx, data_idx);
+                duk_put_prop_string(ctx, -2, "data");
+                duk_push_uint(ctx, idx);
+                duk_put_prop_string(ctx, -2, "idx");
+                duk_push_boolean(ctx, false);
+                duk_put_prop_string(ctx, -2, "isErr");
+
+                duk_push_c_function(ctx, js_promise_all_settled_resolution, 1);
+                duk_dup(ctx, data_idx);
+                duk_put_prop_string(ctx, -2, "data");
+                duk_push_uint(ctx, idx);
+                duk_put_prop_string(ctx, -2, "idx");
+                duk_push_boolean(ctx, true);
+                duk_put_prop_string(ctx, -2, "isErr");
+
+                duk_call_prop(ctx, promise_idx, 2);
+
+                duk_pop_n(ctx, duk_get_top(ctx) - top);
+            }
+            return 0;
+        }, 2);
+        duk_dup(ctx, 0);
+        duk_put_prop_string(ctx, -2, "values");
+        duk_new(ctx, 1);
+        return 1;
+    }
     /********************************
     * END PROMISE STATIC BINDINGS *
     *********************************/
@@ -811,6 +957,9 @@ namespace Urho3D
 
         duk_push_c_lightfunc(ctx, js_promise_any, 1, 1, 0);
         duk_put_prop_string(ctx, -2, "any");
+
+        duk_push_c_lightfunc(ctx, js_promise_all_settled, 1, 1, 0);
+        duk_put_prop_string(ctx, -2, "allSettled");
 
         duk_put_global_string(ctx, "Promise");
     }
