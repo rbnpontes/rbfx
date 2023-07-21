@@ -13,10 +13,16 @@ namespace Urho3D
     StringHash g_ref_counted_type   = StringHash("RefCounted");
     StringHash g_boolean_type       = StringHash("bool");
     StringHash g_number_type        = StringHash("Number");
+    StringHash g_int_type           = StringHash("int");
+    StringHash g_uint_type          = StringHash("uint");
+    StringHash g_float_type         = StringHash("float");
+    StringHash g_double_type        = StringHash("double");
     StringHash g_buffer_type        = StringHash("Buffer");
     StringHash g_pointer_type       = StringHash("void");
     StringHash g_string_type        = StringHash("string");
     StringHash g_variant_map_type   = StringHash("VariantMap");
+    StringHash g_variant_type       = StringHash("Variant");
+    StringHash g_string_hash_type   = StringHash("StringHash");
     StringHash g_vector2_type       = StringHash("Vector2");
     StringHash g_vector3_type       = StringHash("Vector3");
     StringHash g_int_vector2_type   = StringHash("IntVector2");
@@ -750,5 +756,60 @@ namespace Urho3D
         }
 
         return output;
+    }
+    void rbfx_require_type(duk_context* ctx, duk_idx_t value_idx, unsigned type_hash)
+    {
+#define TYPE_REQ_ERROR_MSG(expectType) "invalid value type. the value type does not match type requirements or it's invalid. expected type: "#expectType
+        // type validation can add a lot of boilerplate to final code that is not required.
+        // for this reason, type validation will be removed on release builds
+#ifdef URHO3D_DEBUG
+        duk_idx_t type = duk_get_type(ctx, value_idx);
+        ea::string err_output = "";
+
+        // Variant is like any type of TypeScript.
+        if (type_hash == g_variant_type.Value())
+            return;
+
+        if (type == DUK_TYPE_NULL || type == DUK_TYPE_UNDEFINED)
+            err_output = "invalid value type. object specified is null.";
+        else if (type_hash == g_string_hash_type.Value() && !(type == DUK_TYPE_STRING || type == DUK_TYPE_NUMBER))
+            err_output = TYPE_REQ_ERROR_MSG(StringHash(string | Number));
+        else if (type_hash == g_number_type.Value() && type != DUK_TYPE_NUMBER)
+            err_output = TYPE_REQ_ERROR_MSG(Number);
+        else if (type_hash == g_int_type.Value() && type != DUK_TYPE_NUMBER)
+            err_output = TYPE_REQ_ERROR_MSG(int);
+        else if (type_hash == g_uint_type.Value() && type != DUK_TYPE_NUMBER)
+            err_output = TYPE_REQ_ERROR_MSG(uint);
+        else if (type_hash == g_float_type.Value() && type != DUK_TYPE_NUMBER)
+            err_output = TYPE_REQ_ERROR_MSG(float);
+        else if (type_hash == g_double_type.Value() && type != DUK_TYPE_NUMBER)
+            err_output = TYPE_REQ_ERROR_MSG(double);
+        else if (type_hash == g_string_type.Value() && type != DUK_TYPE_STRING)
+            err_output = TYPE_REQ_ERROR_MSG(string);
+        else if (type_hash == g_buffer_type.Value() && type != DUK_TYPE_BUFFER)
+            err_output = TYPE_REQ_ERROR_MSG(Buffer);
+        else if (type_hash == g_pointer_type.Value() && type != DUK_TYPE_POINTER)
+            err_output = TYPE_REQ_ERROR_MSG(ptr);
+        else if (type_hash == g_variant_map_type.Value() && type != DUK_TYPE_OBJECT)
+            err_output = TYPE_REQ_ERROR_MSG(VariantMap);
+        else if (type == DUK_TYPE_OBJECT)
+        {
+            if (duk_get_prop_string(ctx, value_idx, "type"))
+            {
+                Object* obj = static_cast<Object*>(rbfx_get_instance(ctx, value_idx));
+                if (obj && !obj->GetTypeInfo()->IsTypeOf(StringHash(type_hash)))
+                    err_output = "invalid value type. the value object type does not match type requirements.";
+                else if (type_hash != StringHash(duk_get_type(ctx, -1)).Value())
+                    err_output = "invalid value type. the value object type does not match type requirements.";
+            }
+            duk_pop(ctx);
+        }
+
+        if (!err_output.empty())
+        {
+            duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, err_output.c_str());
+            duk_throw(ctx);
+        }
+#endif
     }
 }

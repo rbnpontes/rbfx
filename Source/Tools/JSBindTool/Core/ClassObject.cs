@@ -322,7 +322,7 @@ namespace JSBindTool.Core
                 for (int i = 0; i < pair.Value.Count; ++i)
                 {
                     code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}{i}_call(duk_context* ctx)");
-                    code.Scope(scopeCode => EmitMethodBody(pair.Value[i], scopeCode));
+                    code.Scope(scopeCode => EmitMethodBody(pair.Value[i], scopeCode, false));
                 }
             }
         }
@@ -431,21 +431,25 @@ namespace JSBindTool.Core
                 code.Add($"duk_put_prop_string(ctx, obj_idx, \"{pair.Key}\");");
             }
         }
-        protected virtual void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code)
+        protected virtual void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidation = true)
         {
             string nativeName = AnnotationUtils.GetMethodNativeName(methodInfo);
+            var parameters = methodInfo.GetParameters().ToList();
+
+            if(emitValidation)
+                EmitArgumentValidation(parameters, code);
+
             code
                 .Add("duk_push_this(ctx);")
                 .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(rbfx_get_instance(ctx, -1));")
                 .Add("duk_pop(ctx);");
-            var parameters = methodInfo.GetParameters();
 
             StringBuilder argsCall = new StringBuilder();
-            for(int i =0; i < parameters.Length; ++i)
+            for(int i =0; i < parameters.Count; ++i)
             {
                 CodeUtils.EmitValueRead(parameters[i].ParameterType, $"arg{i}", i.ToString(), code);
                 argsCall.Append($"arg{i}");
-                if (i < parameters.Length - 1)
+                if (i < parameters.Count - 1)
                     argsCall.Append(", ");
             }
 
@@ -461,6 +465,19 @@ namespace JSBindTool.Core
                 CodeUtils.EmitValueWrite(methodInfo.ReturnType, "result", code);
                 code.Add("return 1;");
             }
+        }
+
+        protected virtual void EmitArgumentValidation(List<ParameterInfo> parameters, CodeBuilder code)
+        {
+            if (parameters.Count == 0)
+                return;
+            code.Add("#if defined(URHO3D_DEBUG)");
+            for(int i = 0; i < parameters.Count; ++i)
+            {
+                uint typeHash = CodeUtils.GetTypeHash(parameters[i].ParameterType);
+                code.Add($"rbfx_require_type(ctx, {i}, {typeHash});");
+            }
+            code.Add("#endif").AddNewLine();
         }
 
         private List<PropertyInfo> GetProperties()

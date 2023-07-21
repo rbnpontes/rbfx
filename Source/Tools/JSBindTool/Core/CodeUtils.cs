@@ -217,7 +217,7 @@ namespace JSBindTool.Core
 
         public static uint GetTypeHash(Type type)
         {
-            string hashInput = "";
+            string hashInput;
 
             if (type.IsEnum)
                 hashInput = "Number";
