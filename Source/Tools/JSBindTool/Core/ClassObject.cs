@@ -475,7 +475,7 @@ namespace JSBindTool.Core
             for(int i = 0; i < parameters.Count; ++i)
             {
                 uint typeHash = CodeUtils.GetTypeHash(parameters[i].ParameterType);
-                code.Add($"rbfx_require_type(ctx, {i}, {typeHash});");
+                code.Add($"rbfx_require_type(ctx, {i}, {typeHash}/*{parameters[i].ParameterType.Name}*/);");
             }
             code.Add("#endif").AddNewLine();
         }

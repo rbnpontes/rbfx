@@ -799,7 +799,7 @@ namespace Urho3D
                 Object* obj = static_cast<Object*>(rbfx_get_instance(ctx, value_idx));
                 if (obj && !obj->GetTypeInfo()->IsTypeOf(StringHash(type_hash)))
                     err_output = "invalid value type. the value object type does not match type requirements.";
-                else if (type_hash != StringHash(duk_get_type(ctx, -1)).Value())
+                else if (!obj && type_hash != StringHash(duk_get_string(ctx, -1)).Value())
                     err_output = "invalid value type. the value object type does not match type requirements.";
             }
             duk_pop(ctx);
