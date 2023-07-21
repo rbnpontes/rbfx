@@ -1,3 +1,4 @@
+using JSBindTool.Bindings.MathTypes;
 using JSBindTool.Core.Annotations;
 using System;
 using System.Collections.Generic;
@@ -5,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace JSBindTool.Core
 {
@@ -29,6 +31,8 @@ namespace JSBindTool.Core
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);");
             code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_ctor(duk_context* ctx);");
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance);");
+
+            EmitMethodSignatures(code);
         }
 
         public virtual void EmitSourceIncludes(CodeBuilder code)
@@ -50,22 +54,96 @@ namespace JSBindTool.Core
             };
 
             GetProperties().ForEach(prop => addInclude(prop.PropertyType));
-            GetMethods().ForEach(method =>
+
+            var methodsData = GetMethods();
+            foreach(var pair in methodsData)
             {
-                addInclude(method.ReturnType);
-                method.GetParameters().ToList().ForEach(x => addInclude(x.ParameterType));
-            });
+                pair.Value.ForEach(method =>
+                {
+                    addInclude(method.ReturnType);
+                    method.GetParameters().ToList().ForEach(x => addInclude(x.ParameterType));
+                });
+            }
 
             code.Add(includes.ToArray()).AddNewLine();
         }
 
         public virtual void EmitSource(CodeBuilder code)
         {
+            EmitSourceMethodLookupTable(code);
             EmitSourceSetup(code);
             EmitSourceConstructor(code);
             EmitSourceWrap(code);
+            EmitSourceMethods(code);
         }
 
+        protected virtual void EmitSourceMethodLookupTable(CodeBuilder code)
+        {
+            CodeBuilder lookupField = new CodeBuilder();
+            lookupField.IndentationSize = 0;
+
+            lookupField.Add("ea::unordered_map<StringHash, duk_c_function> g_functions = {");
+
+            bool hasVariants = false;
+            var methodsData = GetMethods();
+            foreach(var pair in methodsData)
+            {
+                // only generate lookup table if any methods has two or more variants.
+                if (pair.Value.Count <= 1)
+                    continue;
+
+                hasVariants = true;
+
+                for(int i =0;i < pair.Value.Count; ++i)
+                {
+                    MethodInfo method = pair.Value[i];
+                    CodeBuilder funcPair = new CodeBuilder();
+                    string funcSignature = $"{CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}{i}_call";
+                    uint funcHash = 0u;
+
+                    bool hasStringHash = false;
+
+                    Action<ParameterInfo, Type> hashParamCalc = (param, type) =>
+                    {
+                        uint hash = 0u;
+                        if(param.ParameterType == typeof(StringHash))
+                        {
+                            hasStringHash = true;
+                            hash = CodeUtils.GetTypeHash(type);
+                        }
+                        else
+                        {
+                            hash = CodeUtils.GetTypeHash(param.ParameterType);
+                        }
+
+                        HashUtils.Combine(ref funcHash, hash);
+                    };
+
+                    method.GetParameters().ToList().ForEach(param => hashParamCalc(param, typeof(string)));
+
+                    funcPair.Add($"{{ StringHash({funcHash}), {funcSignature} }},");
+                    lookupField.Add(funcPair);
+
+                    // if user code passes a number instead of string
+                    // then get type method will return Number hash code instead of string hash code
+                    // this will lead to not found method call, to fix this
+                    // bind tool will generate two entries for the same method.
+                    if (hasStringHash)
+                    {
+                        funcHash = 0u;
+                        method.GetParameters().ToList().ForEach(param => hashParamCalc(param, typeof(uint)));
+
+                        funcPair.Add($"{{ StringHash({funcHash}), {funcSignature} }},");
+                        lookupField.Add(funcPair);
+                    }
+                }
+            }
+
+            lookupField.Add("};").AddNewLine();
+
+            if (hasVariants)
+                code.Add(lookupField);
+        }
         protected virtual void EmitSourceSetup(CodeBuilder code)
         {
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx)");
@@ -174,10 +252,92 @@ namespace JSBindTool.Core
                 EmitMethods(scope);
             });
         }
+        protected virtual void EmitSourceMethods(CodeBuilder code)
+        {
+            var methodData = GetMethods();
+
+            foreach(var pair in methodData)
+            {
+                code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}_call(duk_context* ctx)");
+                code.Scope(scopeCode =>
+                {
+                    if (pair.Value.Count <= 1)
+                        EmitMethodBody(pair.Value.First(), scopeCode);
+                    else
+                    {
+                        int minArgs = 0;
+                        int maxArgs = 0;
+
+                        pair.Value.ForEach(x =>
+                        {
+                            var paramsLength = x.GetParameters().Length;
+                            minArgs = Math.Min(minArgs, paramsLength);
+                            maxArgs = Math.Max(maxArgs, paramsLength);
+                        });
+
+                        // emit method selection
+                        scopeCode
+                            .Add("unsigned methodHash = 0u;")
+                            .Add("duk_idx_t argc = duk_get_top(ctx);")
+                            .AddNewLine()
+                            .Add("// validate arguments count")
+                            .Add($"if(argc < {minArgs})")
+                            .Scope(ifCode =>
+                            {
+                                ifCode
+                                    .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid arguments to function '{pair.Key}'.\");")
+                                    .Add("return duk_throw(ctx);");
+                            })
+                            .Add($"else if(argc > {maxArgs})")
+                            .Scope(elseScope =>
+                            {
+                                elseScope
+                                    .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid arguments to function '{pair.Key}'.\");")
+                                    .Add("return duk_throw(ctx);");
+                            })
+                            .AddNewLine()
+                            .Add("for(unsigned i = 0; i < argc; ++i)")
+                            .Scope(loopScope =>
+                            {
+                                loopScope
+                                    .Add("StringHash typeHash = rbfx_get_type(ctx, i);")
+                                    .Add("CombineHash(methodHash, typeHash.Value());");
+                            })
+                            .AddNewLine()
+                            .Add("const auto funcIt = g_functions.find(StringHash(methodHash));")
+                            .Add("if(funcIt == g_functions.end())")
+                            .Scope(ifScope =>
+                            {
+                                ifScope
+                                    .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid arguments to function '{pair.Key}'.\");")
+                                    .Add("return duk_throw(ctx);");
+                            })
+                            .Add("return funcIt->second(ctx);");
+                    }
+                });
+
+                if (pair.Value.Count <= 1)
+                    continue;
+
+                for (int i = 0; i < pair.Value.Count; ++i)
+                {
+                    code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}{i}_call(duk_context* ctx)");
+                    code.Scope(scopeCode => EmitMethodBody(pair.Value[i], scopeCode));
+                }
+            }
+        }
 
         protected virtual void EmitProperties(CodeBuilder code)
         {
-            GetProperties().ForEach(prop => EmitProperty(prop, code));
+            var props = GetProperties();
+
+            if (props.Count > 0)
+                code.Add("// properties setup");
+
+            props.ForEach(prop => EmitProperty(prop, code));
+
+            if (props.Count > 0)
+                code.AddNewLine();
         }
         protected virtual void EmitProperty(PropertyInfo prop, CodeBuilder code)
         {
@@ -234,44 +394,73 @@ namespace JSBindTool.Core
             code.Add($"duk_def_prop(ctx, obj_idx, {propFlags});");
         }
 
+        protected virtual void EmitMethodSignatures(CodeBuilder code)
+        {
+            var methodsData = GetMethods();
+            foreach(var pair in methodsData)
+            {
+                code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}_call(duk_context* ctx);");
+                // generate variants only if has two or more methods definitions
+                if(pair.Value.Count > 1)
+                {
+                    for (int i = 0; i < pair.Value.Count; ++i)
+                        code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}{i}_call(duk_context* ctx);");
+                }
+            }
+        }
         protected virtual void EmitMethods(CodeBuilder code)
         {
-            GetMethods().ForEach(method => EmitMethod(method, code));
-        }
-        protected virtual void EmitMethod(MethodInfo method, CodeBuilder code)
-        {
-            string nativeName = AnnotationUtils.GetMethodNativeName(method);
-            code.LightFunction(scope =>
+            var methodsData = GetMethods();
+
+            if (methodsData.Count > 0)
+                code.Add("// methods setup");
+
+            foreach(var pair in methodsData)
             {
-                scope
-                    .Add("duk_push_this(ctx);")
-                    .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(rbfx_get_instance(ctx, -1));")
-                    .Add("duk_pop(ctx);");
-                var parameters = method.GetParameters();
+                int maxArgs = 0;
 
-                StringBuilder argsCall = new StringBuilder();
-                for(int i =0; i < parameters.Length; ++i)
-                {
-                    CodeUtils.EmitValueRead(parameters[i].ParameterType, $"arg{i}", i.ToString(), scope);
-                    argsCall.Append($"arg{i}");
-                    if (i < parameters.Length - 1)
-                        argsCall.Append(", ");
-                }
 
-                if(method.ReturnType == typeof(void))
-                {
-                    scope
-                        .Add($"instance->{nativeName}({argsCall});")
-                        .Add("return 0;");
-                }
+                pair.Value.ForEach(x => maxArgs = Math.Max(maxArgs, x.GetParameters().Length));
+
+
+                if (pair.Value.Count <= 1)
+                    code.Add($"duk_push_c_lightfunc(ctx, {CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}_call, {maxArgs}, {maxArgs}, 0);");
                 else
-                {
-                    scope.Add($"{CodeUtils.GetNativeDeclaration(method.ReturnType)} result = instance->{nativeName}({argsCall});");
-                    CodeUtils.EmitValueWrite(method.ReturnType, "result", scope);
-                    scope.Add("return 1;");
-                }
-            }, method.GetParameters().Length.ToString());
-            code.Add($"duk_put_prop_string(ctx, obj_idx, \"{AnnotationUtils.GetMethodName(method)}\");");
+                    code.Add($"duk_push_c_function(ctx, {CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}_call, DUK_VARARGS);");
+
+                code.Add($"duk_put_prop_string(ctx, obj_idx, \"{pair.Key}\");");
+            }
+        }
+        protected virtual void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code)
+        {
+            string nativeName = AnnotationUtils.GetMethodNativeName(methodInfo);
+            code
+                .Add("duk_push_this(ctx);")
+                .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(rbfx_get_instance(ctx, -1));")
+                .Add("duk_pop(ctx);");
+            var parameters = methodInfo.GetParameters();
+
+            StringBuilder argsCall = new StringBuilder();
+            for(int i =0; i < parameters.Length; ++i)
+            {
+                CodeUtils.EmitValueRead(parameters[i].ParameterType, $"arg{i}", i.ToString(), code);
+                argsCall.Append($"arg{i}");
+                if (i < parameters.Length - 1)
+                    argsCall.Append(", ");
+            }
+
+            if(methodInfo.ReturnType == typeof(void))
+            {
+                code
+                    .Add($"instance->{nativeName}({argsCall});")
+                    .Add("return 0;");
+            }
+            else
+            {
+                code.Add($"{CodeUtils.GetNativeDeclaration(methodInfo.ReturnType)} result = instance->{nativeName}({argsCall});");
+                CodeUtils.EmitValueWrite(methodInfo.ReturnType, "result", code);
+                code.Add("return 1;");
+            }
         }
 
         private List<PropertyInfo> GetProperties()
@@ -280,11 +469,31 @@ namespace JSBindTool.Core
                 .Where(x => AnnotationUtils.IsValidProperty(x))
                 .ToList();
         }
-        private List<MethodInfo> GetMethods()
+        private Dictionary<string, List<MethodInfo>> GetMethods()
         {
-            return Target.GetMethods(BindingFlags.Public | BindingFlags.DeclaredOnly | BindingFlags.Instance)
+            Dictionary<string, List<MethodInfo>> methodsData = new Dictionary<string, List<MethodInfo>>();
+
+            Target
+                .GetMethods(BindingFlags.Public | BindingFlags.DeclaredOnly | BindingFlags.Instance)
                 .Where(x => AnnotationUtils.IsValidMethod(x))
-                .ToList();
+                .ToList()
+                .ForEach(x =>
+                {
+                    List<MethodInfo>? method;
+                    string methodName = AnnotationUtils.GetMethodName(x);
+                    if (methodsData.TryGetValue(methodName, out method))
+                    {
+                        method.Add(x);
+                    }
+                    else
+                    {
+                        method = new List<MethodInfo>();
+                        method.Add(x);
+                        methodsData.Add(methodName, method);
+                    }
+                });
+
+            return methodsData;
         }
 
         public static ClassObject Create(Type type)

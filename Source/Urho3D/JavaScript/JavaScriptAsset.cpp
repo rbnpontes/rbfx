@@ -11,7 +11,7 @@ namespace Urho3D
     {
         sourceCode_ = "(function() {\ntry {\n";
         sourceCode_ += source.ReadString();
-        sourceCode_ += "} catch(e) { console.error(e); }\n})();";
+        sourceCode_ += "\n} catch(e) { console.error(e); }\n})();";
         return true;
     }
     bool JavaScriptAsset::Save(Serializer& desc) const

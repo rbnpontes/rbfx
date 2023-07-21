@@ -27,8 +27,10 @@ namespace JSBindTool.Bindings.UITypes
     public enum Corner
     {
         TopLeft = 0,
+        TopRight,
         BottomLeft,
-        BottomRight
+        BottomRight,
+        MaxUIElementCorners
     }
     [Include("Urho3D/UI/UIElement.h")]
     public enum Orientation

@@ -214,5 +214,29 @@ namespace JSBindTool.Core
                 code.Add($"{AnnotationUtils.GetTypeName(type)} {varName} = {GetMethodPrefix(type)}_resolve(ctx, {accessor});");
             else throw new NotImplementedException();
         }
+
+        public static uint GetTypeHash(Type type)
+        {
+            string hashInput = "";
+
+            if (type.IsEnum)
+                hashInput = "Number";
+            else if (type == typeof(string))
+                hashInput = "string";
+            else if (type == typeof(StringHash))
+                hashInput = "StringHash";
+            else if (type == typeof(bool))
+                hashInput = "bool";
+            else if (type == typeof(float) || type == typeof(double) || type == typeof(int) || type == typeof(uint))
+                hashInput = "Number";
+            else if (type == typeof(IntPtr))
+                hashInput = "void";
+            else if (type == typeof(JSFunction))
+                hashInput = "Function";
+            else
+                hashInput = AnnotationUtils.GetTypeName(type);
+
+            return HashUtils.Hash(hashInput);
+        }
     }
 }

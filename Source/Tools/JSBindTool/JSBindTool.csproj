@@ -42,6 +42,7 @@
         <Compile Include="Core\CodeUtils.cs" />
         <Compile Include="Core\Constants.cs" />
         <Compile Include="Core\EnumGen.cs" />
+        <Compile Include="Core\HashUtils.cs" />
         <Compile Include="Core\HeaderUtils.cs" />
         <Compile Include="Core\JSFunction.cs" />
         <Compile Include="Core\NoopPrimitive.cs" />

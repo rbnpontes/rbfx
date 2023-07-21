@@ -34,6 +34,8 @@ namespace JSBindTool.Bindings.UITypes
         [Method("GetColor")]
         public Color GetColor(Corner corner) { return new Color(); }
         [Method("SetColor")]
+        public void SetColor(Color color) { }
+        [Method("SetColor")]
         public void SetColor(Corner corner, Color color) { }
     }
 }

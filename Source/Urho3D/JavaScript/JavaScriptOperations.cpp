@@ -11,6 +11,12 @@
 namespace Urho3D
 {
     StringHash g_ref_counted_type   = StringHash("RefCounted");
+    StringHash g_boolean_type       = StringHash("bool");
+    StringHash g_number_type        = StringHash("Number");
+    StringHash g_buffer_type        = StringHash("Buffer");
+    StringHash g_pointer_type       = StringHash("void");
+    StringHash g_string_type        = StringHash("string");
+    StringHash g_variant_map_type   = StringHash("VariantMap");
     StringHash g_vector2_type       = StringHash("Vector2");
     StringHash g_vector3_type       = StringHash("Vector3");
     StringHash g_int_vector2_type   = StringHash("IntVector2");
@@ -705,5 +711,44 @@ namespace Urho3D
         duk_dup(ctx, catch_call_idx);
 
         duk_call(ctx, 2);
+    }
+
+    StringHash rbfx_get_type(duk_context* ctx, duk_idx_t value_idx)
+    {
+        StringHash output(M_MAX_UNSIGNED);
+        duk_idx_t type = duk_get_type(ctx, value_idx);
+
+        if (duk_is_null_or_undefined(ctx, value_idx))
+            return output;
+
+        switch (type)
+        {
+            case DUK_TYPE_BOOLEAN:
+                output = g_boolean_type;
+                break;
+            case DUK_TYPE_NUMBER:
+                output = g_number_type;
+                break;
+            case DUK_TYPE_STRING:
+                output = g_string_type;
+                break;
+            case DUK_TYPE_BUFFER:
+                output = g_buffer_type;
+                break;
+            case DUK_TYPE_POINTER:
+                output = g_pointer_type;
+                break;
+            case DUK_TYPE_OBJECT:
+            {
+                if (duk_get_prop_string(ctx, value_idx, "type"))
+                    output = duk_get_string(ctx, -1);
+                else
+                    output = g_variant_map_type;
+                duk_pop(ctx);
+            }
+                break;
+        }
+
+        return output;
     }
 }
