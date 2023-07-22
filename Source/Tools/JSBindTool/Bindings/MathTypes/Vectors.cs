@@ -19,6 +19,10 @@ namespace JSBindTool.Bindings.MathTypes
 
         public Vector2(): base(typeof(Vector2)) { }
 
+        [Method("ToVector3")]
+        public Vector3 ToVector3() { return new Vector3(); }
+        [Method("ToVector3")]
+        public Vector3 ToVector3(float z) { return new Vector3(); }
         [Method("ToVector4")]
         public Vector4 ToVector4(float z, float w) { return new Vector4(); }
 
@@ -43,6 +47,20 @@ namespace JSBindTool.Bindings.MathTypes
         public static Vector2 One = new Vector2();
     }
 
+    [Include("Urho3D/Math/Vector3.h")]
+    public class Vector3 : PrimitiveObject
+    {
+        [Variable("x_")]
+        public float X;
+        [Variable("y_")]
+        public float Y;
+        [Variable("z_")]
+        public float Z;
+
+        public Vector3(): base(typeof(Vector3)) { }
+    }
+
+    [Include("Urho3D/Math/Vector4.h")]
     public class Vector4 : PrimitiveObject
     {
         [Variable("x_")]

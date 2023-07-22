@@ -70,7 +70,7 @@ namespace JSBindTool.Core
             CodeBuilder lookupField = new CodeBuilder();
             lookupField.IndentationSize = 0;
 
-            lookupField.Add("ea::unordered_map<StringHash, duk_c_function> g_functions = {");
+            lookupField.Add("static ea::unordered_map<StringHash, duk_c_function> g_functions = {");
 
             bool hasVariants = false;
             var methodsData = GetMethods();
@@ -109,7 +109,7 @@ namespace JSBindTool.Core
 
                     method.GetParameters().ToList().ForEach(param => hashParamCalc(param, typeof(string)));
 
-                    funcPair.Add($"{{ StringHash({funcHash}), {funcSignature} }},");
+                    funcPair.Add($"{{ StringHash({(funcHash == 0u ? "0u" : funcHash.ToString())}), {funcSignature} }},");
                     lookupField.Add(funcPair);
 
                     // if user code passes a number instead of string
