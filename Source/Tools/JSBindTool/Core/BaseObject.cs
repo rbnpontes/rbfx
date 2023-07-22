@@ -84,10 +84,11 @@ namespace JSBindTool.Core
 
                 for (int i = 0; i < pair.Value.Count; ++i)
                 {
+                    uint methodNameHash = HashUtils.Hash(pair.Key);
                     MethodInfo method = pair.Value[i];
                     CodeBuilder funcPair = new CodeBuilder();
                     string funcSignature = $"{CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}{i}_call";
-                    uint funcHash = 0u;
+                    uint funcHash = methodNameHash;
 
                     bool hasStringHash = false;
 
@@ -118,7 +119,7 @@ namespace JSBindTool.Core
                     // bind tool will generate two entries for the same method.
                     if (hasStringHash)
                     {
-                        funcHash = 0u;
+                        funcHash = methodNameHash;
                         method.GetParameters().ToList().ForEach(param => hashParamCalc(param, typeof(uint)));
 
                         funcPair.Add($"{{ StringHash({funcHash}), {funcSignature} }},");
@@ -141,7 +142,6 @@ namespace JSBindTool.Core
         protected virtual void EmitSourceMethods(CodeBuilder code)
         {
             var methodData = GetMethods();
-
             foreach (var pair in methodData)
             {
                 code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}_call(duk_context* ctx)");
@@ -163,7 +163,7 @@ namespace JSBindTool.Core
 
                         // emit method selection
                         scopeCode
-                            .Add("unsigned methodHash = 0u;")
+                            .Add($"unsigned methodHash = {HashUtils.Hash(pair.Key)};")
                             .Add("duk_idx_t argc = duk_get_top(ctx);")
                             .AddNewLine()
                             .Add("// validate arguments count")
