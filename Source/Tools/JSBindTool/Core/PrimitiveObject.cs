@@ -159,7 +159,7 @@ namespace JSBindTool.Core
                 int idx = 0;
                 CollectVariables().ForEach(vary =>
                 {
-                    ctorScope.Add("if(argc > 0)");
+                    ctorScope.Add($"if(argc > {idx})");
                     ctorScope.Scope(ifScope =>
                     {
                         CodeUtils.EmitValueRead(vary.Type, "value", idx.ToString(), ifScope);
@@ -182,6 +182,8 @@ namespace JSBindTool.Core
                 ctorScope.Add("duk_put_prop_string(ctx, this_idx, \"type\");");
 
                 EmitMethods(ctorScope, "this_idx");
+                EmitProperties(ctorScope, "this_idx");
+
                 ctorScope.AddNewLine();
 
                 ctorScope.Add("duk_push_this(ctx);");
@@ -353,16 +355,64 @@ namespace JSBindTool.Core
             });
         }
 
+        protected override void EmitProperty(PropertyInfo prop, string accessor, CodeBuilder code)
+        {
+            List<string> enumFlags = new List<string>();
+            enumFlags.Add("DUK_DEFPROP_HAVE_ENUMERABLE");
+
+            code.AddNewLine();
+            code.Add($"duk_push_string(ctx, \"{CodeUtils.ToCamelCase(AnnotationUtils.GetJSPropertyName(prop))}\");");
+
+            var attr = AnnotationUtils.GetPropertyMap(prop);
+            if (prop.GetMethod != null && !string.IsNullOrEmpty(attr.GetterName))
+            {
+                code.LightFunction(getterScope =>
+                {
+                    getterScope.Add(
+                        "duk_push_this(ctx);",
+                        $"{AnnotationUtils.GetTypeName(Target)} instance = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, -1);",
+                        "duk_pop(ctx);",
+                        $"{CodeUtils.GetNativeDeclaration(prop.PropertyType)} result = instance.{AnnotationUtils.GetGetterName(prop)}();"
+                    );
+                    CodeUtils.EmitValueWrite(prop.PropertyType, "result", getterScope);
+
+                    getterScope.Add("return 1;");
+                }, "0");
+
+                enumFlags.Add("DUK_DEFPROP_HAVE_GETTER");
+            }
+            if (prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName))
+            {
+                code.LightFunction(setterScope =>
+                {
+                    setterScope.Add(
+                        "duk_push_this(ctx);",
+                        $"{AnnotationUtils.GetTypeName(Target)} instance = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, -1);",
+                        "duk_pop(ctx);"
+                    );
+                    CodeUtils.EmitValueRead(prop.PropertyType, "result", "0", setterScope);
+
+                    setterScope.AddNewLine().Add($"instance.{AnnotationUtils.GetSetterName(prop)}(result);");
+                    setterScope.Add("return 0;");
+                }, "1");
+
+                enumFlags.Add("DUK_DEFPROP_HAVE_SETTER");
+            }
+
+            StringBuilder propFlags = new StringBuilder();
+            for (int i = 0; i < enumFlags.Count; ++i)
+            {
+                propFlags.Append(enumFlags[i]);
+                if (i < enumFlags.Count - 1)
+                    propFlags.Append(" | ");
+            }
+
+            code.Add($"duk_def_prop(ctx, {accessor}, {propFlags});");
+        }
+
         private List<Variable> CollectVariables()
         {
             List<Variable> variables = new List<Variable>();
-            Target.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance).Where(x => !string.Equals(x.Name, "Target")).ToList().ForEach(prop =>
-            {
-                Variable vary = new Variable(prop.PropertyType);
-                vary.NativeName = AnnotationUtils.GetVariableName(prop);
-                vary.JSName = CodeUtils.ToCamelCase(vary.NativeName);
-                variables.Add(vary);
-            });
             Target.GetFields(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance).ToList().ForEach(field =>
             {
                 Variable vary = new Variable(field.FieldType);
@@ -373,7 +423,6 @@ namespace JSBindTool.Core
 
             return variables;
         }
-
 
         private string GetOpMethodSignature(OperatorType opType)
         {

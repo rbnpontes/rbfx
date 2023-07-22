@@ -17,6 +17,12 @@ namespace JSBindTool.Bindings.MathTypes
         [Variable("y_")]
         public float Y;
 
+        [PropertyMap("Normalized")]
+        public Vector2 Normalized
+        {
+            get => new Vector2();
+        }
+
         public Vector2(): base(typeof(Vector2)) { }
 
         [Method("ToVector3")]
@@ -25,6 +31,25 @@ namespace JSBindTool.Bindings.MathTypes
         public Vector3 ToVector3(float z) { return new Vector3(); }
         [Method("ToVector4")]
         public Vector4 ToVector4(float z, float w) { return new Vector4(); }
+
+        [Method("NormalizedOrDefault")]
+        public Vector2 NormalizedOrDefault() { return new Vector2(); }
+        [Method("NormalizedOrDefault")]
+        public Vector2 NormalizedOrDefault(Vector2 defaultValue) { return new Vector2(); }
+        [Method("NormalizedOrDefault")]
+        public Vector2 NormalizedOrDefault(Vector2 defaultValue, float eps) { return new Vector2(); }
+
+        [Method("ReNormalized")]
+        public Vector2 ReNormalized(float minLength, float maxLength) { return new Vector2(); }
+        [Method("ReNormalized")]
+        public Vector2 ReNormalized(float minLength, float maxLength, Vector2 defaultValue) { return new Vector2(); }
+        [Method("ReNormalized")]
+        public Vector2 ReNormalized(float minLength, float maxLength, Vector2 defaultValue, float eps) { return new Vector2(); }
+
+        [Method("GetOrthogonalClockwise")]
+        public Vector2 GetOrthogonalClockwise() { return new Vector2(); }
+        [Method("GetOrthogonalCounterClockwise")]
+        public Vector2 GetOrthogonalCounterClockwise() { return new Vector2(); }
 
         [Method("ToString")]
 #pragma warning disable CS0114 // Member hides inherited member; missing override keyword

@@ -168,24 +168,12 @@ namespace JSBindTool.Core
                     scope.Add("rbfx_object_wrap(ctx, obj_idx, instance);");
                 else if(Target.BaseType != null)
                     scope.Add($"{CodeUtils.GetMethodPrefix(Target.BaseType)}_wrap(ctx, obj_idx, instance);");
-                EmitProperties(scope);
+                EmitProperties(scope, "obj_idx");
                 EmitMethods(scope, "obj_idx");
             });
         }
         
-        protected virtual void EmitProperties(CodeBuilder code)
-        {
-            var props = GetProperties();
-
-            if (props.Count > 0)
-                code.Add("// properties setup");
-
-            props.ForEach(prop => EmitProperty(prop, code));
-
-            if (props.Count > 0)
-                code.AddNewLine();
-        }
-        protected virtual void EmitProperty(PropertyInfo prop, CodeBuilder code)
+        protected override void EmitProperty(PropertyInfo prop, string accessor, CodeBuilder code)
         {
             List<string> enumFlags = new List<string>();
             enumFlags.Add("DUK_DEFPROP_HAVE_ENUMERABLE");
@@ -237,7 +225,7 @@ namespace JSBindTool.Core
                     propFlags.Append(" | ");
             }
 
-            code.Add($"duk_def_prop(ctx, obj_idx, {propFlags});");
+            code.Add($"duk_def_prop(ctx, {accessor}, {propFlags});");
         }
 
         protected override void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
@@ -274,13 +262,6 @@ namespace JSBindTool.Core
                 CodeUtils.EmitValueWrite(methodInfo.ReturnType, "result", code);
                 code.Add("return 1;");
             }
-        }
-
-        private List<PropertyInfo> GetProperties()
-        {
-            return Target.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public)
-                .Where(x => AnnotationUtils.IsValidProperty(x))
-                .ToList();
         }
 
         public static ClassObject Create(Type type)

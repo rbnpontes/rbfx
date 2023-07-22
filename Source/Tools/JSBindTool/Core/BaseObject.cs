@@ -255,6 +255,19 @@ namespace JSBindTool.Core
             }
         }
 
+        protected virtual void EmitProperties(CodeBuilder code, string accessor)
+        {
+            var props = GetProperties();
+
+            if (props.Count > 0)
+                code.Add("// properties setup");
+
+            props.ForEach(prop => EmitProperty(prop, accessor, code));
+
+            if (props.Count > 0)
+                code.AddNewLine();
+        }
+
         protected Dictionary<string, List<MethodInfo>> GetMethods()
         {
             Dictionary<string, List<MethodInfo>> methodsData = new Dictionary<string, List<MethodInfo>>();
@@ -281,8 +294,15 @@ namespace JSBindTool.Core
 
             return methodsData;
         }
+        protected List<PropertyInfo> GetProperties()
+        {
+            return Target.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public)
+                .Where(x => AnnotationUtils.IsValidProperty(x))
+                .ToList();
+        }
 
         public abstract void EmitSourceIncludes(CodeBuilder code);
         protected abstract void EmitSourceConstructor(CodeBuilder code);
+        protected abstract void EmitProperty(PropertyInfo prop, string accessor, CodeBuilder code);
     }
 }
