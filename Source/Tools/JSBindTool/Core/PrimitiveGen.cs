@@ -24,14 +24,7 @@ namespace JSBindTool.Core
             obj.EmitHeaderIncludes(code);
             code.AddNewLine();
 
-            code.Namespace(Constants.Namespace, signatures =>
-            {
-                obj.EmitResolveSignature(signatures);
-                obj.EmitSetSignature(signatures);
-                obj.EmitConstructorSignature(signatures);
-                obj.EmitPushSignature(signatures);
-                obj.EmitSetupSignature(signatures);
-            });
+            code.Namespace(Constants.Namespace, signatures => obj.EmitHeaderSignatures(signatures));
 
             return code;
         }
@@ -47,14 +40,7 @@ namespace JSBindTool.Core
             obj.EmitSourceIncludes(code);
 
             code.AddNewLine();
-            code.Namespace(Constants.Namespace, source =>
-            {
-                obj.EmitResolveSource(source);
-                obj.EmitSetSource(source);
-                obj.EmitConstructorSource(source);
-                obj.EmitPushSource(source);
-                obj.EmitSetupSetupSource(source);
-            });
+            code.Namespace(Constants.Namespace, source => obj.EmitSource(source));
             
             return code;
         }

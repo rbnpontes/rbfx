@@ -12,30 +12,19 @@ namespace JSBindTool.Core
 {
     [Abstract]
     [Include("Urho3D/Core/Object.h")]
-    public class ClassObject
+    public class ClassObject : BaseObject
     {
-        public Type Target { get; private set; }
-        public ClassObject(Type target)
+        public ClassObject(Type type) : base(type)
         {
-            Target = target;
         }
 
-        public virtual void EmitHeaderIncludes(CodeBuilder code)
+        public override void EmitHeaderSignatures(CodeBuilder code)
         {
-            code.Add(AnnotationUtils.GetIncludes(Target).Select(x => $"#include <{x}>"));
-            code.Add("#include <duktape/duktape.h>");
-            code.Add("#include <Urho3D/JavaScript/JavaScriptOperations.h>");
-        }
-        public virtual void EmitHeaderSignatures(CodeBuilder code)
-        {
-            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);");
-            code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_ctor(duk_context* ctx);");
+            base.EmitHeaderSignatures(code);
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance);");
-
-            EmitMethodSignatures(code);
         }
 
-        public virtual void EmitSourceIncludes(CodeBuilder code)
+        public override void EmitSourceIncludes(CodeBuilder code)
         {
             string typeName = Target.Name;
             HashSet<string> includes = new HashSet<string>();
@@ -68,85 +57,15 @@ namespace JSBindTool.Core
             code.Add(includes.ToArray()).AddNewLine();
         }
 
-        public virtual void EmitSource(CodeBuilder code)
+        public override void EmitSource(CodeBuilder code)
         {
-            EmitSourceMethodLookupTable(code);
-            EmitSourceSetup(code);
-            EmitSourceConstructor(code);
             EmitSourceWrap(code);
-            EmitSourceMethods(code);
+            base.EmitSource(code);
         }
 
-        protected virtual void EmitSourceMethodLookupTable(CodeBuilder code)
+        protected override void EmitSourceSetup(CodeBuilder code)
         {
-            CodeBuilder lookupField = new CodeBuilder();
-            lookupField.IndentationSize = 0;
-
-            lookupField.Add("ea::unordered_map<StringHash, duk_c_function> g_functions = {");
-
-            bool hasVariants = false;
-            var methodsData = GetMethods();
-            foreach(var pair in methodsData)
-            {
-                // only generate lookup table if any methods has two or more variants.
-                if (pair.Value.Count <= 1)
-                    continue;
-
-                hasVariants = true;
-
-                for(int i =0;i < pair.Value.Count; ++i)
-                {
-                    MethodInfo method = pair.Value[i];
-                    CodeBuilder funcPair = new CodeBuilder();
-                    string funcSignature = $"{CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}{i}_call";
-                    uint funcHash = 0u;
-
-                    bool hasStringHash = false;
-
-                    Action<ParameterInfo, Type> hashParamCalc = (param, type) =>
-                    {
-                        uint hash = 0u;
-                        if(param.ParameterType == typeof(StringHash))
-                        {
-                            hasStringHash = true;
-                            hash = CodeUtils.GetTypeHash(type);
-                        }
-                        else
-                        {
-                            hash = CodeUtils.GetTypeHash(param.ParameterType);
-                        }
-
-                        HashUtils.Combine(ref funcHash, hash);
-                    };
-
-                    method.GetParameters().ToList().ForEach(param => hashParamCalc(param, typeof(string)));
-
-                    funcPair.Add($"{{ StringHash({funcHash}), {funcSignature} }},");
-                    lookupField.Add(funcPair);
-
-                    // if user code passes a number instead of string
-                    // then get type method will return Number hash code instead of string hash code
-                    // this will lead to not found method call, to fix this
-                    // bind tool will generate two entries for the same method.
-                    if (hasStringHash)
-                    {
-                        funcHash = 0u;
-                        method.GetParameters().ToList().ForEach(param => hashParamCalc(param, typeof(uint)));
-
-                        funcPair.Add($"{{ StringHash({funcHash}), {funcSignature} }},");
-                        lookupField.Add(funcPair);
-                    }
-                }
-            }
-
-            lookupField.Add("};").AddNewLine();
-
-            if (hasVariants)
-                code.Add(lookupField);
-        }
-        protected virtual void EmitSourceSetup(CodeBuilder code)
-        {
-            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx)");
+            base.EmitSourceSetup(code);
             code.Scope(scope =>
             {
                 // Abstract methods must generate as wrapper instead of constructor like
@@ -164,7 +83,7 @@ namespace JSBindTool.Core
                 }
             });
         }
-        protected virtual void EmitSourceConstructor(CodeBuilder code)
+        protected override void EmitSourceConstructor(CodeBuilder code)
         {
             code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_ctor(duk_context* ctx)");
             code.Scope(scope =>
@@ -249,84 +168,10 @@ namespace JSBindTool.Core
                 else if(Target.BaseType != null)
                     scope.Add($"{CodeUtils.GetMethodPrefix(Target.BaseType)}_wrap(ctx, obj_idx, instance);");
                 EmitProperties(scope);
-                EmitMethods(scope);
+                EmitMethods(scope, "obj_idx");
             });
         }
-        protected virtual void EmitSourceMethods(CodeBuilder code)
-        {
-            var methodData = GetMethods();
-
-            foreach(var pair in methodData)
-            {
-                code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}_call(duk_context* ctx)");
-                code.Scope(scopeCode =>
-                {
-                    if (pair.Value.Count <= 1)
-                        EmitMethodBody(pair.Value.First(), scopeCode);
-                    else
-                    {
-                        int minArgs = 0;
-                        int maxArgs = 0;
-
-                        pair.Value.ForEach(x =>
-                        {
-                            var paramsLength = x.GetParameters().Length;
-                            minArgs = Math.Min(minArgs, paramsLength);
-                            maxArgs = Math.Max(maxArgs, paramsLength);
-                        });
-
-                        // emit method selection
-                        scopeCode
-                            .Add("unsigned methodHash = 0u;")
-                            .Add("duk_idx_t argc = duk_get_top(ctx);")
-                            .AddNewLine()
-                            .Add("// validate arguments count")
-                            .Add($"if(argc < {minArgs})")
-                            .Scope(ifCode =>
-                            {
-                                ifCode
-                                    .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid arguments to function '{pair.Key}'.\");")
-                                    .Add("return duk_throw(ctx);");
-                            })
-                            .Add($"else if(argc > {maxArgs})")
-                            .Scope(elseScope =>
-                            {
-                                elseScope
-                                    .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid arguments to function '{pair.Key}'.\");")
-                                    .Add("return duk_throw(ctx);");
-                            })
-                            .AddNewLine()
-                            .Add("for(unsigned i = 0; i < argc; ++i)")
-                            .Scope(loopScope =>
-                            {
-                                loopScope
-                                    .Add("StringHash typeHash = rbfx_get_type(ctx, i);")
-                                    .Add("CombineHash(methodHash, typeHash.Value());");
-                            })
-                            .AddNewLine()
-                            .Add("const auto funcIt = g_functions.find(StringHash(methodHash));")
-                            .Add("if(funcIt == g_functions.end())")
-                            .Scope(ifScope =>
-                            {
-                                ifScope
-                                    .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid arguments to function '{pair.Key}'.\");")
-                                    .Add("return duk_throw(ctx);");
-                            })
-                            .Add("return funcIt->second(ctx);");
-                    }
-                });
-
-                if (pair.Value.Count <= 1)
-                    continue;
-
-                for (int i = 0; i < pair.Value.Count; ++i)
-                {
-                    code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}{i}_call(duk_context* ctx)");
-                    code.Scope(scopeCode => EmitMethodBody(pair.Value[i], scopeCode, false));
-                }
-            }
-        }
-
+        
         protected virtual void EmitProperties(CodeBuilder code)
         {
             var props = GetProperties();
@@ -394,50 +239,13 @@ namespace JSBindTool.Core
             code.Add($"duk_def_prop(ctx, obj_idx, {propFlags});");
         }
 
-        protected virtual void EmitMethodSignatures(CodeBuilder code)
+        protected override void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
         {
-            var methodsData = GetMethods();
-            foreach(var pair in methodsData)
-            {
-                code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}_call(duk_context* ctx);");
-                // generate variants only if has two or more methods definitions
-                if(pair.Value.Count > 1)
-                {
-                    for (int i = 0; i < pair.Value.Count; ++i)
-                        code.Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}{i}_call(duk_context* ctx);");
-                }
-            }
-        }
-        protected virtual void EmitMethods(CodeBuilder code)
-        {
-            var methodsData = GetMethods();
+            base.EmitMethodBody(methodInfo, code, emitValidations);
 
-            if (methodsData.Count > 0)
-                code.Add("// methods setup");
-
-            foreach(var pair in methodsData)
-            {
-                int maxArgs = 0;
-
-
-                pair.Value.ForEach(x => maxArgs = Math.Max(maxArgs, x.GetParameters().Length));
-
-
-                if (pair.Value.Count <= 1)
-                    code.Add($"duk_push_c_lightfunc(ctx, {CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}_call, {maxArgs}, {maxArgs}, 0);");
-                else
-                    code.Add($"duk_push_c_function(ctx, {CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(pair.Key)}_call, DUK_VARARGS);");
-
-                code.Add($"duk_put_prop_string(ctx, obj_idx, \"{pair.Key}\");");
-            }
-        }
-        protected virtual void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidation = true)
-        {
             string nativeName = AnnotationUtils.GetMethodNativeName(methodInfo);
-            var parameters = methodInfo.GetParameters().ToList();
 
-            if(emitValidation)
-                EmitArgumentValidation(parameters, code);
+            var parameters = methodInfo.GetParameters();
 
             code
                 .Add("duk_push_this(ctx);")
@@ -445,11 +253,11 @@ namespace JSBindTool.Core
                 .Add("duk_pop(ctx);");
 
             StringBuilder argsCall = new StringBuilder();
-            for(int i =0; i < parameters.Count; ++i)
+            for(int i =0; i < parameters.Length; ++i)
             {
                 CodeUtils.EmitValueRead(parameters[i].ParameterType, $"arg{i}", i.ToString(), code);
                 argsCall.Append($"arg{i}");
-                if (i < parameters.Count - 1)
+                if (i < parameters.Length - 1)
                     argsCall.Append(", ");
             }
 
@@ -467,50 +275,11 @@ namespace JSBindTool.Core
             }
         }
 
-        protected virtual void EmitArgumentValidation(List<ParameterInfo> parameters, CodeBuilder code)
-        {
-            if (parameters.Count == 0)
-                return;
-            code.Add("#if defined(URHO3D_DEBUG)");
-            for(int i = 0; i < parameters.Count; ++i)
-            {
-                uint typeHash = CodeUtils.GetTypeHash(parameters[i].ParameterType);
-                code.Add($"rbfx_require_type(ctx, {i}, {typeHash}/*{parameters[i].ParameterType.Name}*/);");
-            }
-            code.Add("#endif").AddNewLine();
-        }
-
         private List<PropertyInfo> GetProperties()
         {
             return Target.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public)
                 .Where(x => AnnotationUtils.IsValidProperty(x))
                 .ToList();
-        }
-        private Dictionary<string, List<MethodInfo>> GetMethods()
-        {
-            Dictionary<string, List<MethodInfo>> methodsData = new Dictionary<string, List<MethodInfo>>();
-
-            Target
-                .GetMethods(BindingFlags.Public | BindingFlags.DeclaredOnly | BindingFlags.Instance)
-                .Where(x => AnnotationUtils.IsValidMethod(x))
-                .ToList()
-                .ForEach(x =>
-                {
-                    List<MethodInfo>? method;
-                    string methodName = AnnotationUtils.GetMethodName(x);
-                    if (methodsData.TryGetValue(methodName, out method))
-                    {
-                        method.Add(x);
-                    }
-                    else
-                    {
-                        method = new List<MethodInfo>();
-                        method.Add(x);
-                        methodsData.Add(methodName, method);
-                    }
-                });
-
-            return methodsData;
         }
 
         public static ClassObject Create(Type type)

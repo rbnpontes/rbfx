@@ -37,5 +37,14 @@ namespace JSBindTool.Bindings.UITypes
         public void SetColor(Color color) { }
         [Method("SetColor")]
         public void SetColor(Corner corner, Color color) { }
+
+        [Method("ApplyAttributes")]
+        public void ApplyAttributes() { }
+
+        //[Method("ScreenToElement")]
+        //public IntVector2 ScreenToElement(IntVector2 screenPosition)
+        //{
+
+        //}
     }
 }

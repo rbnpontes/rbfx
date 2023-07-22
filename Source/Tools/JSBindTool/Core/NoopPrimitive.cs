@@ -14,24 +14,11 @@ namespace JSBindTool.Core
         {
         }
 
-        public override void EmitResolveSignature(CodeBuilder code)
-        {
-        }
-        public override void EmitConstructorSignature(CodeBuilder code)
-        {
-        }
-        public override void EmitSetupSignature(CodeBuilder code)
+        public override void EmitHeaderSignatures(CodeBuilder code)
         {
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);");
         }
-
-        public override void EmitConstructorSource(CodeBuilder code)
-        {
-        }
-        public override void EmitResolveSource(CodeBuilder code)
-        {
-        }
-        public override void EmitSetupSetupSource(CodeBuilder code)
+        public override void EmitSource(CodeBuilder code)
         {
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx)").Scope(x => { });
         }

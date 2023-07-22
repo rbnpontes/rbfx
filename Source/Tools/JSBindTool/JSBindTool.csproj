@@ -9,10 +9,12 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="Bindings\MathTypes\Vectors.cs" />
         <Compile Include="Bindings\SceneTypes\Component.cs" />
         <Compile Include="Bindings\SceneTypes\Enums.cs" />
         <Compile Include="Core\Annotations\FieldAttribute.cs" />
         <Compile Include="Core\Annotations\MethodAttribute.cs" />
+        <Compile Include="Core\BaseObject.cs" />
         <Compile Include="Core\ClassObject.cs" />
         <Compile Include="Bindings\MathTypes\Color.cs" />
         <Compile Include="Bindings\MathTypes\StringHash.cs" />

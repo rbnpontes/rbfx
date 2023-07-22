@@ -12,8 +12,5 @@ namespace JSBindTool.Bindings.MathTypes
     public class StringHash : NoopPrimitive
     {
         public StringHash() : base(typeof(StringHash)) { }
-        public override void EmitConstructorSignature(CodeBuilder code)
-        {
-        }
     }
 }

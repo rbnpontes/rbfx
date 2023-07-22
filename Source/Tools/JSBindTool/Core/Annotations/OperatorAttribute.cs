@@ -16,6 +16,14 @@ namespace JSBindTool.Core.Annotations
         Div = 1 << 3,
         Equal = 1 << 4
     }
+    public enum OperatorType
+    {
+        Add,
+        Sub,
+        Mul,
+        Div,
+        Equal
+    }
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
     public class OperatorAttribute : Attribute
     {
