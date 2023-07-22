@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 namespace JSBindTool.Bindings.MathTypes
 {
     [Include("Urho3D/Math/Vector2.h")]
+    [Include("Urho3D/Math/Vector4.h")]
     public class Vector2 : PrimitiveObject
     {
         [Variable("x_")]
@@ -18,6 +19,8 @@ namespace JSBindTool.Bindings.MathTypes
 
         public Vector2(): base(typeof(Vector2)) { }
 
+        [Method("ToVector4")]
+        public Vector4 ToVector4(float z, float w) { return new Vector4(); }
 
         [Method("ToString")]
 #pragma warning disable CS0114 // Member hides inherited member; missing override keyword
@@ -38,5 +41,19 @@ namespace JSBindTool.Bindings.MathTypes
         public static Vector2 Down = new Vector2();
         [Field("one", "ONE")]
         public static Vector2 One = new Vector2();
+    }
+
+    public class Vector4 : PrimitiveObject
+    {
+        [Variable("x_")]
+        public float X;
+        [Variable("y_")]
+        public float Y;
+        [Variable("z_")]
+        public float Z;
+        [Variable("w_")]
+        public float W;
+
+        public Vector4() : base(typeof(Vector4)) { }
     }
 }

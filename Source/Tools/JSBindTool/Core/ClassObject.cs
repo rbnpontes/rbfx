@@ -26,6 +26,7 @@ namespace JSBindTool.Core
 
         public override void EmitSourceIncludes(CodeBuilder code)
         {
+            // TODO: refactor this
             string typeName = Target.Name;
             HashSet<string> includes = new HashSet<string>();
             includes.Add($"#include \"{Target.Name}{Constants.ClassIncludeSuffix}.h\"");

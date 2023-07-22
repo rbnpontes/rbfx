@@ -109,6 +109,8 @@ namespace JSBindTool.Core
                 code.Add($"duk_push_int(ctx, {accessor});");
             else if (type.IsSubclassOf(typeof(ClassObject)) || type.Name.StartsWith("SharedPtr"))
                 code.Add($"rbfx_push_object(ctx, {accessor});");
+            else if (type.IsSubclassOf(typeof(PrimitiveObject)))
+                code.Add($"{GetMethodPrefix(type)}_push(ctx, {accessor});");
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {
                 var templateObj = TemplateObject.Create(type);
