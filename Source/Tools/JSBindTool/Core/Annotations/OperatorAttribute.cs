@@ -18,6 +18,7 @@ namespace JSBindTool.Core.Annotations
     }
     public enum OperatorType
     {
+        None = 0,
         Add,
         Sub,
         Mul,

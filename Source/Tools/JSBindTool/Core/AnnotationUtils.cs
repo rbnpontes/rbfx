@@ -89,6 +89,10 @@ namespace JSBindTool.Core
         {
             return method.GetCustomAttribute<MethodAttribute>() != null;
         }
+        public static bool IsValidOperatorMethod(MethodInfo method)
+        {
+            return method.GetCustomAttribute<OperatorMethodAttribute>() != null && method.GetParameters().Length == 1 && method.ReturnType != typeof(void);
+        }
         public static bool IsValidProperty(PropertyInfo prop)
         {
             return !IsIgnored(prop) && prop.GetCustomAttribute<PropertyMapAttribute>() != null;
@@ -99,6 +103,13 @@ namespace JSBindTool.Core
             FieldAttribute? attr = field.GetCustomAttribute<FieldAttribute>();
             if (attr is null)
                 throw new NullReferenceException("field does not contains FieldAttribute");
+            return attr;
+        }
+        public static OperatorMethodAttribute GetOperatorMethodAttribute(MethodInfo method)
+        {
+            OperatorMethodAttribute? attr = method.GetCustomAttribute<OperatorMethodAttribute>();
+            if (attr is null)
+                throw new NullReferenceException("method does not contains OperatorMethodAttribute");
             return attr;
         }
     }

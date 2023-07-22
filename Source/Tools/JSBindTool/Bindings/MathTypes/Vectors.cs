@@ -61,7 +61,6 @@ namespace JSBindTool.Bindings.MathTypes
     }
     [Include("Urho3D/Math/Vector2.h")]
     [Include("Urho3D/Math/Vector4.h")]
-    [Operator(OperatorFlags.Add | OperatorFlags.Sub | OperatorFlags.Mul | OperatorFlags.Div | OperatorFlags.Equal)]
     public class Vector2 : PrimitiveObject
     {
         [Variable("x_")]
@@ -86,6 +85,21 @@ namespace JSBindTool.Bindings.MathTypes
         public Vector2 Abs { get => new Vector2(); }
 
         public Vector2(): base(typeof(Vector2)) { }
+
+        [OperatorMethod(OperatorType.Equal)]
+        public bool EqualOperator(Vector2 vec) { return true; }
+        [OperatorMethod(OperatorType.Add)]
+        public Vector2 AddOperator(Vector2 vec) { return new Vector2(); }
+        [OperatorMethod(OperatorType.Sub)]
+        public Vector2 SubOperator(Vector2 vec) { return new Vector2(); }
+        [OperatorMethod(OperatorType.Mul)]
+        public Vector2 MulOperator(float scalar) { return new Vector2(); }
+        [OperatorMethod(OperatorType.Mul)]
+        public Vector2 MulOperator(Vector2 scalar) { return new Vector2(); }
+        [OperatorMethod(OperatorType.Div)]
+        public Vector2 DivOperator(float scalar) { return new Vector2(); }
+        [OperatorMethod(OperatorType.Div)]
+        public Vector2 DivOperator(Vector2 scalar) { return new Vector2(); }
 
         [Method("Normalize")]
         public void Normalize() { }

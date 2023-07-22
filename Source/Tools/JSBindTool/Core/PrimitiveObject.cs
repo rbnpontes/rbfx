@@ -48,26 +48,6 @@ namespace JSBindTool.Core
 
             base.EmitHeaderSignatures(code);
         }
-        protected override void EmitMethodSignatures(CodeBuilder code)
-        {
-            OperatorFlags opFlags = AnnotationUtils.GetOperatorFlags(Target);
-            if (opFlags != OperatorFlags.None)
-                code.Add("//@ operators definitions");
-
-            if ((opFlags & OperatorFlags.Add) != 0)
-                code.Add($"duk_idx_t {GetOpMethodSignature(OperatorType.Add)}(duk_context* ctx);");
-            if ((opFlags & OperatorFlags.Sub) != 0)
-                code.Add($"duk_idx_t {GetOpMethodSignature(OperatorType.Sub)}(duk_context* ctx);");
-            if ((opFlags & OperatorFlags.Mul) != 0)
-                code.Add($"duk_idx_t {GetOpMethodSignature(OperatorType.Mul)}(duk_context* ctx);");
-            if ((opFlags & OperatorFlags.Div) != 0)
-                code.Add($"duk_idx_t {GetOpMethodSignature(OperatorType.Div)}(duk_context* ctx);");
-            if ((opFlags & OperatorFlags.Equal) != 0)
-                code.Add($"duk_idx_t {GetOpMethodSignature(OperatorType.Equal)}(duk_context* ctx);");
-
-            base.EmitMethodSignatures(code);
-        }
-
 
         public override void EmitSource(CodeBuilder code)
         {
@@ -182,6 +162,7 @@ namespace JSBindTool.Core
                 ctorScope.Add("duk_put_prop_string(ctx, this_idx, \"type\");");
 
                 EmitMethods(ctorScope, "this_idx");
+                EmitOperatorMethods(ctorScope, "this_idx");
                 EmitProperties(ctorScope, "this_idx");
 
                 ctorScope.AddNewLine();
@@ -189,22 +170,6 @@ namespace JSBindTool.Core
                 ctorScope.Add("duk_push_this(ctx);");
                 ctorScope.Add("return 1;");
             });
-        }
-        protected override void EmitSourceMethods(CodeBuilder code)
-        {
-            OperatorFlags opFlags = AnnotationUtils.GetOperatorFlags(Target);
-            if ((opFlags & OperatorFlags.Add) != 0)
-                EmitOperatorMethodBody(OperatorType.Add, code);
-            if ((opFlags & OperatorFlags.Sub) != 0)
-                EmitOperatorMethodBody(OperatorType.Sub, code);
-            if ((opFlags & OperatorFlags.Mul) != 0)
-                EmitOperatorMethodBody(OperatorType.Mul, code);
-            if ((opFlags & OperatorFlags.Div) != 0)
-                EmitOperatorMethodBody(OperatorType.Div, code);
-            if ((opFlags & OperatorFlags.Equal) != 0)
-                EmitOperatorMethodBody(OperatorType.Equal, code);
-
-            base.EmitSourceMethods(code);
         }
 
         public virtual void EmitPushSource(CodeBuilder code)
@@ -264,30 +229,6 @@ namespace JSBindTool.Core
                 });
             });
         }
-        protected override void EmitMethods(CodeBuilder code, string accessor)
-        {
-            OperatorFlags opFlags = AnnotationUtils.GetOperatorFlags(Target);
-            if (opFlags != OperatorFlags.None)
-                code.Add("// operators setup");
-            if ((opFlags & OperatorFlags.Add) != 0)
-                EmitOperatorMethod(OperatorType.Add, code);
-            if ((opFlags & OperatorFlags.Sub) != 0)
-                EmitOperatorMethod(OperatorType.Sub, code);
-            if ((opFlags & OperatorFlags.Mul) != 0)
-                EmitOperatorMethod(OperatorType.Mul, code);
-            if ((opFlags & OperatorFlags.Div) != 0)
-                EmitOperatorMethod(OperatorType.Div, code);
-            if ((opFlags & OperatorFlags.Equal) != 0)
-                EmitOperatorMethod(OperatorType.Equal, code);
-
-            base.EmitMethods(code, accessor);
-        }
-        private void EmitOperatorMethod(OperatorType operatorType, CodeBuilder code)
-        {
-            code
-                .Add($"duk_push_c_lightfunc(ctx, {GetOpMethodSignature(operatorType)}, 1, 1, 0);")
-                .Add($"duk_put_prop_string(ctx, this_idx, \"{GetOpName(operatorType)}\");");
-        }
 
         protected override void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
         {
@@ -325,34 +266,31 @@ namespace JSBindTool.Core
                 code.Add("return 1;");
             }
         }
-        private void EmitOperatorMethodBody(OperatorType opType, CodeBuilder code)
+        protected override void EmitOperatorMethodBody(OperatorType opType, MethodInfo method, CodeBuilder code, bool emitValidations = true)
         {
-            string operatorSignal = GetOpSignal(opType);
-            code.Add($"duk_idx_t {GetOpMethodSignature(opType)}(duk_context* ctx)");
-            code.Scope(scope =>
+            base.EmitOperatorMethodBody(opType, method, code, emitValidations);
+
+            string operatorSignal = GetOperatorSignal(opType);
+
+            code
+                .Add("duk_push_this(ctx);")
+                .Add($"{AnnotationUtils.GetTypeName(Target)} instance = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, -1);")
+                .Add("duk_pop(ctx);")
+                .AddNewLine();
+
+            CodeUtils.EmitValueRead(method.GetParameters()[0].ParameterType, $"value", "0", code);
+
+            if (opType == OperatorType.Equal)
             {
-                scope.Add("duk_push_this(ctx);");
-                scope.Add($"{AnnotationUtils.GetTypeName(Target)} value ={CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, 0);");
-                if (string.Equals(operatorSignal, "=="))
-                {
-                    scope.Add($"duk_push_boolean(ctx, {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, 1) == value);");
-                    scope.Add("return 1;");
-                }
-                else
-                {
-                    scope.Add($"{AnnotationUtils.GetTypeName(Target)} result = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, 1) {operatorSignal} value;").AddNewLine();
+                code
+                    .Add($"duk_push_boolean(ctx, instance == value);")
+                    .Add("return 1;");
+                return;
+            }
 
-                    scope.Add($"duk_get_global_string(ctx, \"{Target.Name}\");");
-                    var variables = CollectVariables();
-                    variables.ForEach(vary =>
-                    {
-                        CodeUtils.EmitValueWrite(vary.Type, $"result.{vary.NativeName}", scope);
-                    });
-
-                    scope.Add($"duk_new(ctx, {variables.Count});").AddNewLine();
-                    scope.Add("return 1;");
-                }
-            });
+            code.Add($"{CodeUtils.GetNativeDeclaration(method.ReturnType)} result = instance {operatorSignal} value;");
+            CodeUtils.EmitValueWrite(method.ReturnType, "result", code);
+            code.Add("return 1;");
         }
 
         protected override void EmitProperty(PropertyInfo prop, string accessor, CodeBuilder code)
@@ -360,7 +298,6 @@ namespace JSBindTool.Core
             List<string> enumFlags = new List<string>();
             enumFlags.Add("DUK_DEFPROP_HAVE_ENUMERABLE");
 
-            code.AddNewLine();
             code.Add($"duk_push_string(ctx, \"{CodeUtils.ToCamelCase(AnnotationUtils.GetJSPropertyName(prop))}\");");
 
             var attr = AnnotationUtils.GetPropertyMap(prop);
@@ -424,56 +361,6 @@ namespace JSBindTool.Core
             return variables;
         }
 
-        private string GetOpMethodSignature(OperatorType opType)
-        {
-            return $"{CodeUtils.GetMethodPrefix(Target)}_op_{GetOpName(opType)}_call";
-        }
-        private string GetOpName(OperatorType opType)
-        {
-            string op = string.Empty;
-            switch (opType)
-            {
-                case OperatorType.Add:
-                    op = "add";
-                    break;
-                case OperatorType.Sub:
-                    op = "sub";
-                    break;
-                case OperatorType.Mul:
-                    op = "mul";
-                    break;
-                case OperatorType.Div:
-                    op = "div";
-                    break;
-                case OperatorType.Equal:
-                    op = "equal";
-                    break;
-            }
-            return op;
-        }
-        private string GetOpSignal(OperatorType opType)
-        {
-            string op = string.Empty;
-            switch (opType)
-            {
-                case OperatorType.Add:
-                    op = "+";
-                    break;
-                case OperatorType.Sub:
-                    op = "-";
-                    break;
-                case OperatorType.Mul:
-                    op = "*";
-                    break;
-                case OperatorType.Div:
-                    op = "/";
-                    break;
-                case OperatorType.Equal:
-                    op = "==";
-                    break;
-            }
-            return op;
-        }
         public static PrimitiveObject Create(Type type)
         {
             if (!type.IsSubclassOf(typeof(PrimitiveObject)))
