@@ -159,19 +159,20 @@ namespace JSBindTool.Core
 
             bool hasVariants = false;
             bool hasStringHash = false;
+            bool isStatic = false;
             uint funcHash = 0u;
 
-            Action<ParameterInfo, Type> hashParamCalc = (param, type) =>
+            Action<Type, Type> hashParamCalc = (paramType, type) =>
             {
                 uint hash = 0u;
-                if (param.ParameterType == typeof(StringHash))
+                if (paramType == typeof(StringHash))
                 {
                     hasStringHash = true;
                     hash = CodeUtils.GetTypeHash(type);
                 }
                 else
                 {
-                    hash = CodeUtils.GetTypeHash(param.ParameterType);
+                    hash = CodeUtils.GetTypeHash(paramType);
                 }
 
                 HashUtils.Combine(ref funcHash, hash);
@@ -180,11 +181,21 @@ namespace JSBindTool.Core
             {
                 CodeBuilder funcEntriesCode = new CodeBuilder();
 
-                uint methodNameHash = funcHash = HashUtils.Hash(funcName);
+                // append static keyword at start of function name, this prevent naming hash collision
+                uint methodNameHash = funcHash = HashUtils.Hash((isStatic ? "static" : string.Empty)+funcName);
 
                 hasStringHash = false;
 
-                method.GetParameters().ToList().ForEach(param => hashParamCalc(param, typeof(string)));
+                List<Type> paramTypes = method.GetParameters().Select(x => x.ParameterType).ToList();
+
+                CustomCodeAttribute? attr = method.GetCustomAttribute<CustomCodeAttribute>();
+                if (attr != null)
+                    paramTypes = attr.ParameterTypes.ToList();
+
+                paramTypes.ForEach(param => hashParamCalc(param, typeof(string)));
+
+                if (funcHash == 1405959817)
+                    System.Diagnostics.Debugger.Break();
 
                 funcEntriesCode.Add($"{{ StringHash({(funcHash == 0u ? "0u" : funcHash.ToString())}), {funcSignature} }},");
 
@@ -195,7 +206,7 @@ namespace JSBindTool.Core
                 if (hasStringHash)
                 {
                     funcHash = methodNameHash;
-                    method.GetParameters().ToList().ForEach(param => hashParamCalc(param, typeof(uint)));
+                    paramTypes.ForEach(param => hashParamCalc(param, typeof(uint)));
 
                     funcEntriesCode.Add($"{{ StringHash({(funcHash == 0u ? "0u" : funcHash.ToString())}), {funcSignature} }},");
                 }
@@ -234,6 +245,7 @@ namespace JSBindTool.Core
                 }
             }
             // static methods
+            isStatic = true;
             foreach(var pair in GetMethods(StaticMethodsFlags))
             {
                 if (pair.Value.Count <= 1)
@@ -244,7 +256,7 @@ namespace JSBindTool.Core
                 for(int i =0; i < pair.Value.Count; ++i)
                 {
                     MethodInfo method = pair.Value[i];
-                    insertFunctionDefinition(method, GetStaticMethodSignature(pair.Key), GetVariantStaticMethodSignature(pair.Key, i));
+                    insertFunctionDefinition(method, pair.Key, GetVariantStaticMethodSignature(pair.Key, i));
                 }
             }
 
@@ -301,7 +313,7 @@ namespace JSBindTool.Core
 
                         // emit method selection
                         scopeCode
-                            .Add($"unsigned methodHash = {HashUtils.Hash(funcName)};")
+                            .Add($"unsigned methodHash = {HashUtils.Hash((isStatic ? "static" : string.Empty)+funcName)};")
                             .Add("duk_idx_t argc = duk_get_top(ctx);")
                             .AddNewLine()
                             .Add("// validate arguments count")
@@ -349,7 +361,7 @@ namespace JSBindTool.Core
                     .Scope(scopeCode =>
                     {
                         if (isStatic)
-                            EmitStaticMethodBody(methods[i], code, false);
+                            EmitStaticMethodBody(methods[i], scopeCode, false);
                         else if (operatorType == OperatorType.None)
                             EmitMethodBody(methods[i], scopeCode, false);
                         else
