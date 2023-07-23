@@ -24,40 +24,6 @@ namespace JSBindTool.Core
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance);");
         }
 
-        public override void EmitSourceIncludes(CodeBuilder code)
-        {
-            // TODO: refactor this
-            string typeName = Target.Name;
-            HashSet<string> includes = new HashSet<string>();
-            includes.Add($"#include \"{Target.Name}{Constants.ClassIncludeSuffix}.h\"");
-            if (Target.BaseType != null && Target.BaseType != typeof(ClassObject))
-                includes.Add($"#include \"{Target.BaseType.Name}{Constants.ClassIncludeSuffix}.h\"");
-            includes.Add("#include <Urho3D/JavaScript/JavaScriptSystem.h>");
-            includes.Add("#include <Urho3D/JavaScript/JavaScriptOperations.h>");
-
-            Action<Type> addInclude = (type) =>
-            {
-                if(type.IsSubclassOf(typeof(PrimitiveObject)))
-                    includes.Add($"#include \"{type.Name}{Constants.PrimitiveIncludeSuffix}.h\"");
-                else if (type.IsSubclassOf(typeof(ClassObject)))
-                    includes.Add($"#include \"{type.Name}{Constants.ClassIncludeSuffix}.h\"");
-            };
-
-            GetProperties().ForEach(prop => addInclude(prop.PropertyType));
-
-            var methodsData = GetMethods();
-            foreach(var pair in methodsData)
-            {
-                pair.Value.ForEach(method =>
-                {
-                    addInclude(method.ReturnType);
-                    method.GetParameters().ToList().ForEach(x => addInclude(x.ParameterType));
-                });
-            }
-
-            code.Add(includes.ToArray()).AddNewLine();
-        }
-
         public override void EmitSource(CodeBuilder code)
         {
             EmitSourceWrap(code);

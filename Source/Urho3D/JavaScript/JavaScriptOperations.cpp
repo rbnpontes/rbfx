@@ -796,10 +796,12 @@ namespace Urho3D
         {
             if (duk_get_prop_string(ctx, value_idx, "type"))
             {
+                const char* type = duk_get_string(ctx, -1);
+                StringHash obj_type_hash(type);
                 Object* obj = static_cast<Object*>(rbfx_get_instance(ctx, value_idx));
                 if (obj && !obj->GetTypeInfo()->IsTypeOf(StringHash(type_hash)))
                     err_output = "invalid value type. the value object type does not match type requirements.";
-                else if (!obj && type_hash != StringHash(duk_get_string(ctx, -1)).Value())
+                else if (!obj && type_hash != obj_type_hash.Value())
                     err_output = "invalid value type. the value object type does not match type requirements.";
             }
             duk_pop(ctx);
@@ -808,6 +810,8 @@ namespace Urho3D
         if (!err_output.empty())
         {
             duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, err_output.c_str());
+            duk_dup(ctx, value_idx);
+            duk_put_prop_string(ctx, -2, "value");
             duk_throw(ctx);
         }
 #endif

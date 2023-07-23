@@ -57,36 +57,6 @@ namespace JSBindTool.Core
             EmitPushSource(code);
         }
 
-        public override void EmitSourceIncludes(CodeBuilder code)
-        {
-            // TODO: refactor this
-            HashSet<string> includes = new HashSet<string>();
-            includes.Add($"#include \"{Target.Name}{Constants.PrimitiveIncludeSuffix}.h\"");
-            includes.Add("#include <Urho3D/IO/Log.h>");
-
-
-            IEnumerable<Type> usedTypes = new List<Type>();
-            GetMethods().Values.ToList().ForEach(x =>
-            {
-                x.ForEach(method =>
-                {
-                    usedTypes = usedTypes.Concat(method.GetParameters().Select(x => x.ParameterType));
-                    if (method.ReturnType != typeof(void))
-                        usedTypes = usedTypes.Concat(new Type[] { method.ReturnType });
-                });
-            });
-
-            usedTypes.ToList().ForEach(type =>
-            {
-                if (type.IsSubclassOf(typeof(ClassObject)))
-                    includes.Add($"#include \"{type.Name}{Constants.ClassIncludeSuffix}.h\"");
-                else if (type.IsSubclassOf(typeof(PrimitiveObject)))
-                    includes.Add($"#include \"{type.Name}{Constants.PrimitiveIncludeSuffix}.h\"");
-            });
-
-            code.Add(includes.ToArray()).AddNewLine();
-        }
-
         public virtual void EmitResolveSource(CodeBuilder code)
         {
             code.Add($"{Target.Name} {CodeUtils.GetMethodPrefix(Target)}_resolve(duk_context* ctx, duk_idx_t stack_idx)");
@@ -197,6 +167,7 @@ namespace JSBindTool.Core
                 setupScope.Add($"duk_put_global_string(ctx, \"{AnnotationUtils.GetTypeName(Target)}\");");
                 setupScope.Add("// setup static fields");
                 EmitStaticFields(setupScope, "top");
+                EmitStaticMethods(setupScope, "top");
             });
         }
 

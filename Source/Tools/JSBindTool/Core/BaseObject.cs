@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,6 +12,8 @@ namespace JSBindTool.Core
 {
     public abstract class BaseObject
     {
+        const BindingFlags StaticMethodsFlags = BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly;
+
         public Type Target { get; private set; }
         public BaseObject(Type type)
         {
@@ -33,6 +36,7 @@ namespace JSBindTool.Core
 
             EmitMethodSignatures(code);
             EmitOperatorMethodSignatures(code);
+            EmitStaticMethodSignatures(code);
         }
 
         #region Method Emit Signatures
@@ -68,17 +72,76 @@ namespace JSBindTool.Core
                 }
             }
         }
+        protected virtual void EmitStaticMethodSignatures(CodeBuilder code)
+        {
+            var methodsData = GetMethods(StaticMethodsFlags);
+            if (methodsData.Count > 0)
+                code.Add("// @ static methods definitions");
+            foreach(var pair in methodsData)
+            {
+                code.Add($"duk_idx_t {GetStaticMethodSignature(pair.Key)}(duk_context* ctx);");
+                if(pair.Value.Count > 1)
+                {
+                    for (int i = 0; i < pair.Value.Count; ++i)
+                        code.Add($"duk_idx_t {GetVariantStaticMethodSignature(pair.Key, i)}(duk_context* ctx);");
+                }
+            }
+        }
         #endregion
 
-        protected string GetMethodSignature(string methodName)
+        public virtual void EmitSourceIncludes(CodeBuilder code)
         {
-            return $"{CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(methodName)}_call";
-        }
-        protected string GetVariantMethodSignature(string methodName, int index)
-        {
-            return $"{CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(methodName)}{index}_call";
-        }
+            HashSet<string> includes = new HashSet<string>();
+            // add self header
+            if(Target.IsSubclassOf(typeof(ClassObject)))
+                includes.Add($"#include \"{Target.Name}{Constants.ClassIncludeSuffix}.h\"");
+            else if(Target.IsSubclassOf(typeof(PrimitiveObject)))
+                includes.Add($"#include \"{Target.Name}{Constants.PrimitiveIncludeSuffix}.h\"");
 
+            // add inheritance headers if exists
+            if (Target.BaseType != null && Target.BaseType != typeof(ClassObject) && Target.BaseType != typeof(PrimitiveObject))
+            {
+                if (Target.IsSubclassOf(typeof(ClassObject)))
+                    includes.Add($"#include \"{Target.BaseType.Name}{Constants.ClassIncludeSuffix}.h\"");
+                else if (Target.IsSubclassOf(typeof(PrimitiveObject)))
+                    includes.Add($"#include \"{Target.BaseType.Name}{Constants.PrimitiveIncludeSuffix}.h\"");
+            }
+
+            // add require headers
+            includes.Add("#include <Urho3D/IO/Log.h>");
+            includes.Add("#include <Urho3D/JavaScript/JavaScriptSystem.h>");
+            includes.Add("#include <Urho3D/JavaScript/JavaScriptOperations.h>");
+
+
+            IEnumerable<Type> usedTypes = new List<Type>();
+            {   // collect types used to be include your headers
+                Action<List<MethodInfo>> methodTypesCollect = (x) =>
+                {
+                    x.ForEach(method =>
+                    {
+                        usedTypes = usedTypes.Concat(method.GetParameters().Select(x => x.ParameterType));
+                        if (method.ReturnType != typeof(void))
+                            usedTypes = usedTypes.Concat(new Type[] { method.ReturnType });
+                    });
+                };
+
+                GetMethods().Values.ToList().ForEach(methodTypesCollect);
+                GetMethods(StaticMethodsFlags).Values.ToList().ForEach(methodTypesCollect);
+                GetProperties().ForEach(prop => usedTypes = usedTypes.Concat(new Type[] { prop.PropertyType }));
+            }
+
+            // add all headers from collected types 
+            usedTypes.ToList().ForEach(type =>
+            {
+                if (type.IsSubclassOf(typeof(ClassObject)))
+                    includes.Add($"#include \"{type.Name}{Constants.ClassIncludeSuffix}.h\"");
+                else if (type.IsSubclassOf(typeof(PrimitiveObject)))
+                    includes.Add($"#include \"{type.Name}{Constants.PrimitiveIncludeSuffix}.h\"");
+            });
+
+            // finally, generate all headers into code
+            code.Add(includes.ToArray()).AddNewLine();
+        }
         public virtual void EmitSource(CodeBuilder code)
         {
             EmitSourceMethodLookupTable(code);
@@ -170,6 +233,20 @@ namespace JSBindTool.Core
                     insertFunctionDefinition(method, GetOperatorName(pair.Key), GetVariantOperatorMethodSignature(pair.Key, i));
                 }
             }
+            // static methods
+            foreach(var pair in GetMethods(StaticMethodsFlags))
+            {
+                if (pair.Value.Count <= 1)
+                    continue;
+
+                hasVariants = true;
+
+                for(int i =0; i < pair.Value.Count; ++i)
+                {
+                    MethodInfo method = pair.Value[i];
+                    insertFunctionDefinition(method, GetStaticMethodSignature(pair.Key), GetVariantStaticMethodSignature(pair.Key, i));
+                }
+            }
 
             lookupField.Add("};").AddNewLine();
 
@@ -185,16 +262,27 @@ namespace JSBindTool.Core
         protected virtual void EmitSourceMethods(CodeBuilder code)
         {
             OperatorType operatorType = OperatorType.None;
+            bool isStatic = false;
 
             Action<List<MethodInfo>, string> insertFunction = (methods, funcName) =>
             {
+                string methodSignature;
+                if (isStatic)
+                    methodSignature = GetStaticMethodSignature(funcName);
+                else if (operatorType == OperatorType.None)
+                    methodSignature = GetMethodSignature(funcName);
+                else
+                    methodSignature = GetOperatorMethodSignature(operatorType);
+
                 code
-                    .Add($"duk_idx_t {(operatorType == OperatorType.None ? GetMethodSignature(funcName) : GetOperatorMethodSignature(operatorType))}(duk_context* ctx)")
+                    .Add($"duk_idx_t {methodSignature}(duk_context* ctx)")
                     .Scope(scopeCode =>
                     {
                         if (methods.Count <= 1)
                         {
-                            if (operatorType == OperatorType.None)
+                            if (isStatic)
+                                EmitStaticMethodBody(methods.First(), scopeCode);
+                            else if (operatorType == OperatorType.None)
                                 EmitMethodBody(methods.First(), scopeCode);
                             else
                                 EmitOperatorMethodBody(operatorType, methods.First(), scopeCode);
@@ -248,11 +336,21 @@ namespace JSBindTool.Core
 
                 for(int i =0; i <methods.Count; ++i)
                 {
+                    string methodVariantSignature;
+                    if (isStatic)
+                        methodVariantSignature = GetVariantStaticMethodSignature(funcName, i);
+                    else if (operatorType == OperatorType.None)
+                        methodVariantSignature = GetVariantMethodSignature(funcName, i);
+                    else
+                        methodVariantSignature = GetVariantOperatorMethodSignature(operatorType, i);
+
                     code
-                    .Add($"duk_idx_t {(operatorType == OperatorType.None ? GetVariantMethodSignature(funcName, i) : GetVariantOperatorMethodSignature(operatorType, i))}(duk_context* ctx)")
+                    .Add($"duk_idx_t {methodVariantSignature}(duk_context* ctx)")
                     .Scope(scopeCode =>
                     {
-                        if (operatorType == OperatorType.None)
+                        if (isStatic)
+                            EmitStaticMethodBody(methods[i], code, false);
+                        else if (operatorType == OperatorType.None)
                             EmitMethodBody(methods[i], scopeCode, false);
                         else
                             EmitOperatorMethodBody(operatorType, methods[i], scopeCode, false);
@@ -265,6 +363,10 @@ namespace JSBindTool.Core
                 insertFunction(pair.Value, pair.Key);
             foreach (var pair in GetOperatorMethods())
                 insertFunction(pair.Value, GetOperatorName(operatorType = pair.Key));
+
+            isStatic = true;
+            foreach (var pair in GetMethods(StaticMethodsFlags))
+                insertFunction(pair.Value, pair.Key);
         }
 
         protected virtual void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
@@ -280,6 +382,37 @@ namespace JSBindTool.Core
 
             if (emitValidations)
                 EmitArgumentValidation(parameters, code);
+        }
+        protected virtual void EmitStaticMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
+        {
+            string nativeName = AnnotationUtils.GetMethodNativeName(methodInfo);
+
+            var parameters = methodInfo.GetParameters().ToList();
+
+            if (emitValidations)
+                EmitArgumentValidation(parameters, code);
+
+            StringBuilder argsCall = new StringBuilder();
+            for(int i =0; i < parameters.Count; ++i)
+            {
+                CodeUtils.EmitValueRead(parameters[i].ParameterType, $"arg{i}", i.ToString(), code);
+                argsCall.Append($"arg{i}");
+                if (i < parameters.Count - 1)
+                    argsCall.Append(", ");
+            }
+
+            if(methodInfo.ReturnType == typeof(void))
+            {
+                code
+                    .Add($"{CodeUtils.GetNativeDeclaration(Target)}::{nativeName}({argsCall});")
+                    .Add("return 0;");
+                return;
+            }
+
+            code.Add($"{CodeUtils.GetNativeDeclaration(methodInfo.ReturnType)} result = {CodeUtils.GetNativeDeclaration(Target)}::{nativeName}({argsCall})");
+
+            CodeUtils.EmitValueWrite(methodInfo.ReturnType, "result", code);
+            code.Add("return 1;");
         }
 
         protected virtual void EmitArgumentValidation(List<ParameterInfo> parameters, CodeBuilder code)
@@ -306,6 +439,26 @@ namespace JSBindTool.Core
             {
                 int maxArgs = 0;
                 string methodSignature = GetMethodSignature(pair.Key);
+
+                pair.Value.ForEach(x => maxArgs = Math.Max(maxArgs, x.GetParameters().Length));
+                if (pair.Value.Count <= 1)
+                    code.Add($"duk_push_c_lightfunc(ctx, {methodSignature}, {maxArgs}, {maxArgs}, 0);");
+                else
+                    code.Add($"duk_push_c_function(ctx, {methodSignature}, DUK_VARARGS);");
+
+                code.Add($"duk_put_prop_string(ctx, {accessor}, \"{pair.Key}\");");
+            }
+        }
+        protected void EmitStaticMethods(CodeBuilder code, string accessor)
+        {
+            var methodsData = GetMethods(StaticMethodsFlags);
+            if (methodsData.Count > 0)
+                code.Add("// static methods setup");
+
+            foreach(var pair in methodsData)
+            {
+                int maxArgs = 0;
+                string methodSignature = GetStaticMethodSignature(pair.Key);
 
                 pair.Value.ForEach(x => maxArgs = Math.Max(maxArgs, x.GetParameters().Length));
                 if (pair.Value.Count <= 1)
@@ -377,12 +530,12 @@ namespace JSBindTool.Core
 
             return methodsData;
         }
-        protected Dictionary<string, List<MethodInfo>> GetMethods()
+        protected Dictionary<string, List<MethodInfo>> GetMethods(BindingFlags flags = BindingFlags.Public | BindingFlags.DeclaredOnly | BindingFlags.Instance)
         {
             Dictionary<string, List<MethodInfo>> methodsData = new Dictionary<string, List<MethodInfo>>();
 
             Target
-                .GetMethods(BindingFlags.Public | BindingFlags.DeclaredOnly | BindingFlags.Instance)
+                .GetMethods(flags)
                 .Where(x => AnnotationUtils.IsValidMethod(x))
                 .ToList()
                 .ForEach(x =>
@@ -403,6 +556,24 @@ namespace JSBindTool.Core
 
             return methodsData;
         }
+
+        protected string GetMethodSignature(string methodName)
+        {
+            return $"{CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(methodName)}_call";
+        }
+        protected string GetVariantMethodSignature(string methodName, int index)
+        {
+            return $"{CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(methodName)}{index}_call";
+        }
+        protected string GetStaticMethodSignature(string methodName)
+        {
+            return $"{CodeUtils.GetMethodPrefix(Target)}_static_{CodeUtils.ToSnakeCase(methodName)}_call";
+        }
+        protected string GetVariantStaticMethodSignature(string methodName, int index)
+        {
+            return $"{CodeUtils.GetMethodPrefix(Target)}_static_{CodeUtils.ToSnakeCase(methodName)}{index}_call";
+        }
+
         protected List<PropertyInfo> GetProperties()
         {
             return Target.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public)
@@ -464,7 +635,6 @@ namespace JSBindTool.Core
             return $"{CodeUtils.GetMethodPrefix(Target)}_op_{GetOperatorName(opType)}{idx}_call";
         }
 
-        public abstract void EmitSourceIncludes(CodeBuilder code);
         protected abstract void EmitSourceConstructor(CodeBuilder code);
         protected abstract void EmitProperty(PropertyInfo prop, string accessor, CodeBuilder code);
     }

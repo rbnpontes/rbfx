@@ -14,6 +14,10 @@ namespace JSBindTool.Core
         {
         }
 
+        public override void EmitSourceIncludes(CodeBuilder code)
+        {
+            code.Add($"#include \"{Target.Name}{Constants.PrimitiveIncludeSuffix}.h\"");
+        }
         public override void EmitHeaderSignatures(CodeBuilder code)
         {
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);");
