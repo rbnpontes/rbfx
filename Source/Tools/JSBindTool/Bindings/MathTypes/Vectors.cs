@@ -223,6 +223,25 @@ namespace JSBindTool.Bindings.MathTypes
         public static IntVector3 Back = new IntVector3();
         [Field("one", "ONE")]
         public static IntVector3 One = new IntVector3();
+
+        [Method("Min")]
+        [CustomCode(typeof(IntVector3), new Type[] { typeof(IntVector3), typeof(IntVector3) })]
+        public static void Min(CodeBuilder code)
+        {
+            code.Add("IntVector3 result = VectorMin(arg0, arg1);");
+        }
+        [Method("Max")]
+        [CustomCode(typeof(IntVector3), new Type[] { typeof(IntVector3), typeof(IntVector3) })]
+        public static void Max(CodeBuilder code)
+        {
+            code.Add("IntVector3 result = VectorMax(arg0, arg1);");
+        }
+        [Method("Abs")]
+        [CustomCode(typeof(IntVector3), new Type[] { typeof(IntVector3) })]
+        public static void Abs(CodeBuilder code)
+        {
+            code.Add("IntVector3 result = VectorAbs(arg0);");
+        }
     }
 
     [Include("Urho3D/Math/Vector3.h")]
@@ -354,6 +373,79 @@ namespace JSBindTool.Bindings.MathTypes
         public static Vector3 Back = new Vector3();
         [Field("one", "ONE")]
         public static Vector3 One = new Vector3();
+
+        [Method("Lerp")]
+        [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3), typeof(Vector3), typeof(Vector3)})]
+        public static void Lerp(CodeBuilder code)
+        {
+            code.Add("Vector3 result = VectorLerp(arg0, arg1, arg2);");
+        }
+        [Method("Min")]
+        [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3), typeof(Vector3) })]
+        public static void Min(CodeBuilder code)
+        {
+            code.Add("Vector3 result = VectorMin(arg0, arg1);");
+        }
+        [Method("Max")]
+        [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3), typeof(Vector3) })]
+        public static void Max(CodeBuilder code)
+        {
+            code.Add("Vector3 result = VectorMax(arg0, arg1);");
+        }
+        [Method("Floor")]
+        [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3) })]
+        public static void Floor(CodeBuilder code)
+        {
+            code.Add("Vector3 result = VectorFloor(arg0);");
+        }
+        [Method("Round")]
+        [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3) })]
+        public static void Round(CodeBuilder code)
+        {
+            code.Add("Vector3 result = VectorRound(arg0);");
+        }
+        [Method("Ceil")]
+        [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3) })]
+        public static void Ceil(CodeBuilder code)
+        {
+            code.Add("Vector3 result = VectorCeil(arg0);");
+        }
+        [Method("Abs")]
+        [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3) })]
+        public static void _Abs(CodeBuilder code)
+        {
+            code.Add("Vector3 result = VectorAbs(arg0);");
+        }
+        [Method("Sqrt")]
+        [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3) })]
+        public static void Sqrt(CodeBuilder code)
+        {
+            code.Add("Vector3 result = VectorSqrt(arg0);");
+        }
+        [Method("FloorToInt")]
+        [CustomCode(typeof(IntVector3), new Type[] { typeof(Vector3) })]
+        public static void FloorToInt(CodeBuilder code)
+        {
+            code.Add("IntVector3 result = VectorFloorToInt(arg0);");
+        }
+        [Method("RoundToInt")]
+        [CustomCode(typeof(IntVector3), new Type[] { typeof(Vector3) })]
+        public static void RoundToInt(CodeBuilder code)
+        {
+            code.Add("IntVector3 result = VectorRoundToInt(arg0);");
+        }
+        [Method("CeilToInt")]
+        [CustomCode(typeof(IntVector3), new Type[] { typeof(Vector3) })]
+        public static void CeilToInt(CodeBuilder code)
+        {
+            code.Add("IntVector3 result = VectorCeilToInt(arg0);");
+        }
+        [Method("StableRandom")]
+        [CustomCode(typeof(float), new Type[] { typeof(Vector3) })]
+        public static void StableRandom(CodeBuilder code)
+        {
+            code.Add("float result = StableRandom(arg0);");
+        }
     }
 
     [Include("Urho3D/Math/Vector4.h")]

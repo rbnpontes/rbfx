@@ -82,6 +82,9 @@ namespace JSBindTool.Core
         }
         public static string GetMethodName(MethodInfo method)
         {
+            CustomCodeAttribute? customCodeAttr = method.GetCustomAttribute<CustomCodeAttribute>();
+            if(customCodeAttr != null)
+                return CodeUtils.ToCamelCase(GetMethodNativeName(method));
             return CodeUtils.ToCamelCase(method.Name);
         }
 
