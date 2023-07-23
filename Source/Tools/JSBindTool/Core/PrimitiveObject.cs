@@ -208,8 +208,15 @@ namespace JSBindTool.Core
             string nativeName = AnnotationUtils.GetMethodNativeName(methodInfo);
 
             code.Add("duk_push_this(ctx);");
-            code.Add($"{AnnotationUtils.GetTypeName(Target)} value = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, -1);");
+            code.Add($"{AnnotationUtils.GetTypeName(Target)} instance = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, -1);");
             code.Add("duk_pop(ctx);");
+
+            CustomCodeAttribute? customCodeAttr = methodInfo.GetCustomAttribute<CustomCodeAttribute>();
+            if(customCodeAttr != null)
+            {
+                EmitCustomCodeMethodBody(customCodeAttr, methodInfo, code);
+                return;
+            }
 
             var parameters = methodInfo.GetParameters();
 
@@ -224,15 +231,15 @@ namespace JSBindTool.Core
 
             if (methodInfo.ReturnType == typeof(void))
             {
-                code.Add($"value.{nativeName}({argsCall});");
+                code.Add($"instance.{nativeName}({argsCall});");
                 // when return type is void, must update JS properties instead.
                 code.Add("duk_push_this(ctx);");
-                code.Add($"{CodeUtils.GetMethodPrefix(Target)}_set(ctx, duk_get_top(ctx) - 1, value);");
+                code.Add($"{CodeUtils.GetMethodPrefix(Target)}_set(ctx, duk_get_top(ctx) - 1, instance);");
                 code.Add("return 0;");
             }
             else
             {
-                code.Add($"{CodeUtils.GetNativeDeclaration(methodInfo.ReturnType)} result = value.{nativeName}({argsCall});");
+                code.Add($"{CodeUtils.GetNativeDeclaration(methodInfo.ReturnType)} result = instance.{nativeName}({argsCall});");
                 CodeUtils.EmitValueWrite(methodInfo.ReturnType, "result", code);
                 code.Add("return 1;");
             }
@@ -248,6 +255,13 @@ namespace JSBindTool.Core
                 .Add($"{AnnotationUtils.GetTypeName(Target)} instance = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, -1);")
                 .Add("duk_pop(ctx);")
                 .AddNewLine();
+
+            CustomCodeAttribute? customCodeAttr = method.GetCustomAttribute<CustomCodeAttribute>();
+            if (customCodeAttr != null)
+            {
+                EmitCustomCodeMethodBody(customCodeAttr, method, code);
+                return;
+            }
 
             CodeUtils.EmitValueRead(method.GetParameters()[0].ParameterType, $"value", "0", code);
 

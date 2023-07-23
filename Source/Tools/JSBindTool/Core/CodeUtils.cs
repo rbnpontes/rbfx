@@ -129,7 +129,7 @@ namespace JSBindTool.Core
 
                             code.Add(
                                 "duk_push_array(ctx);",
-                                $"duk_idx_t arr_idx_{deepSuffix} = duk_get_top(ctx);",
+                                $"duk_idx_t arr_idx_{deepSuffix} = duk_get_top_index(ctx);",
                                 $"for(duk_idx_t i_{deepSuffix} = 0; i_{deepSuffix} < {accessor}.size(); ++i_{deepSuffix})",
                                 "{"
                             );

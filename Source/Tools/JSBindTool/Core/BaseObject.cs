@@ -374,14 +374,14 @@ namespace JSBindTool.Core
             var parameters = methodInfo.GetParameters().ToList();
 
             if (emitValidations)
-                EmitArgumentValidation(parameters, code);
+                EmitArgumentValidation(parameters, methodInfo.GetCustomAttribute<CustomCodeAttribute>(), code);
         }
         protected virtual void EmitOperatorMethodBody(OperatorType opType, MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
         {
             var parameters = methodInfo.GetParameters().ToList();
 
             if (emitValidations)
-                EmitArgumentValidation(parameters, code);
+                EmitArgumentValidation(parameters, methodInfo.GetCustomAttribute<CustomCodeAttribute>(), code);
         }
         protected virtual void EmitStaticMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
         {
@@ -390,7 +390,14 @@ namespace JSBindTool.Core
             var parameters = methodInfo.GetParameters().ToList();
 
             if (emitValidations)
-                EmitArgumentValidation(parameters, code);
+                EmitArgumentValidation(parameters, methodInfo.GetCustomAttribute<CustomCodeAttribute>(), code);
+
+            CustomCodeAttribute? customCodeAttr = methodInfo.GetCustomAttribute<CustomCodeAttribute>();
+            if(customCodeAttr != null)
+            {
+                EmitCustomCodeMethodBody(customCodeAttr, methodInfo, code);
+                return;
+            }
 
             StringBuilder argsCall = new StringBuilder();
             for(int i =0; i < parameters.Count; ++i)
@@ -409,21 +416,52 @@ namespace JSBindTool.Core
                 return;
             }
 
-            code.Add($"{CodeUtils.GetNativeDeclaration(methodInfo.ReturnType)} result = {CodeUtils.GetNativeDeclaration(Target)}::{nativeName}({argsCall})");
+            code.Add($"{CodeUtils.GetNativeDeclaration(methodInfo.ReturnType)} result = {CodeUtils.GetNativeDeclaration(Target)}::{nativeName}({argsCall});");
 
             CodeUtils.EmitValueWrite(methodInfo.ReturnType, "result", code);
             code.Add("return 1;");
         }
 
-        protected virtual void EmitArgumentValidation(List<ParameterInfo> parameters, CodeBuilder code)
+        protected virtual void EmitCustomCodeMethodBody(CustomCodeAttribute attr, MethodInfo methodInfo, CodeBuilder code)
         {
-            if (parameters.Count == 0)
+            for(int i = 0; i < attr.ParameterTypes.Length; ++i)
+                CodeUtils.EmitValueRead(attr.ParameterTypes[i], $"arg{i}", i.ToString(), code);
+
+            if (attr.ReturnType == typeof(void))
+                code.Add("duk_idx_t result_code = 0;");
+            else
+                code.Add("duk_idx_t result_code = 1;");
+
+            code.AddNewLine().Add("// begin custom code");
+            methodInfo.Invoke(this, new object[] { code });
+            code.Add("// end custom code").AddNewLine();
+            if (attr.ReturnType == typeof(void))
+            {
+                code
+                    .Add("duk_push_this(ctx);")
+                    .Add($"{CodeUtils.GetMethodPrefix(Target)}_set(ctx, duk_get_top(ctx) - 1, instance);")
+                    .Add("duk_pop(ctx);")
+                    .Add("return result_code;");
+                return;
+            }
+
+            CodeUtils.EmitValueWrite(attr.ReturnType, "result", code);
+            code.Add("return result_code;");
+        }
+
+        protected virtual void EmitArgumentValidation(List<ParameterInfo> parameters, CustomCodeAttribute? customCodeAttr, CodeBuilder code)
+        {
+            List<Type> parameterTypes = parameters.Select(p => p.ParameterType).ToList();
+            if (customCodeAttr != null)
+                parameterTypes = customCodeAttr.ParameterTypes.ToList();
+
+            if (parameterTypes.Count == 0)
                 return;
             code.Add("#if defined(URHO3D_DEBUG)");
-            for (int i = 0; i < parameters.Count; ++i)
+            for (int i = 0; i < parameterTypes.Count; ++i)
             {
-                uint typeHash = CodeUtils.GetTypeHash(parameters[i].ParameterType);
-                code.Add($"rbfx_require_type(ctx, {i}, {typeHash}/*{parameters[i].ParameterType.Name}*/);");
+                uint typeHash = CodeUtils.GetTypeHash(parameterTypes[i]);
+                code.Add($"rbfx_require_type(ctx, {i}, {typeHash}/*{parameterTypes[i].Name}*/);");
             }
             code.Add("#endif").AddNewLine();
         }

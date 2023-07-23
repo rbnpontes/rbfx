@@ -252,6 +252,23 @@ namespace JSBindTool.Bindings.MathTypes
 
         public Vector3(): base(typeof(Vector3)) { }
 
+        [Method("Data")]
+        [CustomCode]
+        public void Data(CodeBuilder code)
+        {
+            code
+                .Add("result_code = 1;")
+                .Add("const float* data = instance.Data();")
+                .Add("duk_push_array(ctx);")
+                .Add("for(duk_idx_t i = 0; i < 3; ++i)")
+                .Scope(loopScope =>
+                {
+                    loopScope
+                        .Add("duk_push_number(ctx, data[i]);")
+                        .Add("duk_put_prop_index(ctx, -2, i);");
+                });
+        }
+
         [Method("Normalize")]
         public void Normalize() { }
         [Method("DotProduct")]

@@ -207,6 +207,13 @@ namespace JSBindTool.Core
                 .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(rbfx_get_instance(ctx, -1));")
                 .Add("duk_pop(ctx);");
 
+            CustomCodeAttribute? customCodeAttr = methodInfo.GetCustomAttribute<CustomCodeAttribute>();
+            if(customCodeAttr != null)
+            {
+                EmitCustomCodeMethodBody(customCodeAttr, methodInfo, code);
+                return;
+            }
+
             StringBuilder argsCall = new StringBuilder();
             for(int i =0; i < parameters.Length; ++i)
             {
