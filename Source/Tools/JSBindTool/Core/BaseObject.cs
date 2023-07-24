@@ -313,17 +313,39 @@ namespace JSBindTool.Core
 
                         // emit method selection
                         scopeCode
-                            .Add($"unsigned methodHash = {HashUtils.Hash((isStatic ? "static" : string.Empty)+funcName)};")
+                            .Add($"unsigned methodHash = {HashUtils.Hash((isStatic ? "static" : string.Empty) + funcName)};")
                             .Add("duk_idx_t argc = duk_get_top(ctx);")
                             .AddNewLine()
-                            .Add("// validate arguments count")
-                            .Add($"if(argc < {minArgs} || argc > {maxArgs})")
-                            .Scope(ifCode =>
-                            {
-                                ifCode
-                                    .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid arguments to function '{funcName}'.\");")
-                                    .Add("return duk_throw(ctx);");
-                            })
+                            .Add("// validate arguments count");
+
+                        if(minArgs == maxArgs)
+                        {
+                            scopeCode
+                                .Add($"if(argc != {maxArgs}")
+                                .Scope(ifCode =>
+                                {
+                                    ifCode
+                                        .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid arguments to function '{funcName}'.\");")
+                                        .Add("return duk_throw(ctx);");
+                                });
+                        }
+                        else
+                        {
+                            string validation = string.Empty;
+                            if (minArgs > 0)
+                                validation = $"argc < {minArgs} || ";
+
+                            scopeCode
+                                .Add($"if({validation}argc > {maxArgs})")
+                                .Scope(ifCode =>
+                                {
+                                    ifCode
+                                        .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid arguments to function '{funcName}'.\");")
+                                        .Add("return duk_throw(ctx);");
+                                });
+                        }
+
+                        scopeCode
                             .AddNewLine()
                             .Add("for(unsigned i = 0; i < argc; ++i)")
                             .Scope(loopScope =>
@@ -478,6 +500,7 @@ namespace JSBindTool.Core
             code.Add("#endif").AddNewLine();
         }
 
+        #region Methods Setup Bindings
         protected virtual void EmitMethods(CodeBuilder code, string accessor)
         {
             var methodsData = GetMethods();
@@ -488,10 +511,21 @@ namespace JSBindTool.Core
             foreach (var pair in methodsData)
             {
                 int maxArgs = 0;
+                int minArgs = 0;
                 string methodSignature = GetMethodSignature(pair.Key);
 
-                pair.Value.ForEach(x => maxArgs = Math.Max(maxArgs, x.GetParameters().Length));
-                if (pair.Value.Count <= 1)
+                pair.Value.ForEach(x =>
+                {
+                    int paramCount = x.GetParameters().Length;
+                    var customCodeAttr = x.GetCustomAttribute<CustomCodeAttribute>();
+                    if (customCodeAttr != null)
+                        paramCount = customCodeAttr.ParameterTypes.Length;
+
+                    maxArgs = Math.Max(maxArgs, paramCount);
+                    minArgs = Math.Min(minArgs, paramCount);
+                });
+
+                if (pair.Value.Count <= 1 || minArgs == maxArgs)
                     code.Add($"duk_push_c_lightfunc(ctx, {methodSignature}, {maxArgs}, {maxArgs}, 0);");
                 else
                     code.Add($"duk_push_c_function(ctx, {methodSignature}, DUK_VARARGS);");
@@ -508,10 +542,21 @@ namespace JSBindTool.Core
             foreach(var pair in methodsData)
             {
                 int maxArgs = 0;
+                int minArgs = 0;
                 string methodSignature = GetStaticMethodSignature(pair.Key);
 
-                pair.Value.ForEach(x => maxArgs = Math.Max(maxArgs, x.GetParameters().Length));
-                if (pair.Value.Count <= 1)
+                pair.Value.ForEach(x =>
+                {
+                    int paramCount = x.GetParameters().Length;
+                    var customCodeAttr = x.GetCustomAttribute<CustomCodeAttribute>();
+                    if (customCodeAttr != null)
+                        paramCount = customCodeAttr.ParameterTypes.Length;
+
+                    maxArgs = Math.Max(maxArgs, paramCount);
+                    minArgs = Math.Min(minArgs, paramCount);
+                });
+
+                if (pair.Value.Count <= 1 || minArgs == maxArgs)
                     code.Add($"duk_push_c_lightfunc(ctx, {methodSignature}, {maxArgs}, {maxArgs}, 0);");
                 else
                     code.Add($"duk_push_c_function(ctx, {methodSignature}, DUK_VARARGS);");
@@ -519,7 +564,6 @@ namespace JSBindTool.Core
                 code.Add($"duk_put_prop_string(ctx, {accessor}, \"{pair.Key}\");");
             }
         }
-
         protected virtual void EmitOperatorMethods(CodeBuilder code, string accessor)
         {
             var methodsData = GetOperatorMethods();
@@ -529,11 +573,21 @@ namespace JSBindTool.Core
             foreach(var pair in methodsData)
             {
                 int maxArgs = 0;
+                int minArgs = 0;
                 string methodSignature = GetOperatorMethodSignature(pair.Key);
 
-                pair.Value.ForEach(x => maxArgs = Math.Max(maxArgs, x.GetParameters().Length));
+                pair.Value.ForEach(x =>
+                {
+                    int paramCount = x.GetParameters().Length;
+                    var customCodeAttr = x.GetCustomAttribute<CustomCodeAttribute>();
+                    if (customCodeAttr != null)
+                        paramCount = customCodeAttr.ParameterTypes.Length;
 
-                if (pair.Value.Count <= 1)
+                    maxArgs = Math.Max(maxArgs, paramCount);
+                    minArgs = Math.Min(minArgs, paramCount);
+                });
+
+                if (pair.Value.Count <= 1 || minArgs == maxArgs)
                     code.Add($"duk_push_c_lightfunc(ctx, {methodSignature}, {maxArgs}, {maxArgs}, 0);");
                 else
                     code.Add($"duk_push_c_function(ctx, {methodSignature}, DUK_VARARGS);");
@@ -541,6 +595,7 @@ namespace JSBindTool.Core
                 code.Add($"duk_put_prop_string(ctx, {accessor}, \"{GetOperatorName(pair.Key)}\");");
             }
         }
+        #endregion
         protected virtual void EmitProperties(CodeBuilder code, string accessor)
         {
             var props = GetProperties();
@@ -671,7 +726,7 @@ namespace JSBindTool.Core
                     op = "div";
                     break;
                 case OperatorType.Equal:
-                    op = "equal";
+                    op = "equals";
                     break;
             }
             return op;

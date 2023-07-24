@@ -94,7 +94,7 @@ namespace JSBindTool.Core
         }
         public static bool IsValidOperatorMethod(MethodInfo method)
         {
-            return method.GetCustomAttribute<OperatorMethodAttribute>() != null && method.GetParameters().Length == 1 && method.ReturnType != typeof(void);
+            return method.GetCustomAttribute<OperatorMethodAttribute>() != null;
         }
         public static bool IsValidProperty(PropertyInfo prop)
         {

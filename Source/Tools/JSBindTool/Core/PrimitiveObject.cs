@@ -212,7 +212,7 @@ namespace JSBindTool.Core
             code.Add("duk_pop(ctx);");
 
             CustomCodeAttribute? customCodeAttr = methodInfo.GetCustomAttribute<CustomCodeAttribute>();
-            if(customCodeAttr != null)
+            if (customCodeAttr != null)
             {
                 EmitCustomCodeMethodBody(customCodeAttr, methodInfo, code);
                 return;
@@ -263,7 +263,12 @@ namespace JSBindTool.Core
                 return;
             }
 
-            CodeUtils.EmitValueRead(method.GetParameters()[0].ParameterType, $"value", "0", code);
+            var parameters = method.GetParameters();
+
+            if (parameters.Length > 1)
+                throw new Exception($"Operators that contains more than 1 argument must add custom code attribute. Error Class: {Target.FullName}");
+
+            CodeUtils.EmitValueRead(parameters[0].ParameterType, $"value", "0", code);
 
             if (opType == OperatorType.Equal)
             {
