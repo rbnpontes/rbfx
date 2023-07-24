@@ -471,6 +471,12 @@ namespace JSBindTool.Core
             code.Add("// end custom code").AddNewLine();
             if (attr.ReturnType == typeof(void))
             {
+                if (methodInfo.IsStatic)
+                {
+                    code.Add("return result_code;");
+                    return;
+                }
+
                 code
                     .Add("duk_push_this(ctx);")
                     .Add($"{CodeUtils.GetMethodPrefix(Target)}_set(ctx, duk_get_top(ctx) - 1, instance);")

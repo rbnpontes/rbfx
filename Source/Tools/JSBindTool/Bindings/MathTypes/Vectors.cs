@@ -138,6 +138,12 @@ namespace JSBindTool.Bindings.MathTypes
 
         [OperatorMethod(OperatorType.Equal)]
         public bool EqualOperator(Vector2 vec) { return true; }
+        [OperatorMethod(OperatorType.Equal)]
+        [CustomCode(typeof(bool), new Type[] { typeof(Vector2), typeof(float) })]
+        public void EqualOperator(CodeBuilder code)
+        {
+            code.Add("bool result = instance.Equals(arg0, arg1);");
+        }
         [OperatorMethod(OperatorType.Add)]
         public Vector2 AddOperator(Vector2 vec) { return new Vector2(); }
         [OperatorMethod(OperatorType.Sub)]
@@ -182,11 +188,6 @@ namespace JSBindTool.Bindings.MathTypes
         float Angle(Vector2 vec) { return 0f; }
         [Method("Lerp")]
         public Vector2 Lerp(Vector2 vec, float t) { return new Vector2(); }
-
-        [Method("Equals")]
-        public bool Equals(Vector2 vec) { return true; }
-        [Method("Equals")]
-        public bool Equals(Vector2 vec, float eps) { return true; }
 
         [Method("ToIntVector2")]
         public IntVector2 ToIntVector2() { return new IntVector2(); }
@@ -450,6 +451,12 @@ namespace JSBindTool.Bindings.MathTypes
 
         [OperatorMethod(OperatorType.Equal)]
         public bool EqualOperator(Vector3 vec) { return true; }
+        [OperatorMethod(OperatorType.Equal)]
+        [CustomCode(typeof(bool), new Type[] { typeof(Vector3), typeof(float) })]
+        public void EqualOperator(CodeBuilder code)
+        {
+            code.Add("bool result = instance.Equals(arg0, arg1);");
+        }
         [OperatorMethod(OperatorType.Add)]
         public Vector3 AddOperator(Vector3 vec) { return new Vector3(); }
         [OperatorMethod(OperatorType.Sub)]

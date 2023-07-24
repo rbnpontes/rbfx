@@ -1,0 +1,108 @@
+using JSBindTool.Core;
+using JSBindTool.Core.Annotations;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace JSBindTool.Bindings.MathTypes
+{
+    [Include("Urho3D/Math/Matrix2.h")]
+    public class Matrix2 : PrimitiveObject
+    {
+        [Variable("m00_")]
+        public float M00;
+        [Variable("m01_")]
+        public float M01;
+        [Variable("m10_")]
+        public float M10;
+        [Variable("m11_")]
+        public float M11;
+
+        #region Properties
+        [PropertyMap("Scale", "SetScale")]
+        public Vector2 Scale { get => new Vector2(); set { } }
+        [PropertyMap("Transpose")]
+        public Matrix2 Transpose { get => new Matrix2(); }
+        [PropertyMap("Inverse")]
+        public Matrix2 Inverse { get => new Matrix2(); }
+        [PropertyMap("IsNaN")]
+        public bool IsNaN { get; }
+        [PropertyMap("IsInf")]
+        public bool IsInf { get; }
+        #endregion
+
+        public Matrix2() : base(typeof(Matrix2))
+        {
+        }
+
+        #region Operator Methods
+        [OperatorMethod(OperatorType.Equal)]
+        public bool EqualOperator(Matrix2 m) => true;
+        [OperatorMethod(OperatorType.Equal)]
+        [CustomCode(typeof(bool), new Type[] { typeof(Matrix2), typeof(float) })]
+        public void EqualOperator(CodeBuilder code)
+        {
+            code.Add("bool result = instance.Equals(arg0, arg1);");
+        }
+        [OperatorMethod(OperatorType.Add)]
+        public Matrix2 AddOperator(Matrix2 m) => new Matrix2();
+        [OperatorMethod(OperatorType.Sub)]
+        public Matrix2 SubOperator(Matrix2 m) => new Matrix2();
+        [OperatorMethod(OperatorType.Mul)]
+        public Matrix2 MulOperator(Matrix2 m) => new Matrix2();
+        [OperatorMethod(OperatorType.Mul)]
+        public Matrix2 MulOperator(float v) => new Matrix2();
+        #endregion
+
+        [Method("SetScale")]
+        public void SetScale(float scale) { }
+        [Method("Scaled")]
+        public Matrix2 Scaled(Vector2 scale) => new Matrix2();
+        [Method("Data")]
+        [CustomCode(typeof(Vector<float>))]
+        public void GetData(CodeBuilder code)
+        {
+            code
+                .Add("ea::vector<float> result(4);")
+                .Add("memcpy(result.data(), instance.Data(), sizeof(float) * 4);");
+        }
+        [Method("ToString")]
+#pragma warning disable CS0114 // Member hides inherited member; missing override keyword
+        public string ToString() => string.Empty;
+#pragma warning restore CS0114 // Member hides inherited member; missing override keyword
+
+
+        [Field("zero", "ZERO")]
+        public static Matrix2 Zero = new Matrix2();
+        [Field("identity", "IDENTITY")]
+        public static Matrix2 Identity = new Matrix2();
+
+        [Method("BulkTranspose")]
+        [CustomCode(new Type[] { typeof(Vector<float>), typeof(Vector<float>)})]
+        public static void BulkTranspose(CodeBuilder code)
+        {
+            code
+                .Add("if(arg0.size() != arg1.size())")
+                .Scope(ifScope =>
+                {
+                    ifScope
+                        .Add("duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid arguments. value arrays does not have same size.\");")
+                        .Add("duk_throw(ctx);");
+                })
+                .AddNewLine()
+                .Add("Matrix2::BulkTranspose(arg0.data(), arg1.data(), arg0.size());")
+                .Add("for(duk_idx_t i =0; i < arg0.size(); ++i)")
+                .Scope(loopScope =>
+                {
+                    loopScope
+                        .Add("duk_push_number(ctx, arg0[i]);")
+                        .Add("duk_put_prop_index(ctx, 0, i);")
+                        .Add("// fill second argument")
+                        .Add("duk_push_number(ctx, arg1[i]);")
+                        .Add("duk_put_prop_index(ctx, 1, i);");
+                });
+        }
+    }
+}
