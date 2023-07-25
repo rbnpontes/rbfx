@@ -43,6 +43,10 @@ namespace JSBindTool.Core
                                 .Add($"duk_put_global_string(ctx, \"{namespaceAttr.Namespace}\");");
                         });
                 }
+                else
+                {
+                    code.Add("duk_push_global_object(ctx);");
+                }
 
                 code.Add("duk_idx_t top = duk_get_top_index(ctx);");
                 EmitMethods(code, "top");

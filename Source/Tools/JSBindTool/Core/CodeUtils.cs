@@ -39,6 +39,7 @@ namespace JSBindTool.Core
                 output.Append("unsigned short");
             else if (type == typeof(IntPtr))
                 output.Append("void*");
+            else if(type == typeof(JSFunction) || type == typeof(JSObject)) { /*do nothing*/ }
             else if (type.IsSubclassOf(typeof(ClassObject)))
                 output.Append(type == typeof(ClassObject) ? "Object" : AnnotationUtils.GetTypeName(type)).Append("*");
             else if (type.IsSubclassOf(typeof(TemplateObject)))
@@ -93,8 +94,7 @@ namespace JSBindTool.Core
 
         public static void EmitValueWrite(Type type, string accessor, CodeBuilder code)
         {
-            if (type == typeof(JSFunction))
-                throw new Exception("function cannot be used as write value");
+            if (type == typeof(JSFunction) || type == typeof(JSObject)) { /*do nothing*/ }
             else if (type == typeof(string))
                 code.Add($"duk_push_string(ctx, {accessor}.c_str());");
             else if (type == typeof(StringHash))
@@ -169,7 +169,7 @@ namespace JSBindTool.Core
                 code.Add($"unsigned {varName} = duk_get_uint_default(ctx, {accessor}, 0u);");
             else if (type == typeof(IntPtr))
                 code.Add($"void* {varName} = duk_get_pointer_default(ctx, {accessor}, nullptr);");
-            else if (type == typeof(JSFunction))
+            else if (type == typeof(JSFunction) || type == typeof(JSObject))
                 code.Add($"duk_idx_t {varName} = {accessor};");
             else if (type.IsEnum)
                 code.Add($"{type.Name} {varName} = ({type.Name})duk_get_int(ctx, {accessor});");
@@ -239,6 +239,8 @@ namespace JSBindTool.Core
                 hashInput = "void";
             else if (type == typeof(JSFunction))
                 hashInput = "Function";
+            else if (type == typeof(JSObject))
+                hashInput = "VariantMap";
             else
                 hashInput = AnnotationUtils.GetTypeName(type);
 
