@@ -11,6 +11,8 @@
     <ItemGroup>
         <Compile Include="Bindings\MathTypes\Matrix2.cs" />
         <Compile Include="Bindings\MathTypes\Matrix3.cs" />
+        <Compile Include="Bindings\MathTypes\Matrix3x4.cs" />
+        <Compile Include="Bindings\MathTypes\Matrix4.cs" />
         <Compile Include="Bindings\MathTypes\MatrixCodeUtils.cs" />
         <Compile Include="Bindings\MathTypes\Quaternion.cs" />
         <Compile Include="Bindings\MathTypes\Vectors.cs" />
