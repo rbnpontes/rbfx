@@ -96,11 +96,12 @@ namespace JSBindTool.Core
         {
             HashSet<string> includes = new HashSet<string>();
             // add self header
-            if(Target.IsSubclassOf(typeof(ClassObject)))
+            if (Target.IsSubclassOf(typeof(ClassObject)))
                 includes.Add($"#include \"{Target.Name}{Constants.ClassIncludeSuffix}.h\"");
-            else if(Target.IsSubclassOf(typeof(PrimitiveObject)))
+            else if (Target.IsSubclassOf(typeof(PrimitiveObject)))
                 includes.Add($"#include \"{Target.Name}{Constants.PrimitiveIncludeSuffix}.h\"");
-
+            else if (Target.IsSubclassOf(typeof(ModuleObject)))
+                includes.Add($"#include \"{Target.Name}{Constants.ModuleIncludeSuffix}.h\"");
             // add inheritance headers if exists
             if (Target.BaseType != null && Target.BaseType != typeof(ClassObject) && Target.BaseType != typeof(PrimitiveObject))
             {

@@ -9,6 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="Bindings\MathTypes\MathDefs.cs" />
         <Compile Include="Bindings\MathTypes\Matrix2.cs" />
         <Compile Include="Bindings\MathTypes\Matrix3.cs" />
         <Compile Include="Bindings\MathTypes\Matrix3x4.cs" />
@@ -18,10 +19,12 @@
         <Compile Include="Bindings\MathTypes\Vectors.cs" />
         <Compile Include="Bindings\SceneTypes\Component.cs" />
         <Compile Include="Bindings\SceneTypes\Enums.cs" />
+        <Compile Include="Builders\DuktapeBuilder.cs" />
         <Compile Include="Core\Annotations\CustomCodeAttribute.cs" />
         <Compile Include="Core\Annotations\DefineAttribute.cs" />
         <Compile Include="Core\Annotations\FieldAttribute.cs" />
         <Compile Include="Core\Annotations\MethodAttribute.cs" />
+        <Compile Include="Core\Annotations\NamespaceAttribute.cs" />
         <Compile Include="Core\Annotations\OperatorMethodAttribute.cs" />
         <Compile Include="Core\BaseObject.cs" />
         <Compile Include="Core\ClassObject.cs" />
@@ -52,10 +55,12 @@
         <Compile Include="Core\CodeGen.cs" />
         <Compile Include="Core\CodeUtils.cs" />
         <Compile Include="Core\Constants.cs" />
+        <Compile Include="Core\ModuleObject.cs" />
         <Compile Include="Core\EnumGen.cs" />
         <Compile Include="Core\HashUtils.cs" />
         <Compile Include="Core\HeaderUtils.cs" />
         <Compile Include="Core\JSFunction.cs" />
+        <Compile Include="Core\ModuleGen.cs" />
         <Compile Include="Core\NoopPrimitive.cs" />
         <Compile Include="Core\PrimitiveGen.cs" />
         <Compile Include="Core\PrimitiveObject.cs" />

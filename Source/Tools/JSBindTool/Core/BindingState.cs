@@ -11,21 +11,23 @@ namespace JSBindTool.Core
         private static HashSet<Type> pEnums = new HashSet<Type>();
         private static HashSet<Type> pClasses = new HashSet<Type>();
         private static HashSet<Type> pPrimitives = new HashSet<Type>();
+        private static HashSet<Type> pModules = new HashSet<Type>();
 
         public static void AddEnum(Type type)
         {
-            if(!pEnums.Contains(type))
-                pEnums.Add(type);
+            pEnums.Add(type);
         }
         public static void AddClass(Type type)
         {
-            if (!pClasses.Contains(type))
-                pClasses.Add(type);
+            pClasses.Add(type);
         }
-        public static void AddPrimitives(Type type)
+        public static void AddPrimitive(Type type)
         {
-            if (!pPrimitives.Contains(type))
-                pPrimitives.Add(type);
+            pPrimitives.Add(type);
+        }
+        public static void AddModule(Type type)
+        {
+            pModules.Add(type);
         }
 
         public static IList<Type> GetEnums()
@@ -39,6 +41,10 @@ namespace JSBindTool.Core
         public static IList<Type> GetPrimitives()
         {
             return pPrimitives.ToList();
+        }
+        public static IList<Type> GetModules()
+        {
+            return pModules.ToList();
         }
     }
 }

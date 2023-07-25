@@ -122,5 +122,13 @@ namespace JSBindTool.Core
                 throw new NullReferenceException("method does not contains OperatorMethodAttribute");
             return attr;
         }
+
+        public static NamespaceAttribute GetNamespaceAttribute(Type type)
+        {
+            NamespaceAttribute? attr = type.GetCustomAttribute<NamespaceAttribute>();
+            if (attr is null)
+                throw new NullReferenceException("type does not contains NamespaceMethodAttribute");
+            return attr;
+        }
     }
 }

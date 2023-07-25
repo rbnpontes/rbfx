@@ -12,7 +12,7 @@ namespace JSBindTool.Core
         public static void CollectTypes()
         {
             Assembly.GetExecutingAssembly().GetTypes()
-                .Where(x => x.IsSubclassOf(typeof(ClassObject)) || x.IsSubclassOf(typeof(PrimitiveObject)))
+                .Where(x => x.IsSubclassOf(typeof(ClassObject)) || x.IsSubclassOf(typeof(PrimitiveObject)) || x.IsSubclassOf(typeof(ModuleObject)))
                 .Where(x => !AnnotationUtils.IsIgnored(x))
                 .ToList()
                 .ForEach(type =>
@@ -40,7 +40,11 @@ namespace JSBindTool.Core
                     }
                     else if(type.IsSubclassOf(typeof(PrimitiveObject)))
                     {
-                        BindingState.AddPrimitives(type);
+                        BindingState.AddPrimitive(type);
+                    }
+                    else if(type.IsSubclassOf(typeof(ModuleObject)))
+                    {
+                        BindingState.AddModule(type);
                     }
                 });
         }
@@ -58,6 +62,7 @@ namespace JSBindTool.Core
                 header.Add("#include \"enum_bindings.h\"");
                 header.Add("#include \"primitive_bindings.h\"");
                 header.Add("#include \"class_bindings.h\"");
+                header.Add("#include \"module_bindings.h\"");
                 header.AddNewLine(2);
                 header.Namespace(Constants.Namespace, scope =>
                 {
@@ -80,7 +85,8 @@ namespace JSBindTool.Core
                         setupScope.Add(
                             $"{Constants.MethodPrefix}_enum_bindings_setup(ctx);",
                             $"{Constants.MethodPrefix}_primitive_bindings_setup(ctx);",
-                            $"{Constants.MethodPrefix}_class_bindings_setup(ctx);"
+                            $"{Constants.MethodPrefix}_class_bindings_setup(ctx);",
+                            $"{Constants.MethodPrefix}_module_bindings_setup(ctx);"
                         );
                     });
                 });
@@ -115,6 +121,14 @@ namespace JSBindTool.Core
                 GenerateSetupSource(outputPath, "class_bindings", classes);
             }
             WorkerUtils.ForEach(BindingState.GetClasses(), type => GenerateBindingFiles<ClassGen>(type, outputPath, Constants.ClassIncludeSuffix));
+            Console.WriteLine("------------------------------------------------");
+            Console.WriteLine("-- Generating Code Modules");
+            {
+                var modules = BindingState.GetModules().ToList();
+                GenerateSetupHeader(outputPath, "module_bindings", Constants.ModuleIncludeSuffix, modules);
+                GenerateSetupSource(outputPath, "module_bindings", modules);
+            }
+            WorkerUtils.ForEach(BindingState.GetModules(), type => GenerateBindingFiles<ModuleGen>(type, outputPath, Constants.ModuleIncludeSuffix));
             Console.WriteLine("------------------------------------------------");
             Console.WriteLine("--- Bindings has been Generated with Success ---");
         }
