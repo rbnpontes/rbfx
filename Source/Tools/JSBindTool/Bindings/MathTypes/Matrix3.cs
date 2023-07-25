@@ -59,7 +59,7 @@ namespace JSBindTool.Bindings.MathTypes
         [CustomCode(typeof(bool), new Type[] { typeof(Matrix3), typeof(float) })]
         public void EqualOperator(CodeBuilder code)
         {
-            code.Add("bool result = instance.Equals(arg0, arg1);");
+            MathCodeUtils.EmitEqualOperator(code);
         }
         [OperatorMethod(OperatorType.Add)]
         public Matrix3 AddOperator(Matrix3 m) => new Matrix3();
@@ -70,7 +70,7 @@ namespace JSBindTool.Bindings.MathTypes
         [OperatorMethod(OperatorType.Mul)]
         public Matrix3 MulOperator(float v) => new Matrix3();
         #endregion
-
+        #region Methods
         [Method("FromAngleAxis")]
         public void FromAngleAxis(float angle, Vector3 axis) { }
         [Method("SetScale")]
@@ -83,9 +83,7 @@ namespace JSBindTool.Bindings.MathTypes
         [CustomCode(typeof(Vector<float>))]
         public void GetData(CodeBuilder code)
         {
-            code
-                .Add("ea::vector<float> result(9);")
-                .Add("memcpy(result.data(), instance.Data(), sizeof(float) * 9);");
+            MathCodeUtils.EmitGetData(code, 3 * 3);
         }
         [Method("Element")]
         public float Element(uint i, uint j) => 0f;
@@ -100,7 +98,7 @@ namespace JSBindTool.Bindings.MathTypes
 #pragma warning restore CS0114 // Member hides inherited member; missing override keyword
         [Method("ToHash")]
         public uint ToHash() => 0;
-
+        #endregion
         [Field("zero", "ZERO")]
         public static Matrix3 Zero = new Matrix3();
         [Field("identity", "IDENTITY")]
@@ -110,7 +108,7 @@ namespace JSBindTool.Bindings.MathTypes
         [CustomCode(new Type[] { typeof(Vector<float>), typeof(Vector<float>) })]
         public static void BulkTranspose(CodeBuilder code)
         {
-            MatrixCodeUtils.EmitBulkTranspose("Matrix3", code);
+            MathCodeUtils.EmitMatrixBulkTranspose("Matrix3", code);
         }
     }
 }

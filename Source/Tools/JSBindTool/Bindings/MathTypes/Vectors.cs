@@ -37,20 +37,10 @@ namespace JSBindTool.Bindings.MathTypes
         public IntVector2 DivOperator(IntVector2 scalar) { return new IntVector2(); }
 
         [Method("Data")]
-        [CustomCode]
+        [CustomCode(typeof(Vector<int>))]
         public void Data(CodeBuilder code)
         {
-            code
-                .Add("result_code = 1;")
-                .Add("const int* data = instance.Data();")
-                .Add("duk_push_array(ctx);")
-                .Add("for(duk_idx_t i = 0; i < 3; ++i)")
-                .Scope(loopScope =>
-                {
-                    loopScope
-                        .Add("duk_push_number(ctx, data[i]);")
-                        .Add("duk_put_prop_index(ctx, -2, i);");
-                });
+            MathCodeUtils.EmitGetData(code, 2, "int");
         }
 
         [Method("ToString")]
@@ -142,7 +132,7 @@ namespace JSBindTool.Bindings.MathTypes
         [CustomCode(typeof(bool), new Type[] { typeof(Vector2), typeof(float) })]
         public void EqualOperator(CodeBuilder code)
         {
-            code.Add("bool result = instance.Equals(arg0, arg1);");
+            MathCodeUtils.EmitEqualOperator(code);
         }
         [OperatorMethod(OperatorType.Add)]
         public Vector2 AddOperator(Vector2 vec) { return new Vector2(); }
@@ -158,20 +148,10 @@ namespace JSBindTool.Bindings.MathTypes
         public Vector2 DivOperator(Vector2 scalar) { return new Vector2(); }
 
         [Method("Data")]
-        [CustomCode]
+        [CustomCode(typeof(Vector<float>))]
         public void Data(CodeBuilder code)
         {
-            code
-                .Add("result_code = 1;")
-                .Add("const float* data = instance.Data();")
-                .Add("duk_push_array(ctx);")
-                .Add("for(duk_idx_t i = 0; i < 2; ++i)")
-                .Scope(loopScope =>
-                {
-                    loopScope
-                        .Add("duk_push_number(ctx, data[i]);")
-                        .Add("duk_put_prop_index(ctx, -2, i);");
-                });
+            MathCodeUtils.EmitGetData(code, 2);
         }
 
         [Method("Normalize")]
@@ -185,7 +165,7 @@ namespace JSBindTool.Bindings.MathTypes
         [Method("ProjectOntoAxis")]
         public float ProjectOntoAxis(Vector2 axis) { return 0f; }
         [Method("Angle")]
-        float Angle(Vector2 vec) { return 0f; }
+        public float Angle(Vector2 vec) { return 0f; }
         [Method("Lerp")]
         public Vector2 Lerp(Vector2 vec, float t) { return new Vector2(); }
 
@@ -352,20 +332,10 @@ namespace JSBindTool.Bindings.MathTypes
         public IntVector3 DivOperator(IntVector3 scalar) { return new IntVector3(); }
 
         [Method("Data")]
-        [CustomCode]
+        [CustomCode(typeof(Vector<int>))]
         public void Data(CodeBuilder code)
         {
-            code
-                .Add("result_code = 1;")
-                .Add("const int* data = instance.Data();")
-                .Add("duk_push_array(ctx);")
-                .Add("for(duk_idx_t i = 0; i < 3; ++i)")
-                .Scope(loopScope =>
-                {
-                    loopScope
-                        .Add("duk_push_number(ctx, data[i]);")
-                        .Add("duk_put_prop_index(ctx, -2, i);");
-                });
+            MathCodeUtils.EmitGetData(code, 3, "int");
         }
 
         [Method("ToString")]
@@ -455,7 +425,7 @@ namespace JSBindTool.Bindings.MathTypes
         [CustomCode(typeof(bool), new Type[] { typeof(Vector3), typeof(float) })]
         public void EqualOperator(CodeBuilder code)
         {
-            code.Add("bool result = instance.Equals(arg0, arg1);");
+            MathCodeUtils.EmitEqualOperator(code);
         }
         [OperatorMethod(OperatorType.Add)]
         public Vector3 AddOperator(Vector3 vec) { return new Vector3(); }
@@ -471,20 +441,10 @@ namespace JSBindTool.Bindings.MathTypes
         public Vector3 DivOperator(Vector3 scalar) { return new Vector3(); }
 
         [Method("Data")]
-        [CustomCode]
+        [CustomCode(typeof(Vector<float>))]
         public void Data(CodeBuilder code)
         {
-            code
-                .Add("result_code = 1;")
-                .Add("const float* data = instance.Data();")
-                .Add("duk_push_array(ctx);")
-                .Add("for(duk_idx_t i = 0; i < 3; ++i)")
-                .Scope(loopScope =>
-                {
-                    loopScope
-                        .Add("duk_push_number(ctx, data[i]);")
-                        .Add("duk_put_prop_index(ctx, -2, i);");
-                });
+            MathCodeUtils.EmitGetData(code, 3);
         }
 
         [Method("Normalize")]
@@ -674,6 +634,12 @@ namespace JSBindTool.Bindings.MathTypes
 
         [OperatorMethod(OperatorType.Equal)]
         public bool EqualOperator(Vector4 vec) { return true; }
+        [OperatorMethod(OperatorType.Equal)]
+        [CustomCode(typeof(bool), new Type[] { typeof(Vector4), typeof(float)})]
+        public void EqualOperator(CodeBuilder code)
+        {
+            MathCodeUtils.EmitEqualOperator(code);
+        }
         [OperatorMethod(OperatorType.Add)]
         public Vector4 AddOperator(Vector4 vec) { return new Vector4(); }
         [OperatorMethod(OperatorType.Sub)]
@@ -695,8 +661,6 @@ namespace JSBindTool.Bindings.MathTypes
         public float ProjectOntoAxis(Vector3 vec) => 0f;
         [Method("Lerp")]
         public Vector4 Lerp(Vector4 vec, float t) => new Vector4();
-        [Method("Equals")]
-        public float Equals(Vector4 vec, float eps) => 0f;
 
         [Method("ToIntVector2")]
         public IntVector2 ToIntVector2() => new IntVector2();
@@ -706,7 +670,12 @@ namespace JSBindTool.Bindings.MathTypes
         public IntVector3 ToIntVector3() => new IntVector3();
         [Method("ToVector3")]
         public Vector3 ToVector3() => new Vector3();
-
+        [Method("Data")]
+        [CustomCode(typeof(Vector<float>))]
+        public void GetData(CodeBuilder code)
+        {
+            MathCodeUtils.EmitGetData(code, 4);
+        }
         [Method("ToString")]
 #pragma warning disable CS0114 // Member hides inherited member; missing override keyword
         public string ToString() => string.Empty;

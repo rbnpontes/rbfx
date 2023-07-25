@@ -31,6 +31,8 @@ namespace JSBindTool.Core
                 output.Append("float");
             else if (type == typeof(double))
                 output.Append("double");
+            else if (type == typeof(int))
+                output.Append("int");
             else if (type == typeof(uint))
                 output.Append("unsigned");
             else if (type == typeof(IntPtr))

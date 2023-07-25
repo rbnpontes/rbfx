@@ -126,6 +126,7 @@ namespace JSBindTool.Core
                 };
 
                 GetMethods().Values.ToList().ForEach(methodTypesCollect);
+                GetOperatorMethods().Values.ToList().ForEach(methodTypesCollect);
                 GetMethods(StaticMethodsFlags).Values.ToList().ForEach(methodTypesCollect);
                 GetProperties().ForEach(prop => usedTypes = usedTypes.Concat(new Type[] { prop.PropertyType }));
             }

@@ -66,7 +66,7 @@ namespace JSBindTool.Bindings.MathTypes
         [CustomCode(typeof(bool), new Type[] { typeof(Matrix3x4), typeof(float) })]
         public void EqualOperator(CodeBuilder code)
         {
-            code.Add("bool result = instance.Equals(arg0, arg1);");
+            MathCodeUtils.EmitEqualOperator(code);
         }
         [OperatorMethod(OperatorType.Mul)]
         public Vector3 MulOperator(Vector3 vec) => new Vector3();
@@ -98,19 +98,13 @@ namespace JSBindTool.Bindings.MathTypes
         [CustomCode(new Type[] { typeof(Vector3), typeof(Quaternion), typeof(Vector3) })]
         public void Decompose(CodeBuilder code)
         {
-            code
-                .Add("instance.Decompose(arg0, arg1, arg2);")
-                .Add("jsbind_vector3_set(ctx, 0, arg0);")
-                .Add("jsbind_quaternion_set(ctx, 1, arg1);")
-                .Add("jsbind_vector3_set(ctx, 2, arg2);");
+            MathCodeUtils.EmitMatrixDecompose(code);
         }
         [Method("Data")]
         [CustomCode(typeof(Vector<float>))]
         public void GetData(CodeBuilder code)
         {
-            code
-                .Add("ea::vector<float> result(12);")
-                .Add("memcpy(result.data(), instance.Data(), sizeof(float) * 12);");
+            MathCodeUtils.EmitGetData(code, 3 * 4);
         }
         [Method("Element")]
         public float Element(uint i, uint j) => 0f;
