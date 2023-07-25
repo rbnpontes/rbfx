@@ -50,5 +50,9 @@ namespace JSBindTool.Bindings.MathTypes
                 .Add($"ea::vector<{dataType}> result({sizeOf});")
                 .Add($"memcpy(result.data(), instance.Data(), sizeof({dataType}) * {sizeOf});");
         }
+        public static void EmitVectorClamp(string typeName, CodeBuilder code)
+        {
+            code.Add($"{typeName} result = VectorClamp(arg0, arg1, arg2);");
+        }
     }
 }

@@ -98,6 +98,12 @@ namespace JSBindTool.Bindings.MathTypes
         {
             code.Add("IntVector2 result = VectorAbs(arg0);");
         }
+        [Method("Clamp")]
+        [CustomCode(typeof(IntVector2), new Type[] { typeof(IntVector2), typeof(IntVector2), typeof(IntVector2) })]
+        public static void Clamp(CodeBuilder code)
+        {
+            MathCodeUtils.EmitVectorClamp("IntVector2", code);
+        }
     }
     [Include("Urho3D/Math/Vector2.h")]
     [Include("Urho3D/Math/Vector4.h")]
@@ -299,6 +305,12 @@ namespace JSBindTool.Bindings.MathTypes
         {
             code.Add("float result = StableRandom(arg0);");
         }
+        [Method("Clamp")]
+        [CustomCode(typeof(Vector2), new Type[] { typeof(Vector2), typeof(Vector2), typeof(Vector2) })]
+        public static void Clamp(CodeBuilder code)
+        {
+            MathCodeUtils.EmitVectorClamp("Vector2", code);
+        }
     }
 
     [Include("Urho3D/Math/Vector3.h")]
@@ -389,6 +401,12 @@ namespace JSBindTool.Bindings.MathTypes
         public static void Abs(CodeBuilder code)
         {
             code.Add("IntVector3 result = VectorAbs(arg0);");
+        }
+        [Method("Clamp")]
+        [CustomCode(typeof(IntVector3), new Type[] { typeof(IntVector3), typeof(IntVector3), typeof(IntVector3) })]
+        public static void Clamp(CodeBuilder code)
+        {
+            MathCodeUtils.EmitVectorClamp("IntVector3", code);
         }
     }
 
@@ -605,6 +623,12 @@ namespace JSBindTool.Bindings.MathTypes
         {
             code.Add("float result = StableRandom(arg0);");
         }
+        [Method("Clamp")]
+        [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3), typeof(Vector3), typeof(Vector3) })]
+        public static void Clamp(CodeBuilder code)
+        {
+            MathCodeUtils.EmitVectorClamp("Vector3", code);
+        }
     }
 
     [Include("Urho3D/Math/Vector4.h")]
@@ -723,6 +747,12 @@ namespace JSBindTool.Bindings.MathTypes
         public static void VectorCeil(CodeBuilder code)
         {
             code.Add("Vector4 result = VectorCeil(arg0);");
+        }
+        [Method("Clamp")]
+        [CustomCode(typeof(Vector4), new Type[] { typeof(Vector4), typeof(Vector4), typeof(Vector4) })]
+        public static void Clamp(CodeBuilder code)
+        {
+            MathCodeUtils.EmitVectorClamp("Vector4", code);
         }
     }
 }

@@ -35,6 +35,8 @@ namespace JSBindTool.Core
                 output.Append("int");
             else if (type == typeof(uint))
                 output.Append("unsigned");
+            else if (type == typeof(ushort))
+                output.Append("unsigned short");
             else if (type == typeof(IntPtr))
                 output.Append("void*");
             else if (type.IsSubclassOf(typeof(ClassObject)))
@@ -96,14 +98,14 @@ namespace JSBindTool.Core
             else if (type == typeof(string))
                 code.Add($"duk_push_string(ctx, {accessor}.c_str());");
             else if (type == typeof(StringHash))
-                code.Add($"rbfx_push_string_hash(ctx, {accessor}.Value());");
+                code.Add($"rbfx_push_string_hash(ctx, {accessor});");
             else if (type == typeof(bool))
                 code.Add($"duk_push_boolean(ctx, {accessor});");
             else if (type == typeof(float) || type == typeof(double))
                 code.Add($"duk_push_number(ctx, {accessor});");
             else if (type == typeof(int))
                 code.Add($"duk_push_int(ctx, {accessor});");
-            else if (type == typeof(uint))
+            else if (type == typeof(uint) || type == typeof(ushort))
                 code.Add($"duk_push_uint(ctx, {accessor});");
             else if (type == typeof(IntPtr))
                 code.Add($"duk_push_pointer(ctx, {accessor});");
@@ -163,7 +165,7 @@ namespace JSBindTool.Core
                 code.Add($"double {varName} = duk_get_number_default(ctx, {accessor}, 0.0);");
             else if (type == typeof(int))
                 code.Add($"int {varName} = duk_get_int_default(ctx, {accessor}, 0);");
-            else if (type == typeof(uint))
+            else if (type == typeof(uint) || type == typeof(ushort))
                 code.Add($"unsigned {varName} = duk_get_uint_default(ctx, {accessor}, 0u);");
             else if (type == typeof(IntPtr))
                 code.Add($"void* {varName} = duk_get_pointer_default(ctx, {accessor}, nullptr);");
