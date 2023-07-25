@@ -45,6 +45,7 @@ namespace Urho3D
     URHO3D_API StringHash rbfx_require_string_hash(duk_context* ctx, duk_idx_t stack_idx);
     /// get string hash at stack index
     URHO3D_API StringHash rbfx_get_string_hash(duk_context* ctx, duk_idx_t stack_idx);
+    URHO3D_API void rbfx_push_string_hash(duk_context* ctx, const StringHash& hash);
     /// push variant to stack
     URHO3D_API void rbfx_push_variant(duk_context* ctx, const Variant& vary);
     URHO3D_API Variant rbfx_get_variant(duk_context* ctx, duk_idx_t stack_idx);

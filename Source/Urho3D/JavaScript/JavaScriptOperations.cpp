@@ -62,6 +62,9 @@ namespace Urho3D
             result = StringHash(duk_get_uint(ctx, stack_idx));
         return result;
     }
+    void rbfx_push_string_hash(duk_context* ctx, const StringHash& hash) {
+        duk_push_uint(ctx, hash.Value());
+    }
     void rbfx_push_variant(duk_context* ctx, const Variant& vary)
     {
         switch (vary.GetType())
