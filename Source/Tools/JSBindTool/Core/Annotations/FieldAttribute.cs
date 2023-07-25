@@ -17,4 +17,13 @@ namespace JSBindTool.Core.Annotations
             NativeName = nativeName;
         }
     }
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
+    public class CustomFieldAttribute : Attribute
+    {
+        public string JSName { get; private set; }
+        public CustomFieldAttribute(string jsName)
+        {
+            JSName = jsName;
+        }
+    }
 }

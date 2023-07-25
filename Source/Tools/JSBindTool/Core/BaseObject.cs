@@ -25,7 +25,10 @@ namespace JSBindTool.Core
             code
                 .Add(AnnotationUtils.GetIncludes(Target).Select(x => $"#include <{x}>"))
                 .Add("#include <duktape/duktape.h>")
-                .Add("#include <Urho3D/JavaScript/JavaScriptOperations.h>");
+                .Add("#include <Urho3D/JavaScript/JavaScriptOperations.h>")
+                .AddNewLine();
+            var defines = Target.GetCustomAttributes<DefineAttribute>(false);
+            defines.ToList().ForEach(define => code.Add(define.CustomCode));
         }
 
         public virtual void EmitHeaderSignatures(CodeBuilder code)

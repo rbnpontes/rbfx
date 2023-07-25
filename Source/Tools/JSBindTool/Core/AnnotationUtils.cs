@@ -108,6 +108,13 @@ namespace JSBindTool.Core
                 throw new NullReferenceException("field does not contains FieldAttribute");
             return attr;
         }
+        public static CustomFieldAttribute GetCustomFieldAttribute(MethodInfo method)
+        {
+            CustomFieldAttribute? attr = method.GetCustomAttribute<CustomFieldAttribute>();
+            if (attr is null)
+                throw new NullReferenceException("method does not contains CustomFieldAttribute");
+            return attr;
+        }
         public static OperatorMethodAttribute GetOperatorMethodAttribute(MethodInfo method)
         {
             OperatorMethodAttribute? attr = method.GetCustomAttribute<OperatorMethodAttribute>();

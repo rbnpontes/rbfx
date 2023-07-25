@@ -177,13 +177,24 @@ namespace JSBindTool.Core
                 .Where(x => x.GetCustomAttribute<FieldAttribute>() != null)
                 .ToList()
                 .ForEach(field => EmitStaticField(field, code, accessor));
+
+            Target
+                .GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                .Where(x => x.GetCustomAttribute<CustomFieldAttribute>() != null)
+                .ToList()
+                .ForEach(method => EmitCustomStaticField(method, code, accessor));
         }
         private void EmitStaticField(FieldInfo field, CodeBuilder code, string accessor)
         {
             FieldAttribute fieldAttr = AnnotationUtils.GetFieldAttribute(field);
-
             code.Add($"{CodeUtils.GetMethodPrefix(Target)}_push(ctx, {AnnotationUtils.GetTypeName(field.FieldType)}::{fieldAttr.NativeName});");
             code.Add($"duk_put_prop_string(ctx, {accessor}, \"{fieldAttr.JSName}\");");
+        }
+        private void EmitCustomStaticField(MethodInfo method, CodeBuilder code, string accessor)
+        {
+            CustomFieldAttribute attr = AnnotationUtils.GetCustomFieldAttribute(method);
+            method.Invoke(this, new object[] { code });
+            code.Add($"duk_put_prop_string(ctx, {accessor}, \"{attr.JSName}\");");
         }
 
         private void EmitObjectRead(CodeBuilder code, string accessor)
