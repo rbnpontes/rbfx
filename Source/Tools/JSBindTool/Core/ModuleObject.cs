@@ -29,23 +29,26 @@ namespace JSBindTool.Core
             code.Scope(code =>
             {
                 NamespaceAttribute? namespaceAttr = Target.GetCustomAttribute<NamespaceAttribute>();
+
+                code.Add("duk_push_global_object(ctx);");
+
                 if (namespaceAttr != null)
                 {
-                    code
-                        .Add($"auto hasNamespace = duk_get_global_string(ctx, \"{namespaceAttr.Namespace}\");")
-                        .Add("if (!hasNamespace)")
-                        .Scope(scope =>
-                        {
-                            scope
-                                .Add("duk_pop(ctx);")
-                                .Add("duk_push_object(ctx);")
-                                .Add("duk_dup(ctx, -1);")
-                                .Add($"duk_put_global_string(ctx, \"{namespaceAttr.Namespace}\");");
-                        });
-                }
-                else
-                {
-                    code.Add("duk_push_global_object(ctx);");
+                    string[] parts = namespaceAttr.Namespace.Split('.');
+                    foreach (string part in parts)
+                    {
+                        code
+                            .Add($"// search namespace part: {part}")
+                            .Add($"if(!duk_get_prop_string(ctx, duk_get_top_index(ctx), \"{part}\"))")
+                            .Scope(code =>
+                            {
+                                code
+                                    .Add("duk_pop(ctx);")
+                                    .Add("duk_push_object(ctx);")
+                                    .Add("duk_dup(ctx, -1);")
+                                    .Add($"duk_put_prop_string(ctx, -3, \"{part}\");");
+                            });
+                    }
                 }
 
                 code.Add("duk_idx_t top = duk_get_top_index(ctx);");
