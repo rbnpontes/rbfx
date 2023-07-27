@@ -16,17 +16,6 @@ namespace JSBindTool.Core
         {
         }
 
-        class Variable
-        {
-            public string NativeName { get; set; } = string.Empty;
-            public string JSName { get; set; } = string.Empty;
-            public Type Type { get; set; }
-            public Variable(Type type)
-            {
-                Type = type;
-            }
-        }
-
         protected virtual void EmitResolveSignature(CodeBuilder code)
         {
             code.Add($"{Target.Name} {CodeUtils.GetMethodPrefix(Target)}_resolve(duk_context* ctx, duk_idx_t stack_idx);");
@@ -90,7 +79,7 @@ namespace JSBindTool.Core
                 .Add($"void {CodeUtils.GetMethodPrefix(Target)}_set(duk_context* ctx, duk_idx_t obj_idx, const {AnnotationUtils.GetTypeName(Target)}& target)")
                 .Scope(scope =>
                 {
-                    CollectVariables().ForEach(vary =>
+                    GetVariables().ForEach(vary =>
                     {
                         scope.Add($"// set '{vary.NativeName}' property.");
                         CodeUtils.EmitValueWrite(vary.Type, $"target.{vary.NativeName}", scope);
@@ -107,7 +96,7 @@ namespace JSBindTool.Core
                 ctorScope.Add("duk_idx_t argc = duk_get_top(ctx);");
                 ctorScope.Add($"{Target.Name} instance;").AddNewLine();
                 int idx = 0;
-                CollectVariables().ForEach(vary =>
+                GetVariables().ForEach(vary =>
                 {
                     ctorScope.Add($"if(argc > {idx})");
                     ctorScope.Scope(ifScope =>
@@ -148,7 +137,7 @@ namespace JSBindTool.Core
             code.Scope(scope =>
             {
                 scope.Add($"duk_get_global_string(ctx, \"{AnnotationUtils.GetTypeName(Target)}\");");
-                var variables = CollectVariables();
+                var variables = GetVariables();
                 variables.ForEach(vary =>
                 {
                     CodeUtils.EmitValueWrite(vary.Type, "value."+vary.NativeName, scope);
@@ -199,7 +188,7 @@ namespace JSBindTool.Core
 
         private void EmitObjectRead(CodeBuilder code, string accessor)
         {
-            CollectVariables().ForEach(vary =>
+            GetVariables().ForEach(vary =>
             {
                 code.Add($"// variable {vary.NativeName} read");
                 code.Scope(scope =>
@@ -346,20 +335,6 @@ namespace JSBindTool.Core
             }
 
             code.Add($"duk_def_prop(ctx, {accessor}, {propFlags});");
-        }
-
-        private List<Variable> CollectVariables()
-        {
-            List<Variable> variables = new List<Variable>();
-            Target.GetFields(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance).ToList().ForEach(field =>
-            {
-                Variable vary = new Variable(field.FieldType);
-                vary.NativeName = AnnotationUtils.GetVariableName(field);
-                vary.JSName = CodeUtils.ToCamelCase(field.Name);
-                variables.Add(vary);
-            });
-
-            return variables;
         }
 
         public static PrimitiveObject Create(Type type)

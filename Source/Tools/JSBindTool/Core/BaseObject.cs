@@ -10,6 +10,16 @@ using System.Threading.Tasks;
 
 namespace JSBindTool.Core
 {
+    public class BindingVariable
+    {
+        public string NativeName { get; set; } = string.Empty;
+        public string JSName { get; set; } = string.Empty;
+        public Type Type { get; set; }
+        public BindingVariable(Type type)
+        {
+            Type = type;
+        }
+    }
     public abstract class BaseObject
     {
         const BindingFlags StaticMethodsFlags = BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly;
@@ -133,6 +143,7 @@ namespace JSBindTool.Core
                 GetOperatorMethods().Values.ToList().ForEach(methodTypesCollect);
                 GetMethods(StaticMethodsFlags).Values.ToList().ForEach(methodTypesCollect);
                 GetProperties().ForEach(prop => usedTypes = usedTypes.Concat(new Type[] { prop.PropertyType }));
+                GetVariables().ForEach(vary => usedTypes = usedTypes.Concat(new Type[] { vary.Type }));
             }
 
             // add all headers from collected types 
@@ -671,6 +682,19 @@ namespace JSBindTool.Core
                 });
 
             return methodsData;
+        }
+        protected virtual List<BindingVariable> GetVariables()
+        {
+            return Target
+                .GetFields(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance).ToList()
+                .Where(x => x.GetCustomAttribute<VariableAttribute>() != null)
+                .Select(x =>
+                {
+                    BindingVariable vary = new BindingVariable(x.FieldType);
+                    vary.NativeName = AnnotationUtils.GetVariableName(x);
+                    vary.JSName = CodeUtils.ToCamelCase(x.Name);
+                    return vary;
+                }).ToList();
         }
 
         protected string GetMethodSignature(string methodName)

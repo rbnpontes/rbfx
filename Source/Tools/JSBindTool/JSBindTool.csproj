@@ -10,14 +10,19 @@
 
     <ItemGroup>
         <Compile Include="Bindings\MathTypes\AreaAllocator.cs" />
+        <Compile Include="Bindings\MathTypes\BoundingBox.cs" />
         <Compile Include="Bindings\MathTypes\Enums.cs" />
+        <Compile Include="Bindings\MathTypes\Frustum.cs" />
         <Compile Include="Bindings\MathTypes\MathDefs.cs" />
         <Compile Include="Bindings\MathTypes\Matrix2.cs" />
         <Compile Include="Bindings\MathTypes\Matrix3.cs" />
         <Compile Include="Bindings\MathTypes\Matrix3x4.cs" />
         <Compile Include="Bindings\MathTypes\Matrix4.cs" />
         <Compile Include="Bindings\MathTypes\MathCodeUtils.cs" />
+        <Compile Include="Bindings\MathTypes\Polyhedron.cs" />
         <Compile Include="Bindings\MathTypes\Quaternion.cs" />
+        <Compile Include="Bindings\MathTypes\Rect.cs" />
+        <Compile Include="Bindings\MathTypes\Sphere.cs" />
         <Compile Include="Bindings\MathTypes\Vectors.cs" />
         <Compile Include="Bindings\SceneTypes\Component.cs" />
         <Compile Include="Bindings\SceneTypes\Enums.cs" />
