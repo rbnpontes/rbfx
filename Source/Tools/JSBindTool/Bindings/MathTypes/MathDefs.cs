@@ -11,7 +11,7 @@ namespace JSBindTool.Bindings.MathTypes
 {
     [Include("Urho3D/Math/MathDefs.h")]
     [Include("Urho3D/Math/StringHash.h")]
-    [Namespace(Constants.ProjectName)]
+    [Namespace(Constants.ProjectName+".Math")]
     public class MathDefs : ModuleObject
     {
         public MathDefs() : base(typeof(MathDefs)) { }
