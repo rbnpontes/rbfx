@@ -26,6 +26,7 @@
 #include "../Math/StringHash.h"
 #include "../Core/Variant.h"
 
+#define JS_OBJ_HIDDEN_PTR DUK_HIDDEN_SYMBOL("__ptr")
 #define JS_OBJECT_HEAPPTR_PROP "heapptr"
 #define JS_OBJ_HIDDEN_WRAP_CALL DUK_HIDDEN_SYMBOL("__wrapcall")
 #define JS_PROP_STRONG_REFS "__refs"

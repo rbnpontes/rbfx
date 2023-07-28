@@ -3,7 +3,6 @@
 #include "../IO/Log.h"
 #include "../Container/Hash.h"
 
-#define JS_OBJ_HIDDEN_PTR DUK_HIDDEN_SYMBOL("__ptr")
 #define JS_OBJ_HIDDEN_EVENT_TABLE DUK_HIDDEN_SYMBOL("__events")
 #define JS_BIND_HIDDEN_CALL_PROP DUK_HIDDEN_SYMBOL("__call")
 #define JS_BIND_HIDDEN_TARGET_PROP DUK_HIDDEN_SYMBOL("__target")

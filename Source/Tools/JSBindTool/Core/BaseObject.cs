@@ -47,12 +47,17 @@ namespace JSBindTool.Core
                 .Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);")
                 .Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_ctor(duk_context* ctx);");
 
+            EmitGetRefSignatures(code);
             EmitMethodSignatures(code);
             EmitOperatorMethodSignatures(code);
             EmitStaticMethodSignatures(code);
         }
 
         #region Method Emit Signatures
+        protected virtual void EmitGetRefSignatures(CodeBuilder code)
+        {
+            code.Add($"{AnnotationUtils.GetTypeName(Target)}* {CodeUtils.GetMethodPrefix(Target)}_get_ref(duk_context* ctx, duk_idx_t obj_idx);");
+        }
         protected virtual void EmitMethodSignatures(CodeBuilder code)
         {
             var methodsData = GetMethods();
@@ -173,6 +178,7 @@ namespace JSBindTool.Core
             EmitSourceMethodLookupTable(code);
             EmitSourceConstructor(code);
             EmitSourceSetup(code);
+            EmitSourceGetRef(code);
             EmitSourceMethods(code);
         }
 
@@ -290,6 +296,28 @@ namespace JSBindTool.Core
 
             if (hasVariants)
                 code.Add(lookupField);
+        }
+
+        protected virtual void EmitSourceGetRef(CodeBuilder code)
+        {
+            code
+                .Add($"{AnnotationUtils.GetTypeName(Target)}* {CodeUtils.GetMethodPrefix(Target)}_get_ref(duk_context* ctx, duk_idx_t obj_idx)")
+                .Scope(code =>
+                {
+                    code
+                        .Add($"if(!duk_get_prop_string(ctx, obj_idx, JS_OBJ_HIDDEN_PTR))")
+                        .Scope(code =>
+                        {
+                            code
+                                .Add("duk_pop(ctx);")
+                                .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"could not possible to get ref of object '{AnnotationUtils.GetTypeName(Target)}. Internal ptr prop does not exists.'\");")
+                                .Add("duk_throw(ctx);")
+                                .Add("return nullptr;");
+                        })
+                        .Add($"{AnnotationUtils.GetTypeName(Target)}* result = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(duk_get_pointer(ctx, -1));")
+                        .Add("duk_pop(ctx);")
+                        .Add("return result;");
+                });
         }
 
         protected virtual void EmitSourceSetup(CodeBuilder code)
