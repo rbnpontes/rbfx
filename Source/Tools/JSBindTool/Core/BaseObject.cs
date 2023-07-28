@@ -126,16 +126,26 @@ namespace JSBindTool.Core
             includes.Add("#include <Urho3D/JavaScript/JavaScriptSystem.h>");
             includes.Add("#include <Urho3D/JavaScript/JavaScriptOperations.h>");
 
-
             IEnumerable<Type> usedTypes = new List<Type>();
             {   // collect types used to be include your headers
                 Action<List<MethodInfo>> methodTypesCollect = (x) =>
                 {
                     x.ForEach(method =>
                     {
-                        usedTypes = usedTypes.Concat(method.GetParameters().Select(x => x.ParameterType));
-                        if (method.ReturnType != typeof(void))
-                            usedTypes = usedTypes.Concat(new Type[] { method.ReturnType });
+                        Type returnType = method.ReturnType;
+                        if(AnnotationUtils.IsCustomCodeMethod(method))
+                        {
+                            var attr = AnnotationUtils.GetCustomCodeAttribute(method);
+                            returnType = attr.ReturnType;
+                            usedTypes = usedTypes.Concat(attr.ParameterTypes);
+                        }
+                        else
+                        {
+                            usedTypes = usedTypes.Concat(method.GetParameters().Select(x => x.ParameterType));
+                        }
+
+                        if (returnType != typeof(void))
+                            usedTypes = usedTypes.Concat(new Type[] { returnType });
                     });
                 };
 

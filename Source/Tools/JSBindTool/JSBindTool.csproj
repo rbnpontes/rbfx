@@ -20,6 +20,7 @@
         <Compile Include="Bindings\MathTypes\Matrix3x4.cs" />
         <Compile Include="Bindings\MathTypes\Matrix4.cs" />
         <Compile Include="Bindings\MathTypes\MathCodeUtils.cs" />
+        <Compile Include="Bindings\MathTypes\Planes.cs" />
         <Compile Include="Bindings\MathTypes\Polyhedron.cs" />
         <Compile Include="Bindings\MathTypes\Quaternion.cs" />
         <Compile Include="Bindings\MathTypes\Rect.cs" />

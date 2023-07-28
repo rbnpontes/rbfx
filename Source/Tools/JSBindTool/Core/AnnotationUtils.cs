@@ -34,6 +34,10 @@ namespace JSBindTool.Core
         {
             return type.GetCustomAttribute<AbstractAttribute>() != null;
         }
+        public static bool IsCustomCodeMethod(MethodInfo method)
+        {
+            return method.GetCustomAttribute<CustomCodeAttribute>() != null;
+        }
         public static List<string> GetIncludes(Type type)
         {
             var includes = type.GetCustomAttributes<IncludeAttribute>();
@@ -128,6 +132,14 @@ namespace JSBindTool.Core
             NamespaceAttribute? attr = type.GetCustomAttribute<NamespaceAttribute>();
             if (attr is null)
                 throw new NullReferenceException("type does not contains NamespaceMethodAttribute");
+            return attr;
+        }
+
+        public static CustomCodeAttribute GetCustomCodeAttribute(MethodInfo method)
+        {
+            CustomCodeAttribute? attr = method.GetCustomAttribute<CustomCodeAttribute>();
+            if (attr is null)
+                throw new NullReferenceException("type does not contains CustomCodeAttribute");
             return attr;
         }
     }
