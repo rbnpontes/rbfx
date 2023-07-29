@@ -487,11 +487,11 @@ namespace JSBindTool.Core
                     .Scope(scopeCode =>
                     {
                         if (isStatic)
-                            EmitStaticMethodBody(methods[i], scopeCode, false);
+                            EmitStaticMethodBody(methods[i], scopeCode);
                         else if (operatorType == OperatorType.None)
-                            EmitMethodBody(methods[i], scopeCode, false);
+                            EmitMethodBody(methods[i], scopeCode);
                         else
-                            EmitOperatorMethodBody(operatorType, methods[i], scopeCode, false);
+                            EmitOperatorMethodBody(operatorType, methods[i], scopeCode);
                     });
                 }
             };
@@ -526,12 +526,11 @@ namespace JSBindTool.Core
             });
         }
 
-        protected virtual void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
+        protected virtual void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code)
         {
             var parameters = methodInfo.GetParameters().ToList();
 
-            if (emitValidations)
-                EmitArgumentValidation(parameters, methodInfo.GetCustomAttribute<CustomCodeAttribute>(), code);
+            EmitArgumentValidation(parameters, methodInfo.GetCustomAttribute<CustomCodeAttribute>(), code);
 
             string nativeName = AnnotationUtils.GetMethodNativeName(methodInfo);
 
@@ -567,21 +566,18 @@ namespace JSBindTool.Core
                 code.Add("return 1;");
             }
         }
-        protected virtual void EmitOperatorMethodBody(OperatorType opType, MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
+        protected virtual void EmitOperatorMethodBody(OperatorType opType, MethodInfo methodInfo, CodeBuilder code)
         {
             var parameters = methodInfo.GetParameters().ToList();
-
-            if (emitValidations)
-                EmitArgumentValidation(parameters, methodInfo.GetCustomAttribute<CustomCodeAttribute>(), code);
+            EmitArgumentValidation(parameters, methodInfo.GetCustomAttribute<CustomCodeAttribute>(), code);
         }
-        protected virtual void EmitStaticMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
+        protected virtual void EmitStaticMethodBody(MethodInfo methodInfo, CodeBuilder code)
         {
             string nativeName = AnnotationUtils.GetMethodNativeName(methodInfo);
 
             var parameters = methodInfo.GetParameters().ToList();
 
-            if (emitValidations)
-                EmitArgumentValidation(parameters, methodInfo.GetCustomAttribute<CustomCodeAttribute>(), code);
+            EmitArgumentValidation(parameters, methodInfo.GetCustomAttribute<CustomCodeAttribute>(), code);
 
             CustomCodeAttribute? customCodeAttr = methodInfo.GetCustomAttribute<CustomCodeAttribute>();
             if(customCodeAttr != null)
@@ -654,7 +650,16 @@ namespace JSBindTool.Core
             for (int i = 0; i < parameterTypes.Count; ++i)
             {
                 uint typeHash = CodeUtils.GetTypeHash(parameterTypes[i]);
+                if (TemplateObject.IsVectorType(parameterTypes[i]))
+                {
+                    TemplateObject templateObj = TemplateObject.Create(parameterTypes[i]);
+                    typeHash = CodeUtils.GetTypeHash(templateObj.TargetType);
+                    code.Add($"rbfx_require_array_type(ctx, {i}, {typeHash}/*Vector<{templateObj.TargetType.Name}>*/);");
+                    continue;
+                }
+
                 code.Add($"rbfx_require_type(ctx, {i}, {typeHash}/*{parameterTypes[i].Name}*/);");
+
             }
             code.Add("#endif").AddNewLine();
         }
@@ -1032,7 +1037,7 @@ namespace JSBindTool.Core
         }
         protected string GetRefSignature()
         {
-            return $"{CodeUtils.GetMethodPrefix(Target)}_get_ref";
+            return CodeUtils.GetRefSignature(Target);
         }
 
         protected abstract void EmitSourceConstructor(CodeBuilder code);

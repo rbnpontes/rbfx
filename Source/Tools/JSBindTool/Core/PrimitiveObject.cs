@@ -300,9 +300,9 @@ namespace JSBindTool.Core
         //        code.Add("return 1;");
         //    }
         //}
-        protected override void EmitOperatorMethodBody(OperatorType opType, MethodInfo method, CodeBuilder code, bool emitValidations = true)
+        protected override void EmitOperatorMethodBody(OperatorType opType, MethodInfo method, CodeBuilder code)
         {
-            base.EmitOperatorMethodBody(opType, method, code, emitValidations);
+            base.EmitOperatorMethodBody(opType, method, code);
 
             string operatorSignal = GetOperatorSignal(opType);
 

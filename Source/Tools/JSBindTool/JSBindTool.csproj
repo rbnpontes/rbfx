@@ -75,6 +75,7 @@
         <Compile Include="Core\NoopPrimitive.cs" />
         <Compile Include="Core\PrimitiveGen.cs" />
         <Compile Include="Core\PrimitiveObject.cs" />
+        <Compile Include="Core\PtrRef.cs" />
         <Compile Include="Core\SharedPtr.cs" />
         <Compile Include="Core\BindingState.cs" />
         <Compile Include="Core\TemplateObject.cs" />

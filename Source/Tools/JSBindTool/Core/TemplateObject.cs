@@ -10,7 +10,8 @@ namespace JSBindTool.Core
     {
         SharedPtr=0,
         WeakPtr,
-        Vector
+        Vector,
+        RefPtr
     }
     public class TemplateObject
     {
@@ -30,6 +31,13 @@ namespace JSBindTool.Core
             if (templateObj is null)
                 throw new Exception("could not possible to instantiate this template object derived type.");
             return templateObj;
+        }
+        public static bool IsVectorType(Type type)
+        {
+            if (!type.IsSubclassOf(typeof(TemplateObject)))
+                return false;
+            var templateObj = Activator.CreateInstance(type) as TemplateObject;
+            return templateObj?.TemplateType == TemplateType.Vector;
         }
     }
 }

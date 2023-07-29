@@ -57,11 +57,11 @@ namespace JSBindTool.Core
             });
         }
 
-        protected override void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
+        protected override void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code)
         {
             var parameters = methodInfo.GetParameters().ToList();
-            if (emitValidations)
-                EmitArgumentValidation(parameters, methodInfo.GetCustomAttribute<CustomCodeAttribute>(), code);
+
+            EmitArgumentValidation(parameters, methodInfo.GetCustomAttribute<CustomCodeAttribute>(), code);
 
             string nativeName = AnnotationUtils.GetMethodNativeName(methodInfo);
 

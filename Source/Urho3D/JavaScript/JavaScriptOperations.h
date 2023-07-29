@@ -106,5 +106,6 @@ namespace Urho3D
     /// @}
     URHO3D_API void rbfx_try_catch(duk_context* ctx, duk_idx_t func_idx, duk_idx_t catch_call_idx);
     URHO3D_API StringHash rbfx_get_type(duk_context* ctx, duk_idx_t value_idx);
+    URHO3D_API void rbfx_require_array_type(duk_context* ctx, duk_idx_t value_idx, unsigned type_hash);
     URHO3D_API void rbfx_require_type(duk_context* ctx, duk_idx_t value_idx, unsigned type_hash);
 }

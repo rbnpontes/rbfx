@@ -90,6 +90,10 @@ namespace JSBindTool.Core
             return $"{Constants.MethodPrefix}_{ToSnakeCase(AnnotationUtils.GetTypeName(type))}";
         }
 
+        public static string GetRefSignature(Type type)
+        {
+            return $"{GetMethodPrefix(type)}_get_ref";
+        }
         public static string GetPushRefSignature(Type type)
         {
             return $"{GetMethodPrefix(type)}_push_ref";
@@ -130,6 +134,9 @@ namespace JSBindTool.Core
                         break;
                     case TemplateType.WeakPtr:
                         throw new NotImplementedException();
+                        break;
+                    case TemplateType.RefPtr:
+                        code.Add($"{GetPushRefSignature(templateObj.TargetType)}(ctx, {accessor});");
                         break;
                     case TemplateType.Vector:
                         {
@@ -189,6 +196,8 @@ namespace JSBindTool.Core
                         break;
                     case TemplateType.WeakPtr:
                         throw new NotImplementedException();
+                    case TemplateType.RefPtr:
+                            code.Add($"{AnnotationUtils.GetTypeName(templateObj.TargetType)}* {varName}({GetRefSignature(templateObj.TargetType)}(ctx, {accessor}));");
                         break;
                     case TemplateType.Vector:
                         {
@@ -245,6 +254,14 @@ namespace JSBindTool.Core
                 hashInput = "Function";
             else if (type == typeof(JSObject))
                 hashInput = "VariantMap";
+            else if (type.IsSubclassOf(typeof(TemplateObject)))
+            {
+                var templateObj = TemplateObject.Create(type);
+                if (templateObj.TemplateType == TemplateType.Vector)
+                    hashInput = "Vector";
+                else
+                    throw new NotImplementedException("not implemented GetTypeHash for TemplateObject inherited types.");
+            }
             else
                 hashInput = AnnotationUtils.GetTypeName(type);
 

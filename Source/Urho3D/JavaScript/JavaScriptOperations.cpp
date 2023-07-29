@@ -35,6 +35,7 @@ namespace Urho3D
     StringHash g_matrix3_type       = StringHash("Matrix3");
     StringHash g_matrix3x4_type     = StringHash("Matrix3x4");
     StringHash g_matrix4_type       = StringHash("Matrix4");
+    StringHash g_vector_type        = StringHash("Vector");
 
     StringHash rbfx_require_string_hash(duk_context* ctx, duk_idx_t stack_idx)
     {
@@ -748,7 +749,9 @@ namespace Urho3D
                 break;
             case DUK_TYPE_OBJECT:
             {
-                if (duk_get_prop_string(ctx, value_idx, "type"))
+                if (duk_is_array(ctx, value_idx))
+                    output = g_vector_type;
+                else if (duk_get_prop_string(ctx, value_idx, "type"))
                     output = duk_get_string(ctx, -1);
                 else
                     output = g_variant_map_type;
@@ -758,6 +761,22 @@ namespace Urho3D
         }
 
         return output;
+    }
+    void rbfx_require_array_type(duk_context* ctx, duk_idx_t value_idx, unsigned type_hash)
+    {
+        if (!duk_is_array(ctx, value_idx))
+        {
+            duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, "invalid value type. expected array(Iterable) like.");
+            duk_throw(ctx);
+            return;
+        }
+
+        duk_size_t len = duk_get_length(ctx, value_idx);
+        if (len == 0)
+            return;
+
+        duk_get_prop_index(ctx, value_idx, 0);
+        rbfx_require_type(ctx, value_idx, type_hash);
     }
     void rbfx_require_type(duk_context* ctx, duk_idx_t value_idx, unsigned type_hash)
     {
