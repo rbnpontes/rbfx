@@ -56,6 +56,9 @@ namespace JSBindTool.Core
                     case TemplateType.Vector:
                         output.Append($"ea::vector<{GetNativeDeclaration(templateObj.TargetType)}>");
                         break;
+                    case TemplateType.RefPtr:
+                        output.Append($"{AnnotationUtils.GetTypeName(templateObj.TargetType)}*");
+                        break;
                 }
             }
             else

@@ -751,11 +751,14 @@ namespace Urho3D
             {
                 if (duk_is_array(ctx, value_idx))
                     output = g_vector_type;
-                else if (duk_get_prop_string(ctx, value_idx, "type"))
-                    output = duk_get_string(ctx, -1);
                 else
-                    output = g_variant_map_type;
-                duk_pop(ctx);
+                {
+                    if (duk_get_prop_string(ctx, value_idx, "type"))
+                        output = duk_get_string(ctx, -1);
+                    else
+                        output = g_variant_map_type;
+                    duk_pop(ctx);
+                }
             }
                 break;
         }

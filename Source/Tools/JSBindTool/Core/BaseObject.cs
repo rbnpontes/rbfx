@@ -194,13 +194,27 @@ namespace JSBindTool.Core
                 GetVariables().ForEach(vary => usedTypes = usedTypes.Concat(new Type[] { vary.Type }));
             }
 
-            // add all headers from collected types 
-            usedTypes.ToList().ForEach(type =>
+
+            // add all headers from collected types action.
+            Action<Type> insertType = (type) =>
             {
                 if (type.IsSubclassOf(typeof(ClassObject)))
                     includes.Add($"#include \"{type.Name}{Constants.ClassIncludeSuffix}.h\"");
                 else if (type.IsSubclassOf(typeof(PrimitiveObject)))
                     includes.Add($"#include \"{type.Name}{Constants.PrimitiveIncludeSuffix}.h\"");
+            };
+
+            usedTypes.ToList().ForEach(type =>
+            {
+                if (type.IsSubclassOf(typeof(TemplateObject)))
+                {
+                    TemplateObject templateObj = TemplateObject.Create(type);
+                    insertType(templateObj.TargetType);
+                }
+                else
+                {
+                    insertType(type);
+                }
             });
 
             // finally, generate all headers into code
@@ -815,6 +829,7 @@ namespace JSBindTool.Core
                 code.AddNewLine();
         }
         #endregion
+        #region Variables and Properties Body
         protected virtual void EmitVariableGetter(BindingVariable variable, CodeBuilder code)
         {
             code
@@ -879,6 +894,7 @@ namespace JSBindTool.Core
                         .Add("return 0;");
                 });
         }
+        #endregion
 
         protected Dictionary<OperatorType, List<MethodInfo>> GetOperatorMethods()
         {
