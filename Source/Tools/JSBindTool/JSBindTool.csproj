@@ -14,6 +14,7 @@
         <Compile Include="Bindings\MathTypes\EaseMath.cs" />
         <Compile Include="Bindings\MathTypes\Enums.cs" />
         <Compile Include="Bindings\MathTypes\Frustum.cs" />
+        <Compile Include="Bindings\MathTypes\IKSettings.cs" />
         <Compile Include="Bindings\MathTypes\MathDefs.cs" />
         <Compile Include="Bindings\MathTypes\Matrix2.cs" />
         <Compile Include="Bindings\MathTypes\Matrix3.cs" />

@@ -90,6 +90,10 @@ namespace JSBindTool.Core
             return $"{Constants.MethodPrefix}_{ToSnakeCase(AnnotationUtils.GetTypeName(type))}";
         }
 
+        public static string GetPushRefSignature(Type type)
+        {
+            return $"{GetMethodPrefix(type)}_push_ref";
+        }
         private static int pDeepValueCount = 0;
 
         public static void EmitValueWrite(Type type, string accessor, CodeBuilder code)

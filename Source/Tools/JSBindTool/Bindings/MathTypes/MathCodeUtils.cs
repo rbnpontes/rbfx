@@ -35,7 +35,7 @@ namespace JSBindTool.Bindings.MathTypes
         public static void EmitMatrixDecompose(CodeBuilder code)
         {
             code
-                .Add("instance.Decompose(arg0, arg1, arg2);")
+                .Add("instance->Decompose(arg0, arg1, arg2);")
                 .Add("jsbind_vector3_set(ctx, 0, arg0);")
                 .Add("jsbind_quaternion_set(ctx, 1, arg1);")
                 .Add("jsbind_vector3_set(ctx, 2, arg2);");
@@ -48,7 +48,7 @@ namespace JSBindTool.Bindings.MathTypes
         {
             code
                 .Add($"ea::vector<{dataType}> result({sizeOf});")
-                .Add($"memcpy(result.data(), instance.Data(), sizeof({dataType}) * {sizeOf});");
+                .Add($"memcpy(result.data(), instance->Data(), sizeof({dataType}) * {sizeOf});");
         }
         public static void EmitVectorClamp(string typeName, CodeBuilder code)
         {

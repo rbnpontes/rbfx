@@ -92,28 +92,28 @@ namespace JSBindTool.Bindings.MathTypes
         public void GetPlane(CodeBuilder code)
         {
             EmitPlaneIdxValidation(code);
-            code.Add("Plane result = instance.planes_[arg0];");
+            code.Add("Plane result = instance->planes_[arg0];");
         }
         [Method("SetPlanes")]
         [CustomCode(new Type[] { typeof(uint), typeof(Plane) })]
         public void SetPlane(CodeBuilder code)
         {
             EmitPlaneIdxValidation(code);
-            code.Add("instance.planes_[arg0] = arg1;");
+            code.Add("instance->planes_[arg0] = arg1;");
         }
         [Method("GetVertex")]
         [CustomCode(typeof(Vector3), new Type[] { typeof(uint) })]
         public void GetVertex(CodeBuilder code)
         {
             EmitVertexIdxValidation(code);
-            code.Add("Vector3 result = instance.vertices_[arg0];");
+            code.Add("Vector3 result = instance->vertices_[arg0];");
         }
         [Method("SetVertex")]
         [CustomCode(new Type[] { typeof(uint), typeof(Vector3) })]
         public void SetVertex(CodeBuilder code)
         {
             EmitPlaneIdxValidation(code);
-            code.Add("instance.vertices_[arg0] = arg1;");
+            code.Add("instance->vertices_[arg0] = arg1;");
         }
         #endregion
         #region Static Fields

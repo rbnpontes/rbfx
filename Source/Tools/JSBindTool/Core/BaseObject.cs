@@ -40,23 +40,56 @@ namespace JSBindTool.Core
             var defines = Target.GetCustomAttributes<DefineAttribute>(false);
             defines.ToList().ForEach(define => code.Add(define.CustomCode));
         }
-
         public virtual void EmitHeaderSignatures(CodeBuilder code)
         {
             code
                 .Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);")
                 .Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_ctor(duk_context* ctx);");
 
+            EmitWrapSignature(code);
             EmitGetRefSignatures(code);
+            EmitVariableSignatures(code);
+            EmitPropertySignatures(code);
             EmitMethodSignatures(code);
             EmitOperatorMethodSignatures(code);
             EmitStaticMethodSignatures(code);
         }
 
         #region Method Emit Signatures
+        protected virtual void EmitWrapSignature(CodeBuilder code)
+        {
+            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance);");
+        }
         protected virtual void EmitGetRefSignatures(CodeBuilder code)
         {
-            code.Add($"{AnnotationUtils.GetTypeName(Target)}* {CodeUtils.GetMethodPrefix(Target)}_get_ref(duk_context* ctx, duk_idx_t obj_idx);");
+            code.Add($"{AnnotationUtils.GetTypeName(Target)}* {GetRefSignature()}(duk_context* ctx, duk_idx_t obj_idx);");
+        }
+        protected virtual void EmitVariableSignatures(CodeBuilder code)
+        {
+            var variables = GetVariables();
+            if (variables.Count > 0)
+                code.Add("// @ variables definitions");
+
+            foreach(var prop in variables)
+            {
+                code.Add($"duk_idx_t {GetVariableSignature(prop)}(duk_context* ctx);");
+                code.Add($"duk_idx_t {GetVariableSignature(prop, true)}(duk_context* ctx);");
+            }
+        }
+        protected virtual void EmitPropertySignatures(CodeBuilder code)
+        {
+            var properties = GetProperties();
+            if (properties.Count > 0)
+                code.Add("// @ properties definitions");
+
+            foreach(var prop in properties)
+            {
+                var attr = AnnotationUtils.GetPropertyMap(prop);
+                if(prop.GetMethod != null && !string.IsNullOrEmpty(attr.GetterName))
+                    code.Add($"duk_idx_t {GetPropertySignature(prop)}(duk_context* ctx);");
+                if(prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName))
+                    code.Add($"duk_idx_t {GetPropertySignature(prop, true)}(duk_context* ctx);");
+            }
         }
         protected virtual void EmitMethodSignatures(CodeBuilder code)
         {
@@ -178,7 +211,10 @@ namespace JSBindTool.Core
             EmitSourceMethodLookupTable(code);
             EmitSourceConstructor(code);
             EmitSourceSetup(code);
+            EmitSourceWrap(code);
             EmitSourceGetRef(code);
+            EmitSourceVariables(code);
+            EmitSourceProperties(code);
             EmitSourceMethods(code);
         }
 
@@ -301,7 +337,7 @@ namespace JSBindTool.Core
         protected virtual void EmitSourceGetRef(CodeBuilder code)
         {
             code
-                .Add($"{AnnotationUtils.GetTypeName(Target)}* {CodeUtils.GetMethodPrefix(Target)}_get_ref(duk_context* ctx, duk_idx_t obj_idx)")
+                .Add($"{AnnotationUtils.GetTypeName(Target)}* {GetRefSignature()}(duk_context* ctx, duk_idx_t obj_idx)")
                 .Scope(code =>
                 {
                     code
@@ -319,7 +355,21 @@ namespace JSBindTool.Core
                         .Add("return result;");
                 });
         }
-
+        protected virtual void EmitSourceWrap(CodeBuilder code)
+        {
+            code
+                .Add($"void {CodeUtils.GetMethodPrefix(Target)}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance)")
+                .Scope(code =>
+                {
+                    if (Target.BaseType == typeof(ClassObject))
+                        code.Add("rbfx_object_wrap(ctx, obj_idx, instance);");
+                    else if (Target.BaseType != null && Target.BaseType != typeof(PrimitiveObject))
+                        code.Add($"{CodeUtils.GetMethodPrefix(Target.BaseType)}_wrap(ctx, obj_idx, instance);");
+                    EmitVariables(code, "obj_idx");
+                    EmitProperties(code, "obj_idx");
+                    EmitMethods(code, "obj_idx");
+                });
+        }
         protected virtual void EmitSourceSetup(CodeBuilder code)
         {
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx)");
@@ -456,6 +506,25 @@ namespace JSBindTool.Core
             foreach (var pair in GetMethods(StaticMethodsFlags))
                 insertFunction(pair.Value, pair.Key);
         }
+        protected virtual void EmitSourceVariables(CodeBuilder code)
+        {
+            GetVariables().ForEach(variable =>
+            {
+                EmitVariableGetter(variable, code);
+                EmitVariableSetter(variable, code);
+            });
+        }
+        protected virtual void EmitSourceProperties(CodeBuilder code)
+        {
+            GetProperties().ForEach(prop =>
+            {
+                var attr = AnnotationUtils.GetPropertyMap(prop);
+                if (prop.GetMethod != null && !string.IsNullOrEmpty(attr.GetterName))
+                    EmitPropertyGetter(prop, code);
+                if (prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName))
+                    EmitPropertySetter(prop, code);
+            });
+        }
 
         protected virtual void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
         {
@@ -463,6 +532,40 @@ namespace JSBindTool.Core
 
             if (emitValidations)
                 EmitArgumentValidation(parameters, methodInfo.GetCustomAttribute<CustomCodeAttribute>(), code);
+
+            string nativeName = AnnotationUtils.GetMethodNativeName(methodInfo);
+
+            code.Add("duk_push_this(ctx);");
+            code.Add($"{AnnotationUtils.GetTypeName(Target)}* instance = {GetRefSignature()}(ctx, duk_get_top_index(ctx));");
+            code.Add("duk_pop(ctx);");
+
+            CustomCodeAttribute? customCodeAttr = methodInfo.GetCustomAttribute<CustomCodeAttribute>();
+            if (customCodeAttr != null)
+            {
+                EmitCustomCodeMethodBody(customCodeAttr, methodInfo, code);
+                return;
+            }
+
+            StringBuilder argsCall = new StringBuilder();
+            for (int i = 0; i < parameters.Count; ++i)
+            {
+                CodeUtils.EmitValueRead(parameters[i].ParameterType, $"arg{i}", i.ToString(), code);
+                argsCall.Append($"arg{i}");
+                if (i < parameters.Count - 1)
+                    argsCall.Append(", ");
+            }
+
+            if (methodInfo.ReturnType == typeof(void))
+            {
+                code.Add($"instance->{nativeName}({argsCall});");
+                code.Add("return 0;");
+            }
+            else
+            {
+                code.Add($"{CodeUtils.GetNativeDeclaration(methodInfo.ReturnType)} result = instance->{nativeName}({argsCall});");
+                CodeUtils.EmitValueWrite(methodInfo.ReturnType, "result", code);
+                code.Add("return 1;");
+            }
         }
         protected virtual void EmitOperatorMethodBody(OperatorType opType, MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
         {
@@ -531,11 +634,7 @@ namespace JSBindTool.Core
                     return;
                 }
 
-                code
-                    .Add("duk_push_this(ctx);")
-                    .Add($"{CodeUtils.GetMethodPrefix(Target)}_set(ctx, duk_get_top(ctx) - 1, instance);")
-                    .Add("duk_pop(ctx);")
-                    .Add("return result_code;");
+                code.Add("return result_code;");
                 return;
             }
 
@@ -655,7 +754,21 @@ namespace JSBindTool.Core
                 code.Add($"duk_put_prop_string(ctx, {accessor}, \"{GetOperatorName(pair.Key)}\");");
             }
         }
-        #endregion
+        protected virtual void EmitVariables(CodeBuilder code, string accessor)
+        {
+            var variables = GetVariables();
+            if (variables.Count > 0)
+                code.Add("// variables setup");
+
+            foreach(var variable in variables)
+            {
+                code
+                    .Add($"duk_push_string(ctx, \"{variable.JSName}\");")
+                    .Add($"duk_push_c_lightfunc(ctx, {GetVariableSignature(variable)}, 0, 0, 1);")
+                    .Add($"duk_push_c_lightfunc(ctx, {GetVariableSignature(variable, true)}, 1, 1, 1);")
+                    .Add($"duk_def_prop(ctx, {accessor}, DUK_DEFPROP_HAVE_GETTER | DUK_DEFPROP_HAVE_SETTER);");
+            }
+        }
         protected virtual void EmitProperties(CodeBuilder code, string accessor)
         {
             var props = GetProperties();
@@ -663,10 +776,103 @@ namespace JSBindTool.Core
             if (props.Count > 0)
                 code.Add("// properties setup");
 
-            props.ForEach(prop => EmitProperty(prop, accessor, code));
+            foreach (var prop in props)
+            {
+                List<string> enumFlags = new List<string>();
+                enumFlags.Add("DUK_DEFPROP_HAVE_ENUMERABLE");
+
+                code.Add($"duk_push_string(ctx, \"{CodeUtils.ToCamelCase(AnnotationUtils.GetJSPropertyName(prop))}\");");
+
+                var attr = AnnotationUtils.GetPropertyMap(prop);
+                if (prop.GetMethod != null && !string.IsNullOrEmpty(attr.GetterName))
+                {
+                    code.Add($"duk_push_c_lightfunc(ctx, {GetPropertySignature(prop)}, 0, 0, 1);");
+                    enumFlags.Add("DUK_DEFPROP_HAVE_GETTER");
+                }
+                if (prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName))
+                {
+                    code.Add($"duk_push_c_lightfunc(ctx, {GetPropertySignature(prop, true)}, 1, 1, 1);");
+                    enumFlags.Add("DUK_DEFPROP_HAVE_SETTER");
+                }
+
+                StringBuilder propFlags = new StringBuilder();
+                for (int i = 0; i < enumFlags.Count; ++i)
+                {
+                    propFlags.Append(enumFlags[i]);
+                    if (i < enumFlags.Count - 1)
+                        propFlags.Append(" | ");
+                }
+
+                code.Add($"duk_def_prop(ctx, {accessor}, {propFlags});");
+            }
 
             if (props.Count > 0)
                 code.AddNewLine();
+        }
+        #endregion
+        protected virtual void EmitVariableGetter(BindingVariable variable, CodeBuilder code)
+        {
+            code
+                .Add($"duk_idx_t {GetVariableSignature(variable)}(duk_context* ctx)")
+                .Scope(code =>
+                {
+                    code
+                        .Add("duk_push_this(ctx);")
+                        .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = {GetRefSignature()}(ctx, duk_get_top_index(ctx));")
+                        .Add("duk_pop(ctx);")
+                        .Add($"{CodeUtils.GetNativeDeclaration(variable.Type)} result = instance->{variable.NativeName};");
+                    CodeUtils.EmitValueWrite(variable.Type, "result", code);
+                    code.Add("return 1;");
+                });
+        }
+        protected virtual void EmitVariableSetter(BindingVariable variable, CodeBuilder code)
+        {
+            code
+                .Add($"duk_idx_t {GetVariableSignature(variable, true)}(duk_context* ctx)")
+                .Scope(code =>
+                {
+                    code
+                        .Add("duk_push_this(ctx);")
+                        .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = {GetRefSignature()}(ctx, duk_get_top_index(ctx));")
+                        .Add("duk_pop(ctx);");
+                    CodeUtils.EmitValueRead(variable.Type, "result", "0", code);
+                    code
+                        .Add($"instance->{variable.NativeName} = result;")
+                        .Add("return 0;");
+                });
+        }
+        protected virtual void EmitPropertyGetter(PropertyInfo prop, CodeBuilder code)
+        {
+            code
+                .Add($"duk_idx_t {GetPropertySignature(prop)}(duk_context* ctx)")
+                .Scope(code =>
+                {
+                    code
+                        .Add("duk_push_this(ctx);")
+                        .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = {GetRefSignature()}(ctx, duk_get_top_index(ctx));")
+                        .Add("duk_pop(ctx);")
+                        .Add($"{CodeUtils.GetNativeDeclaration(prop.PropertyType)} result = instance->{AnnotationUtils.GetGetterName(prop)}();");
+                    CodeUtils.EmitValueWrite(prop.PropertyType, "result", code);
+                    code.Add("return 1;");
+                });
+        }
+        protected virtual void EmitPropertySetter(PropertyInfo prop, CodeBuilder code)
+        {
+            code
+                .Add($"duk_idx_t {GetPropertySignature(prop, true)}(duk_context* ctx)")
+                .Scope(code =>
+                {
+                    code
+                        .Add("duk_push_this(ctx);")
+                        .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = {GetRefSignature()}(ctx, duk_get_top_index(ctx));")
+                        .Add("duk_pop(ctx);");
+                    CodeUtils.EmitValueRead(prop.PropertyType, "result", "0", code);
+
+                    code
+                        .AddNewLine()
+                        .Add($"instance->{AnnotationUtils.GetSetterName(prop)}(result);")
+                        .Add("return 0;");
+                });
         }
 
         protected Dictionary<OperatorType, List<MethodInfo>> GetOperatorMethods()
@@ -812,8 +1018,23 @@ namespace JSBindTool.Core
         {
             return $"{CodeUtils.GetMethodPrefix(Target)}_op_{GetOperatorName(opType)}{idx}_call";
         }
+        protected string GetPropertySignature(PropertyInfo prop, bool isSetter = false)
+        {
+            if (isSetter)
+                return $"{CodeUtils.GetMethodPrefix(Target)}_prop_setter_{CodeUtils.ToSnakeCase(prop.Name)}_call";
+            return $"{CodeUtils.GetMethodPrefix(Target)}_prop_getter_{CodeUtils.ToSnakeCase(prop.Name)}_call";
+        }
+        protected string GetVariableSignature(BindingVariable variable, bool isSetter = false)
+        {
+            if (isSetter)
+                return $"{CodeUtils.GetMethodPrefix(Target)}_var_setter_{CodeUtils.ToSnakeCase(variable.JSName)}_call";
+            return $"{CodeUtils.GetMethodPrefix(Target)}_var_getter_{CodeUtils.ToSnakeCase(variable.JSName)}_call";
+        }
+        protected string GetRefSignature()
+        {
+            return $"{CodeUtils.GetMethodPrefix(Target)}_get_ref";
+        }
 
         protected abstract void EmitSourceConstructor(CodeBuilder code);
-        protected abstract void EmitProperty(PropertyInfo prop, string accessor, CodeBuilder code);
     }
 }

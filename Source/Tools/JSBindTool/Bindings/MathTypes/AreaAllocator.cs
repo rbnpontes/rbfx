@@ -38,7 +38,7 @@ namespace JSBindTool.Bindings.MathTypes
             code
                 .Add("int x = 0;")
                 .Add("int y = 0;")
-                .Add("bool result = instance.Allocate(arg0, arg1, x, y);")
+                .Add("bool result = instance->Allocate(arg0, arg1, x, y);")
                 .Add("// update map")
                 .Add("duk_push_number(ctx, x);")
                 .Add("duk_put_prop_string(ctx, arg2, \"x\");")

@@ -5,8 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace JSBindTool.Core
 {
@@ -18,17 +16,17 @@ namespace JSBindTool.Core
         {
         }
 
-        public override void EmitHeaderSignatures(CodeBuilder code)
-        {
-            base.EmitHeaderSignatures(code);
-            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance);");
-        }
+        //public override void EmitHeaderSignatures(CodeBuilder code)
+        //{
+        //    base.EmitHeaderSignatures(code);
+        //    code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance);");
+        //}
 
-        public override void EmitSource(CodeBuilder code)
-        {
-            EmitSourceWrap(code);
-            base.EmitSource(code);
-        }
+        //public override void EmitSource(CodeBuilder code)
+        //{
+        //    EmitSourceWrap(code);
+        //    base.EmitSource(code);
+        //}
 
         protected override void EmitSourceSetup(CodeBuilder code)
         {
@@ -125,117 +123,118 @@ namespace JSBindTool.Core
                 }
             });
         }
-        protected virtual void EmitSourceWrap(CodeBuilder code)
-        {
-            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance)");
-            code.Scope(scope =>
-            {
-                if (Target.BaseType == typeof(ClassObject))
-                    scope.Add("rbfx_object_wrap(ctx, obj_idx, instance);");
-                else if(Target.BaseType != null)
-                    scope.Add($"{CodeUtils.GetMethodPrefix(Target.BaseType)}_wrap(ctx, obj_idx, instance);");
-                EmitProperties(scope, "obj_idx");
-                EmitMethods(scope, "obj_idx");
-            });
-        }
+        // TODO: remove this
+        //protected virtual void EmitSourceWrap(CodeBuilder code)
+        //{
+        //    code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance)");
+        //    code.Scope(scope =>
+        //    {
+        //        if (Target.BaseType == typeof(ClassObject))
+        //            scope.Add("rbfx_object_wrap(ctx, obj_idx, instance);");
+        //        else if(Target.BaseType != null)
+        //            scope.Add($"{CodeUtils.GetMethodPrefix(Target.BaseType)}_wrap(ctx, obj_idx, instance);");
+        //        EmitProperties(scope, "obj_idx");
+        //        EmitMethods(scope, "obj_idx");
+        //    });
+        //}
         
-        protected override void EmitProperty(PropertyInfo prop, string accessor, CodeBuilder code)
-        {
-            List<string> enumFlags = new List<string>();
-            enumFlags.Add("DUK_DEFPROP_HAVE_ENUMERABLE");
+        //protected override void EmitProperty(PropertyInfo prop, string accessor, CodeBuilder code)
+        //{
+        //    List<string> enumFlags = new List<string>();
+        //    enumFlags.Add("DUK_DEFPROP_HAVE_ENUMERABLE");
 
-            code.AddNewLine();
-            code.Add($"duk_push_string(ctx, \"{CodeUtils.ToCamelCase(AnnotationUtils.GetJSPropertyName(prop))}\");");
+        //    code.AddNewLine();
+        //    code.Add($"duk_push_string(ctx, \"{CodeUtils.ToCamelCase(AnnotationUtils.GetJSPropertyName(prop))}\");");
 
-            var attr = AnnotationUtils.GetPropertyMap(prop);
-            if(prop.GetMethod != null && !string.IsNullOrEmpty(attr.GetterName))
-            {
-                code.LightFunction(getterScope =>
-                {
-                    getterScope.Add(
-                        "duk_push_this(ctx);",
-                        $"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(rbfx_get_instance(ctx, -1));",
-                        "duk_pop(ctx);",
-                        $"{CodeUtils.GetNativeDeclaration(prop.PropertyType)} result = instance->{AnnotationUtils.GetGetterName(prop)}();"
-                    );
-                    CodeUtils.EmitValueWrite(prop.PropertyType, "result", getterScope);
+        //    var attr = AnnotationUtils.GetPropertyMap(prop);
+        //    if(prop.GetMethod != null && !string.IsNullOrEmpty(attr.GetterName))
+        //    {
+        //        code.LightFunction(getterScope =>
+        //        {
+        //            getterScope.Add(
+        //                "duk_push_this(ctx);",
+        //                $"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(rbfx_get_instance(ctx, -1));",
+        //                "duk_pop(ctx);",
+        //                $"{CodeUtils.GetNativeDeclaration(prop.PropertyType)} result = instance->{AnnotationUtils.GetGetterName(prop)}();"
+        //            );
+        //            CodeUtils.EmitValueWrite(prop.PropertyType, "result", getterScope);
 
-                    getterScope.Add("return 1;");
-                }, "0");
+        //            getterScope.Add("return 1;");
+        //        }, "0");
 
-                enumFlags.Add("DUK_DEFPROP_HAVE_GETTER");
-            }
-            if(prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName))
-            {
-                code.LightFunction(setterScope =>
-                {
-                    setterScope.Add(
-                        "duk_push_this(ctx);",
-                        $"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(rbfx_get_instance(ctx, -1));",
-                        "duk_pop(ctx);"
-                    );
-                    CodeUtils.EmitValueRead(prop.PropertyType, "result", "0", setterScope);
+        //        enumFlags.Add("DUK_DEFPROP_HAVE_GETTER");
+        //    }
+        //    if(prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName))
+        //    {
+        //        code.LightFunction(setterScope =>
+        //        {
+        //            setterScope.Add(
+        //                "duk_push_this(ctx);",
+        //                $"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(rbfx_get_instance(ctx, -1));",
+        //                "duk_pop(ctx);"
+        //            );
+        //            CodeUtils.EmitValueRead(prop.PropertyType, "result", "0", setterScope);
 
-                    setterScope.AddNewLine().Add($"instance->{AnnotationUtils.GetSetterName(prop)}(result);");
-                    setterScope.Add("return 0;");
-                }, "1");
+        //            setterScope.AddNewLine().Add($"instance->{AnnotationUtils.GetSetterName(prop)}(result);");
+        //            setterScope.Add("return 0;");
+        //        }, "1");
 
-                enumFlags.Add("DUK_DEFPROP_HAVE_SETTER");
-            }
+        //        enumFlags.Add("DUK_DEFPROP_HAVE_SETTER");
+        //    }
 
-            StringBuilder propFlags = new StringBuilder();
-            for(int i =0; i < enumFlags.Count; ++i)
-            {
-                propFlags.Append(enumFlags[i]);
-                if (i < enumFlags.Count - 1)
-                    propFlags.Append(" | ");
-            }
+        //    StringBuilder propFlags = new StringBuilder();
+        //    for(int i =0; i < enumFlags.Count; ++i)
+        //    {
+        //        propFlags.Append(enumFlags[i]);
+        //        if (i < enumFlags.Count - 1)
+        //            propFlags.Append(" | ");
+        //    }
 
-            code.Add($"duk_def_prop(ctx, {accessor}, {propFlags});");
-        }
+        //    code.Add($"duk_def_prop(ctx, {accessor}, {propFlags});");
+        //}
 
-        protected override void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
-        {
-            base.EmitMethodBody(methodInfo, code, emitValidations);
+        //protected override void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
+        //{
+        //    base.EmitMethodBody(methodInfo, code, emitValidations);
 
-            string nativeName = AnnotationUtils.GetMethodNativeName(methodInfo);
+        //    string nativeName = AnnotationUtils.GetMethodNativeName(methodInfo);
 
-            var parameters = methodInfo.GetParameters();
+        //    var parameters = methodInfo.GetParameters();
 
-            code
-                .Add("duk_push_this(ctx);")
-                .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(rbfx_get_instance(ctx, -1));")
-                .Add("duk_pop(ctx);");
+        //    code
+        //        .Add("duk_push_this(ctx);")
+        //        .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = static_cast<{AnnotationUtils.GetTypeName(Target)}*>(rbfx_get_instance(ctx, -1));")
+        //        .Add("duk_pop(ctx);");
 
-            CustomCodeAttribute? customCodeAttr = methodInfo.GetCustomAttribute<CustomCodeAttribute>();
-            if(customCodeAttr != null)
-            {
-                EmitCustomCodeMethodBody(customCodeAttr, methodInfo, code);
-                return;
-            }
+        //    CustomCodeAttribute? customCodeAttr = methodInfo.GetCustomAttribute<CustomCodeAttribute>();
+        //    if(customCodeAttr != null)
+        //    {
+        //        EmitCustomCodeMethodBody(customCodeAttr, methodInfo, code);
+        //        return;
+        //    }
 
-            StringBuilder argsCall = new StringBuilder();
-            for(int i =0; i < parameters.Length; ++i)
-            {
-                CodeUtils.EmitValueRead(parameters[i].ParameterType, $"arg{i}", i.ToString(), code);
-                argsCall.Append($"arg{i}");
-                if (i < parameters.Length - 1)
-                    argsCall.Append(", ");
-            }
+        //    StringBuilder argsCall = new StringBuilder();
+        //    for(int i =0; i < parameters.Length; ++i)
+        //    {
+        //        CodeUtils.EmitValueRead(parameters[i].ParameterType, $"arg{i}", i.ToString(), code);
+        //        argsCall.Append($"arg{i}");
+        //        if (i < parameters.Length - 1)
+        //            argsCall.Append(", ");
+        //    }
 
-            if(methodInfo.ReturnType == typeof(void))
-            {
-                code
-                    .Add($"instance->{nativeName}({argsCall});")
-                    .Add("return 0;");
-            }
-            else
-            {
-                code.Add($"{CodeUtils.GetNativeDeclaration(methodInfo.ReturnType)} result = instance->{nativeName}({argsCall});");
-                CodeUtils.EmitValueWrite(methodInfo.ReturnType, "result", code);
-                code.Add("return 1;");
-            }
-        }
+        //    if(methodInfo.ReturnType == typeof(void))
+        //    {
+        //        code
+        //            .Add($"instance->{nativeName}({argsCall});")
+        //            .Add("return 0;");
+        //    }
+        //    else
+        //    {
+        //        code.Add($"{CodeUtils.GetNativeDeclaration(methodInfo.ReturnType)} result = instance->{nativeName}({argsCall});");
+        //        CodeUtils.EmitValueWrite(methodInfo.ReturnType, "result", code);
+        //        code.Add("return 1;");
+        //    }
+        //}
 
         public static ClassObject Create(Type type)
         {

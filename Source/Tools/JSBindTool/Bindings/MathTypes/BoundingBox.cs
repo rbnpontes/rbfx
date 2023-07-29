@@ -48,7 +48,7 @@ namespace JSBindTool.Bindings.MathTypes
         [CustomCode(new Type[] { typeof(Vector<Vector3>)})]
         public void Define(CodeBuilder code)
         {
-            code.Add("instance.Define(arg0.data(), arg0.size());");
+            code.Add("instance->Define(arg0.data(), arg0.size());");
         }
         [Method("Define")]
         public void Define(Frustum frustum) { }
@@ -65,7 +65,7 @@ namespace JSBindTool.Bindings.MathTypes
         [CustomCode(new Type[] { typeof(Vector<Vector3>) })]
         public void Merge(CodeBuilder code)
         {
-            code.Add("instance.Merge(arg0.data(), arg0.size());");
+            code.Add("instance->Merge(arg0.data(), arg0.size());");
         }
         [Method("Merge")]
         public void Merge(Frustum frustum) { }

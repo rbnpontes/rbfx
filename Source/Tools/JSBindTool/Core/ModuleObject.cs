@@ -59,7 +59,9 @@ namespace JSBindTool.Core
 
         protected override void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code, bool emitValidations = true)
         {
-            base.EmitMethodBody(methodInfo, code, emitValidations);
+            var parameters = methodInfo.GetParameters().ToList();
+            if (emitValidations)
+                EmitArgumentValidation(parameters, methodInfo.GetCustomAttribute<CustomCodeAttribute>(), code);
 
             string nativeName = AnnotationUtils.GetMethodNativeName(methodInfo);
 
@@ -70,14 +72,13 @@ namespace JSBindTool.Core
                 return;
             }
 
-            var parameters = methodInfo.GetParameters();
 
             StringBuilder argsCall = new StringBuilder();
-            for (int i = 0; i < parameters.Length; ++i)
+            for (int i = 0; i < parameters.Count; ++i)
             {
                 CodeUtils.EmitValueRead(parameters[i].ParameterType, $"arg{i}", i.ToString(), code);
                 argsCall.Append($"arg{i}");
-                if (i < parameters.Length - 1)
+                if (i < parameters.Count - 1)
                     argsCall.Append(", ");
             }
 
@@ -94,10 +95,8 @@ namespace JSBindTool.Core
         }
 
         #region Skipped Methods
-        protected override void EmitProperty(PropertyInfo prop, string accessor, CodeBuilder code)
-        {
-        }
-
+        protected override void EmitSourceGetRef(CodeBuilder code) { }
+        protected override void EmitSourceProperties(CodeBuilder code) { }
         protected override void EmitSourceConstructor(CodeBuilder code)
         {
         }

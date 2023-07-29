@@ -109,7 +109,7 @@ namespace JSBindTool.Bindings.MathTypes
         public void ToSwingTwist(CodeBuilder code)
         {
             code
-                .Add("auto result = instance.ToSwingTwist(arg0);")
+                .Add("auto result = instance->ToSwingTwist(arg0);")
                 .Add("duk_push_array(ctx);")
                 .Add("jsbind_quaternion_push(ctx, result.first);")
                 .Add("duk_put_prop_index(ctx, -2, 0);")
