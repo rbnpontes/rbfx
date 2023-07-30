@@ -28,7 +28,7 @@ namespace JSBindTool.Core
         }
         protected virtual void EmitPushSignature(CodeBuilder code)
         {
-            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_push(duk_context* ctx, const {AnnotationUtils.GetTypeName(Target)}& value);");
+            code.Add($"void {CodeUtils.GetPushSignature(Target)}(duk_context* ctx, const {AnnotationUtils.GetTypeName(Target)}& value);");
         }
         protected virtual void EmitPushRefSignature(CodeBuilder code)
         {
@@ -207,7 +207,7 @@ namespace JSBindTool.Core
         }
         public virtual void EmitPushSource(CodeBuilder code)
         {
-            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_push(duk_context* ctx, const {AnnotationUtils.GetTypeName(Target)}& value)");
+            code.Add($"void {CodeUtils.GetPushSignature(Target)}(duk_context* ctx, const {AnnotationUtils.GetTypeName(Target)}& value)");
             code.Scope(scope =>
             {
                 scope.Add($"duk_get_global_string(ctx, \"{AnnotationUtils.GetTypeName(Target)}\");");

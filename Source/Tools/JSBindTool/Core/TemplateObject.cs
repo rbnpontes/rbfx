@@ -11,7 +11,8 @@ namespace JSBindTool.Core
         SharedPtr=0,
         WeakPtr,
         Vector,
-        RefPtr
+        RefPtr,
+        Const
     }
     public class TemplateObject
     {

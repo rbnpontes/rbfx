@@ -10,6 +10,10 @@ namespace JSBindTool.Core.Annotations
     public class MethodAttribute : Attribute
     {
         public string NativeName { get; private set; }
+        public MethodAttribute()
+        {
+            NativeName = string.Empty;
+        }
         public MethodAttribute(string name)
         {
             NativeName = name;

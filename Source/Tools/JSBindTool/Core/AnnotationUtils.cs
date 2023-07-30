@@ -82,7 +82,8 @@ namespace JSBindTool.Core
 
         public static string GetMethodNativeName(MethodInfo method)
         {
-            return method.GetCustomAttribute<MethodAttribute>()?.NativeName ?? method.Name;
+            string? nativeName = method.GetCustomAttribute<MethodAttribute>()?.NativeName;
+            return string.IsNullOrEmpty(nativeName) ? method.Name : nativeName;
         }
         public static string GetMethodName(MethodInfo method)
         {

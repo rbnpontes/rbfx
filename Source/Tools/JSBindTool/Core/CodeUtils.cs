@@ -59,6 +59,11 @@ namespace JSBindTool.Core
                     case TemplateType.RefPtr:
                         output.Append($"{AnnotationUtils.GetTypeName(templateObj.TargetType)}*");
                         break;
+                    case TemplateType.Const:
+                        output.Append($"const {GetNativeDeclaration(templateObj.TargetType)}");
+                        break;
+                    default:
+						throw new NotImplementedException();
                 }
             }
             else
@@ -93,6 +98,10 @@ namespace JSBindTool.Core
             return $"{Constants.MethodPrefix}_{ToSnakeCase(AnnotationUtils.GetTypeName(type))}";
         }
 
+        public static string GetPushSignature(Type type)
+        {
+            return $"{GetMethodPrefix(type)}_push";
+        }
         public static string GetRefSignature(Type type)
         {
             return $"{GetMethodPrefix(type)}_get_ref";
@@ -135,11 +144,11 @@ namespace JSBindTool.Core
                     case TemplateType.SharedPtr:
                         code.Add($"rbfx_push_object(ctx, {accessor});");
                         break;
-                    case TemplateType.WeakPtr:
-                        throw new NotImplementedException();
-                        break;
                     case TemplateType.RefPtr:
                         code.Add($"{GetPushRefSignature(templateObj.TargetType)}(ctx, {accessor});");
+                        break;
+                    case TemplateType.Const:
+                        EmitValueWrite(templateObj.TargetType, $"const_cast<{GetNativeDeclaration(templateObj.TargetType)}>({accessor})", code);
                         break;
                     case TemplateType.Vector:
                         {
@@ -162,6 +171,8 @@ namespace JSBindTool.Core
                             --pDeepValueCount;
                         }
                         break;
+                    default:
+                        throw new NotImplementedException();
                 }
             }
         }
@@ -197,8 +208,6 @@ namespace JSBindTool.Core
                     case TemplateType.SharedPtr:
                         code.Add($"{GetNativeDeclaration(templateObj.TargetType)} {varName}(static_cast<{AnnotationUtils.GetTypeName(templateObj.TargetType)}*>(rbfx_get_instance(ctx, {accessor})));");
                         break;
-                    case TemplateType.WeakPtr:
-                        throw new NotImplementedException();
                     case TemplateType.RefPtr:
                             code.Add($"{AnnotationUtils.GetTypeName(templateObj.TargetType)}* {varName}({GetRefSignature(templateObj.TargetType)}(ctx, {accessor}));");
                         break;
@@ -230,6 +239,8 @@ namespace JSBindTool.Core
                             code.Add("}");
                         }
                         break;
+                    default:
+                        throw new NotImplementedException();
                 }
             }
             else if (type.IsSubclassOf(typeof(PrimitiveObject)))
@@ -260,10 +271,17 @@ namespace JSBindTool.Core
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {
                 var templateObj = TemplateObject.Create(type);
-                if (templateObj.TemplateType == TemplateType.Vector)
-                    hashInput = "Vector";
-                else
-                    throw new NotImplementedException("not implemented GetTypeHash for TemplateObject inherited types.");
+                switch (templateObj.TemplateType)
+                {
+                    case TemplateType.Vector:
+                        hashInput = "Vector";
+                        break;
+                    case TemplateType.RefPtr:
+                        hashInput = AnnotationUtils.GetTypeName(templateObj.TargetType);
+                        break;
+                    default:
+                        throw new NotImplementedException("not implemented GetTypeHash for TemplateObject inherited types.");
+                }
             }
             else
                 hashInput = AnnotationUtils.GetTypeName(type);
