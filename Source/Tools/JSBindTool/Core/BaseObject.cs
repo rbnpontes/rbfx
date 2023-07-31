@@ -424,7 +424,9 @@ namespace JSBindTool.Core
 
                         methods.ForEach(x =>
                         {
-                            var paramsLength = x.GetParameters().Length;
+                            int paramsLength = x.GetParameters().Length;
+                            if (AnnotationUtils.IsCustomCodeMethod(x))
+                                paramsLength = AnnotationUtils.GetCustomCodeAttribute(x).ParameterTypes.Length;
                             minArgs = Math.Min(minArgs, paramsLength);
                             maxArgs = Math.Max(maxArgs, paramsLength);
                         });
@@ -580,10 +582,42 @@ namespace JSBindTool.Core
                 code.Add("return 1;");
             }
         }
-        protected virtual void EmitOperatorMethodBody(OperatorType opType, MethodInfo methodInfo, CodeBuilder code)
+        protected virtual void EmitOperatorMethodBody(OperatorType opType, MethodInfo method, CodeBuilder code)
         {
-            var parameters = methodInfo.GetParameters().ToList();
-            EmitArgumentValidation(parameters, methodInfo.GetCustomAttribute<CustomCodeAttribute>(), code);
+            var parameters = method.GetParameters().ToList();
+            EmitArgumentValidation(parameters, method.GetCustomAttribute<CustomCodeAttribute>(), code);
+
+            string operatorSignal = GetOperatorSignal(opType);
+
+            code
+                .Add("duk_push_this(ctx);")
+                .Add($"{AnnotationUtils.GetTypeName(Target)} instance = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, -1);")
+                .Add("duk_pop(ctx);")
+                .AddNewLine();
+
+            CustomCodeAttribute? customCodeAttr = method.GetCustomAttribute<CustomCodeAttribute>();
+            if (customCodeAttr != null)
+            {
+                EmitCustomCodeMethodBody(customCodeAttr, method, code);
+                return;
+            }
+
+            if (parameters.Count > 1)
+                throw new Exception($"Operators that contains more than 1 argument must add custom code attribute. Error Class: {Target.FullName}");
+
+            CodeUtils.EmitValueRead(parameters[0].ParameterType, $"value", "0", code);
+
+            if (opType == OperatorType.Equal)
+            {
+                code
+                    .Add($"duk_push_boolean(ctx, instance == value);")
+                    .Add("return 1;");
+                return;
+            }
+
+            code.Add($"{CodeUtils.GetNativeDeclaration(method.ReturnType)} result = instance {operatorSignal} value;");
+            CodeUtils.EmitValueWrite(method.ReturnType, "result", code);
+            code.Add("return 1;");
         }
         protected virtual void EmitStaticMethodBody(MethodInfo methodInfo, CodeBuilder code)
         {
@@ -1055,7 +1089,7 @@ namespace JSBindTool.Core
         {
             return CodeUtils.GetRefSignature(Target);
         }
-
+     
         protected abstract void EmitSourceConstructor(CodeBuilder code);
     }
 }

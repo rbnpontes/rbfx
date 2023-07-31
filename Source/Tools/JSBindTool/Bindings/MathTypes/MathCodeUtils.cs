@@ -36,9 +36,9 @@ namespace JSBindTool.Bindings.MathTypes
         {
             code
                 .Add("instance->Decompose(arg0, arg1, arg2);")
-                .Add("jsbind_vector3_set(ctx, 0, arg0);")
-                .Add("jsbind_quaternion_set(ctx, 1, arg1);")
-                .Add("jsbind_vector3_set(ctx, 2, arg2);");
+                .Add("jsbind_vector3_set(ctx, 0, &arg0);")
+                .Add("jsbind_quaternion_set(ctx, 1, &arg1);")
+                .Add("jsbind_vector3_set(ctx, 2, &arg2);");
         }
         public static void EmitEqualOperator(CodeBuilder code)
         {
@@ -49,6 +49,54 @@ namespace JSBindTool.Bindings.MathTypes
             code
                 .Add($"ea::vector<{dataType}> result({sizeOf});")
                 .Add($"memcpy(result.data(), instance->Data(), sizeof({dataType}) * {sizeOf});");
+        }
+        public static void EmitVectorLerp(string typeName, CodeBuilder code)
+        {
+            code.Add($"{typeName} result = VectorLerp(arg0, arg1, arg2);");
+        }
+        public static void EmitVectorMax(string typeName, CodeBuilder code)
+        {
+            code.Add($"{typeName} result = VectorMax(arg0, arg1);");
+        }
+        public static void EmitVectorMin(string typeName, CodeBuilder code)
+        {
+            code.Add($"{typeName} result = VectorMin(arg0, arg1);");
+        }
+        public static void EmitVectorFloor(string typeName, CodeBuilder code)
+        {
+            code.Add($"{typeName} result = VectorFloor(arg0);");
+        }
+        public static void EmitVectorRound(string typeName, CodeBuilder code)
+        {
+            code.Add($"{typeName} result = VectorRound(arg0);");
+        }
+        public static void EmitVectorCeil(string typeName, CodeBuilder code)
+        {
+            code.Add($"{typeName} result = VectorCeil(arg0);");
+        }
+        public static void EmitVectorAbs(string typeName, CodeBuilder code)
+        {
+            code.Add($"{typeName} result = VectorAbs(arg0);");
+        }
+        public static void EmitVectorSqrt(string typeName, CodeBuilder code)
+        {
+            code.Add($"{typeName} result = VectorSqrt(arg0);");
+        }
+        public static void EmitVectorFloorToInt(string typeName, CodeBuilder code)
+        {
+            code.Add($"{typeName} result = VectorFloorToInt(arg0);");
+        }
+        public static void EmitVectorRoundToInt(string typeName, CodeBuilder code)
+        {
+            code.Add($"{typeName} result = VectorRoundToInt(arg0);");
+        }
+        public static void EmitVectorCeilToInt(string typeName, CodeBuilder code)
+        {
+            code.Add($"{typeName} result = VectorCeilToInt(arg0);");
+        }
+        public static void EmitVectorStableRandom(string typeName, CodeBuilder code)
+        {
+            code.Add($"{typeName} result = StableRandom(arg0);");
         }
         public static void EmitVectorClamp(string typeName, CodeBuilder code)
         {

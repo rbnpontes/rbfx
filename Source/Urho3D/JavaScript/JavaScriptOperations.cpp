@@ -3,39 +3,41 @@
 #include "../IO/Log.h"
 #include "../Container/Hash.h"
 
+#define JS_REF_PTR_HIDDEN_PROP DUK_HIDDEN_SYMBOL("__refptr")
 #define JS_OBJ_HIDDEN_EVENT_TABLE DUK_HIDDEN_SYMBOL("__events")
 #define JS_BIND_HIDDEN_CALL_PROP DUK_HIDDEN_SYMBOL("__call")
 #define JS_BIND_HIDDEN_TARGET_PROP DUK_HIDDEN_SYMBOL("__target")
 
 namespace Urho3D
 {
-    StringHash g_ref_counted_type   = StringHash("RefCounted");
-    StringHash g_boolean_type       = StringHash("bool");
-    StringHash g_number_type        = StringHash("Number");
-    StringHash g_int_type           = StringHash("int");
-    StringHash g_uint_type          = StringHash("uint");
-    StringHash g_float_type         = StringHash("float");
-    StringHash g_double_type        = StringHash("double");
-    StringHash g_buffer_type        = StringHash("Buffer");
-    StringHash g_pointer_type       = StringHash("void");
-    StringHash g_string_type        = StringHash("string");
-    StringHash g_variant_map_type   = StringHash("VariantMap");
-    StringHash g_variant_type       = StringHash("Variant");
-    StringHash g_string_hash_type   = StringHash("StringHash");
-    StringHash g_vector2_type       = StringHash("Vector2");
-    StringHash g_vector3_type       = StringHash("Vector3");
-    StringHash g_int_vector2_type   = StringHash("IntVector2");
-    StringHash g_int_vector3_type   = StringHash("IntVector3");
-    StringHash g_vector4_type       = StringHash("Vector4");
-    StringHash g_quaternion_type    = StringHash("Quaternion");
-    StringHash g_color_type         = StringHash("Color");
-    StringHash g_rect_type          = StringHash("Rect");
-    StringHash g_int_rect_type      = StringHash("IntRect");
-    StringHash g_matrix2_type       = StringHash("Matrix2");
-    StringHash g_matrix3_type       = StringHash("Matrix3");
-    StringHash g_matrix3x4_type     = StringHash("Matrix3x4");
-    StringHash g_matrix4_type       = StringHash("Matrix4");
-    StringHash g_vector_type        = StringHash("Vector");
+    static StringHash g_ref_counted_type   = StringHash("RefCounted");
+    static StringHash g_boolean_type       = StringHash("bool");
+    static StringHash g_number_type        = StringHash("Number");
+    static StringHash g_int_type           = StringHash("int");
+    static StringHash g_uint_type          = StringHash("uint");
+    static StringHash g_float_type         = StringHash("float");
+    static StringHash g_double_type        = StringHash("double");
+    static StringHash g_buffer_type        = StringHash("Buffer");
+    static StringHash g_pointer_type       = StringHash("void");
+    static StringHash g_string_type        = StringHash("string");
+    static StringHash g_variant_map_type   = StringHash("VariantMap");
+    static StringHash g_variant_type       = StringHash("Variant");
+    static StringHash g_string_hash_type   = StringHash("StringHash");
+    static StringHash g_vector2_type       = StringHash("Vector2");
+    static StringHash g_vector3_type       = StringHash("Vector3");
+    static StringHash g_int_vector2_type   = StringHash("IntVector2");
+    static StringHash g_int_vector3_type   = StringHash("IntVector3");
+    static StringHash g_vector4_type       = StringHash("Vector4");
+    static StringHash g_quaternion_type    = StringHash("Quaternion");
+    static StringHash g_color_type         = StringHash("Color");
+    static StringHash g_rect_type          = StringHash("Rect");
+    static StringHash g_int_rect_type      = StringHash("IntRect");
+    static StringHash g_matrix2_type       = StringHash("Matrix2");
+    static StringHash g_matrix3_type       = StringHash("Matrix3");
+    static StringHash g_matrix3x4_type     = StringHash("Matrix3x4");
+    static StringHash g_matrix4_type       = StringHash("Matrix4");
+    static StringHash g_vector_type        = StringHash("Vector");
+    static StringHash g_function_type      = StringHash("Function");
 
     StringHash rbfx_require_string_hash(duk_context* ctx, duk_idx_t stack_idx)
     {
@@ -510,7 +512,7 @@ namespace Urho3D
     void rbfx_ref_counted_wrap(duk_context* ctx, duk_idx_t obj_idx, RefCounted* ref_count)
     {
         duk_push_pointer(ctx, ref_count);
-        duk_put_prop_string(ctx, obj_idx, JS_OBJ_HIDDEN_PTR);
+        duk_put_prop_string(ctx, obj_idx, JS_REF_PTR_HIDDEN_PROP);
     }
     void rbfx_object_wrap(duk_context* ctx, duk_idx_t obj_idx, Object* obj)
     {
@@ -566,7 +568,7 @@ namespace Urho3D
     }
     RefCounted* rbfx_get_instance(duk_context* ctx, duk_idx_t obj_idx)
     {
-        duk_get_prop_string(ctx, obj_idx, JS_OBJ_HIDDEN_PTR);
+        duk_get_prop_string(ctx, obj_idx, JS_REF_PTR_HIDDEN_PROP);
         void* ptr = duk_get_pointer_default(ctx, -1, nullptr);
 
         if (!ptr)
@@ -730,6 +732,9 @@ namespace Urho3D
         if (duk_is_null_or_undefined(ctx, value_idx))
             return output;
 
+        if (duk_is_function(ctx, value_idx))
+            return g_function_type;
+
         switch (type)
         {
             case DUK_TYPE_BOOLEAN:
@@ -794,7 +799,9 @@ namespace Urho3D
         if (type_hash == g_variant_type.Value())
             return;
 
-        if (type == DUK_TYPE_NULL || type == DUK_TYPE_UNDEFINED)
+        if (type_hash == g_function_type.Value() && !duk_is_function(ctx, value_idx))
+            err_output = TYPE_REQ_ERROR_MSG(Function);
+        else if (type == DUK_TYPE_NULL || type == DUK_TYPE_UNDEFINED)
             err_output = "invalid value type. object specified is null.";
         else if (type_hash == g_string_hash_type.Value() && !(type == DUK_TYPE_STRING || type == DUK_TYPE_NUMBER))
             err_output = TYPE_REQ_ERROR_MSG(StringHash(string | Number));
@@ -823,9 +830,14 @@ namespace Urho3D
                 const char* type = duk_get_string(ctx, -1);
                 StringHash obj_type_hash(type);
                 Object* obj = static_cast<Object*>(rbfx_get_instance(ctx, value_idx));
-                if (obj && !obj->GetTypeInfo()->IsTypeOf(StringHash(type_hash)))
-                    err_output = "invalid value type. the value object type does not match type requirements.";
-                else if (!obj && type_hash != obj_type_hash.Value())
+
+                bool has_err = true;
+                if (obj)
+                    has_err = !obj->GetTypeInfo()->IsTypeOf(StringHash(type_hash));
+                else
+                    has_err = type_hash != obj_type_hash.Value();
+
+                if (has_err)
                     err_output = "invalid value type. the value object type does not match type requirements.";
             }
             duk_pop(ctx);

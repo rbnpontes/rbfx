@@ -28,6 +28,16 @@ namespace JSBindTool.Core
         //    base.EmitSource(code);
         //}
 
+        protected override void EmitSourceGetRef(CodeBuilder code)
+        {
+            code
+                .Add($"{AnnotationUtils.GetTypeName(Target)}* {GetRefSignature()}(duk_context* ctx, duk_idx_t obj_idx)")
+                .Scope(code =>
+                {
+                    code.Add($"return static_cast<{AnnotationUtils.GetTypeName(Target)}*>(rbfx_get_instance(ctx, obj_idx));");
+                });
+        }
+
         protected override void EmitSourceSetup(CodeBuilder code)
         {
             base.EmitSourceSetup(code);

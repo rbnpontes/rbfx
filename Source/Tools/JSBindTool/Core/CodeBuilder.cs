@@ -50,6 +50,26 @@ namespace JSBindTool.Core
             return this;
         }
 
+        public CodeBuilder AddSameLine(string code)
+        {
+            if (pChunks.Count == 0)
+                return Add(code);
+            pChunks[pChunks.Count - 1] = pChunks[pChunks.Count - 1] + code;
+            return this;
+        }
+        public CodeBuilder AddSameLine(IEnumerable<string> codeParts)
+        {
+            foreach (string arg in codeParts)
+                AddSameLine(arg);
+            return this;
+        }
+        public CodeBuilder AddSameLine(params string[] args)
+        {
+            foreach (string arg in args)
+                AddSameLine(arg);
+            return this;
+        }
+
         public CodeBuilder AddNewLine(uint count = 1)
         {
             for (uint i = 0; i < count; ++i)
@@ -69,6 +89,16 @@ namespace JSBindTool.Core
             Add("{");
             Add(scope);
             Add("}");
+            return this;
+        }
+        public CodeBuilder Lambda(Action<CodeBuilder> body)
+        {
+            CodeBuilder scope = new CodeBuilder();
+            body(scope);
+
+            Add("{");
+            Add(scope);
+            Add("};");
             return this;
         }
         public CodeBuilder Function(Action<CodeBuilder> body, string args)

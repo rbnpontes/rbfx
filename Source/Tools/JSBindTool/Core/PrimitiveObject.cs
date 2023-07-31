@@ -24,7 +24,7 @@ namespace JSBindTool.Core
         }
         protected virtual void EmitSetSignature(CodeBuilder code)
         {
-            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_set(duk_context* ctx, duk_idx_t obj_idx, const {AnnotationUtils.GetTypeName(Target)}& target);");
+            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_set(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* target);");
         }
         protected virtual void EmitPushSignature(CodeBuilder code)
         {
@@ -92,13 +92,20 @@ namespace JSBindTool.Core
         public virtual void EmitSetSource(CodeBuilder code)
         {
             code
-                .Add($"void {CodeUtils.GetMethodPrefix(Target)}_set(duk_context* ctx, duk_idx_t obj_idx, const {AnnotationUtils.GetTypeName(Target)}& target)")
+                .Add($"void {CodeUtils.GetMethodPrefix(Target)}_set(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* target)")
                 .Scope(scope =>
                 {
+                    var baseType = Target.BaseType;
+                    if (baseType != typeof(PrimitiveObject) && baseType != null)
+                    {
+                        scope
+                            .Add("// set parent definition first.")
+                            .Add($"{CodeUtils.GetMethodPrefix(baseType)}_set(ctx, obj_idx, target);");
+                    }
                     GetVariables().ForEach(vary =>
                     {
                         scope.Add($"// set '{vary.NativeName}' property.");
-                        CodeUtils.EmitValueWrite(vary.Type, $"target.{vary.NativeName}", scope);
+                        CodeUtils.EmitValueWrite(vary.Type, $"target->{vary.NativeName}", scope);
                         scope.Add($"duk_put_prop_string(ctx, obj_idx, \"{vary.JSName}\");");
                     });
                 });
@@ -300,44 +307,44 @@ namespace JSBindTool.Core
         //        code.Add("return 1;");
         //    }
         //}
-        protected override void EmitOperatorMethodBody(OperatorType opType, MethodInfo method, CodeBuilder code)
-        {
-            base.EmitOperatorMethodBody(opType, method, code);
+        //protected override void EmitOperatorMethodBody(OperatorType opType, MethodInfo method, CodeBuilder code)
+        //{
+        //    base.EmitOperatorMethodBody(opType, method, code);
 
-            string operatorSignal = GetOperatorSignal(opType);
+        //    string operatorSignal = GetOperatorSignal(opType);
 
-            code
-                .Add("duk_push_this(ctx);")
-                .Add($"{AnnotationUtils.GetTypeName(Target)} instance = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, -1);")
-                .Add("duk_pop(ctx);")
-                .AddNewLine();
+        //    code
+        //        .Add("duk_push_this(ctx);")
+        //        .Add($"{AnnotationUtils.GetTypeName(Target)} instance = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, -1);")
+        //        .Add("duk_pop(ctx);")
+        //        .AddNewLine();
 
-            CustomCodeAttribute? customCodeAttr = method.GetCustomAttribute<CustomCodeAttribute>();
-            if (customCodeAttr != null)
-            {
-                EmitCustomCodeMethodBody(customCodeAttr, method, code);
-                return;
-            }
+        //    CustomCodeAttribute? customCodeAttr = method.GetCustomAttribute<CustomCodeAttribute>();
+        //    if (customCodeAttr != null)
+        //    {
+        //        EmitCustomCodeMethodBody(customCodeAttr, method, code);
+        //        return;
+        //    }
 
-            var parameters = method.GetParameters();
+        //    var parameters = method.GetParameters();
 
-            if (parameters.Length > 1)
-                throw new Exception($"Operators that contains more than 1 argument must add custom code attribute. Error Class: {Target.FullName}");
+        //    if (parameters.Length > 1)
+        //        throw new Exception($"Operators that contains more than 1 argument must add custom code attribute. Error Class: {Target.FullName}");
 
-            CodeUtils.EmitValueRead(parameters[0].ParameterType, $"value", "0", code);
+        //    CodeUtils.EmitValueRead(parameters[0].ParameterType, $"value", "0", code);
 
-            if (opType == OperatorType.Equal)
-            {
-                code
-                    .Add($"duk_push_boolean(ctx, instance == value);")
-                    .Add("return 1;");
-                return;
-            }
+        //    if (opType == OperatorType.Equal)
+        //    {
+        //        code
+        //            .Add($"duk_push_boolean(ctx, instance == value);")
+        //            .Add("return 1;");
+        //        return;
+        //    }
 
-            code.Add($"{CodeUtils.GetNativeDeclaration(method.ReturnType)} result = instance {operatorSignal} value;");
-            CodeUtils.EmitValueWrite(method.ReturnType, "result", code);
-            code.Add("return 1;");
-        }
+        //    code.Add($"{CodeUtils.GetNativeDeclaration(method.ReturnType)} result = instance {operatorSignal} value;");
+        //    CodeUtils.EmitValueWrite(method.ReturnType, "result", code);
+        //    code.Add("return 1;");
+        //}
 
         //protected override void EmitProperty(PropertyInfo prop, string accessor, CodeBuilder code)
         //{

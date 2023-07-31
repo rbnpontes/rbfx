@@ -84,19 +84,19 @@ namespace JSBindTool.Bindings.MathTypes
         [CustomCode(typeof(IntVector2), new Type[] { typeof(IntVector2), typeof(IntVector2) })]
         public static void Min(CodeBuilder code)
         {
-            code.Add("IntVector2 result = VectorMin(arg0, arg1);");
+            MathCodeUtils.EmitVectorMin("IntVector2", code);
         }
         [Method("Max")]
         [CustomCode(typeof(IntVector2), new Type[] { typeof(IntVector2), typeof(IntVector2) })]
         public static void Max(CodeBuilder code)
         {
-            code.Add("IntVector2 result = VectorMax(arg0, arg1);");
+            MathCodeUtils.EmitVectorMax("IntVector2", code);
         }
         [Method("Abs")]
         [CustomCode(typeof(IntVector2), new Type[] { typeof(IntVector2) })]
         public static void Abs(CodeBuilder code)
         {
-            code.Add("IntVector2 result = VectorAbs(arg0);");
+            MathCodeUtils.EmitVectorAbs("IntVector2", code);
         }
         [Method("Clamp")]
         [CustomCode(typeof(IntVector2), new Type[] { typeof(IntVector2), typeof(IntVector2), typeof(IntVector2) })]
@@ -231,73 +231,73 @@ namespace JSBindTool.Bindings.MathTypes
         [CustomCode(typeof(Vector2), new Type[] { typeof(Vector2), typeof(Vector2), typeof(Vector2) })]
         public static void Lerp(CodeBuilder code)
         {
-            code.Add("Vector2 result = VectorLerp(arg0, arg1, arg2);");
+            MathCodeUtils.EmitVectorLerp("Vector2", code);
         }
         [Method("Min")]
         [CustomCode(typeof(Vector2), new Type[] { typeof(Vector2), typeof(Vector2) })]
         public static void Min(CodeBuilder code)
         {
-            code.Add("Vector2 result = VectorMin(arg0, arg1);");
+            MathCodeUtils.EmitVectorMin("Vector2", code);
         }
         [Method("Max")]
         [CustomCode(typeof(Vector2), new Type[] { typeof(Vector2), typeof(Vector2) })]
         public static void Max(CodeBuilder code)
         {
-            code.Add("Vector2 result = VectorMax(arg0, arg1);");
+            MathCodeUtils.EmitVectorMax("Vector2", code);
         }
         [Method("Floor")]
         [CustomCode(typeof(Vector2), new Type[] { typeof(Vector2) })]
         public static void Floor(CodeBuilder code)
         {
-            code.Add("Vector2 result = VectorFloor(arg0);");
+            MathCodeUtils.EmitVectorFloor("Vector2", code);
         }
         [Method("Round")]
         [CustomCode(typeof(Vector2), new Type[] { typeof(Vector2) })]
         public static void Round(CodeBuilder code)
         {
-            code.Add("Vector2 result = VectorRound(arg0);");
+            MathCodeUtils.EmitVectorRound("Vector2", code);
         }
         [Method("Ceil")]
         [CustomCode(typeof(Vector2), new Type[] { typeof(Vector2) })]
         public static void Ceil(CodeBuilder code)
         {
-            code.Add("Vector2 result = VectorCeil(arg0);");
+            MathCodeUtils.EmitVectorCeil("Vector2", code);
         }
         [Method("Abs")]
         [CustomCode(typeof(Vector2), new Type[] { typeof(Vector2) })]
         public static void _Abs(CodeBuilder code)
         {
-            code.Add("Vector2 result = VectorAbs(arg0);");
+            MathCodeUtils.EmitVectorAbs("Vector2", code);
         }
         [Method("Sqrt")]
         [CustomCode(typeof(Vector2), new Type[] { typeof(Vector2) })]
         public static void Sqrt(CodeBuilder code)
         {
-            code.Add("Vector2 result = VectorSqrt(arg0);");
+            MathCodeUtils.EmitVectorSqrt("Vector2", code);
         }
         [Method("FloorToInt")]
         [CustomCode(typeof(IntVector2), new Type[] { typeof(Vector2) })]
         public static void FloorToInt(CodeBuilder code)
         {
-            code.Add("IntVector2 result = VectorFloorToInt(arg0);");
+            MathCodeUtils.EmitVectorFloorToInt("IntVector2", code);
         }
         [Method("RoundToInt")]
         [CustomCode(typeof(IntVector2), new Type[] { typeof(Vector2) })]
         public static void RoundToInt(CodeBuilder code)
         {
-            code.Add("IntVector2 result = VectorRoundToInt(arg0);");
+            MathCodeUtils.EmitVectorRoundToInt("IntVector2", code);
         }
         [Method("CeilToInt")]
         [CustomCode(typeof(IntVector2), new Type[] { typeof(Vector2) })]
         public static void CeilToInt(CodeBuilder code)
         {
-            code.Add("IntVector2 result = VectorCeilToInt(arg0);");
+            MathCodeUtils.EmitVectorCeilToInt("IntVector2", code);
         }
         [Method("StableRandom")]
         [CustomCode(typeof(float), new Type[] { typeof(Vector2) })]
         public static void StableRandom(CodeBuilder code)
         {
-            code.Add("float result = StableRandom(arg0);");
+            MathCodeUtils.EmitVectorStableRandom("float", code);
         }
         [Method("StableRandom")]
         [CustomCode(typeof(float), new Type[] { typeof(float) })]
@@ -388,19 +388,19 @@ namespace JSBindTool.Bindings.MathTypes
         [CustomCode(typeof(IntVector3), new Type[] { typeof(IntVector3), typeof(IntVector3) })]
         public static void Min(CodeBuilder code)
         {
-            code.Add("IntVector3 result = VectorMin(arg0, arg1);");
+            MathCodeUtils.EmitVectorMin("IntVector3", code);
         }
         [Method("Max")]
         [CustomCode(typeof(IntVector3), new Type[] { typeof(IntVector3), typeof(IntVector3) })]
         public static void Max(CodeBuilder code)
         {
-            code.Add("IntVector3 result = VectorMax(arg0, arg1);");
+            MathCodeUtils.EmitVectorMax("IntVector3", code);
         }
         [Method("Abs")]
         [CustomCode(typeof(IntVector3), new Type[] { typeof(IntVector3) })]
         public static void Abs(CodeBuilder code)
         {
-            code.Add("IntVector3 result = VectorAbs(arg0);");
+            MathCodeUtils.EmitVectorAbs("IntVector3", code);
         }
         [Method("Clamp")]
         [CustomCode(typeof(IntVector3), new Type[] { typeof(IntVector3), typeof(IntVector3), typeof(IntVector3) })]
@@ -555,73 +555,73 @@ namespace JSBindTool.Bindings.MathTypes
         [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3), typeof(Vector3), typeof(Vector3)})]
         public static void Lerp(CodeBuilder code)
         {
-            code.Add("Vector3 result = VectorLerp(arg0, arg1, arg2);");
+            MathCodeUtils.EmitVectorLerp("Vector3", code);
         }
         [Method("Min")]
         [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3), typeof(Vector3) })]
         public static void Min(CodeBuilder code)
         {
-            code.Add("Vector3 result = VectorMin(arg0, arg1);");
+            MathCodeUtils.EmitVectorMin("Vector3", code);
         }
         [Method("Max")]
         [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3), typeof(Vector3) })]
         public static void Max(CodeBuilder code)
         {
-            code.Add("Vector3 result = VectorMax(arg0, arg1);");
+            MathCodeUtils.EmitVectorMax("Vector3", code);
         }
         [Method("Floor")]
         [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3) })]
         public static void Floor(CodeBuilder code)
         {
-            code.Add("Vector3 result = VectorFloor(arg0);");
+            MathCodeUtils.EmitVectorFloor("Vector3", code);
         }
         [Method("Round")]
         [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3) })]
         public static void Round(CodeBuilder code)
         {
-            code.Add("Vector3 result = VectorRound(arg0);");
+            MathCodeUtils.EmitVectorRound("Vector3", code);
         }
         [Method("Ceil")]
         [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3) })]
         public static void Ceil(CodeBuilder code)
         {
-            code.Add("Vector3 result = VectorCeil(arg0);");
+            MathCodeUtils.EmitVectorCeil("Vector3", code);
         }
         [Method("Abs")]
         [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3) })]
         public static void _Abs(CodeBuilder code)
         {
-            code.Add("Vector3 result = VectorAbs(arg0);");
+            MathCodeUtils.EmitVectorAbs("Vector3", code);
         }
         [Method("Sqrt")]
         [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3) })]
         public static void Sqrt(CodeBuilder code)
         {
-            code.Add("Vector3 result = VectorSqrt(arg0);");
+            MathCodeUtils.EmitVectorSqrt("Vector3", code);
         }
         [Method("FloorToInt")]
         [CustomCode(typeof(IntVector3), new Type[] { typeof(Vector3) })]
         public static void FloorToInt(CodeBuilder code)
         {
-            code.Add("IntVector3 result = VectorFloorToInt(arg0);");
+            MathCodeUtils.EmitVectorFloorToInt("IntVector3", code);
         }
         [Method("RoundToInt")]
         [CustomCode(typeof(IntVector3), new Type[] { typeof(Vector3) })]
         public static void RoundToInt(CodeBuilder code)
         {
-            code.Add("IntVector3 result = VectorRoundToInt(arg0);");
+            MathCodeUtils.EmitVectorRoundToInt("IntVector3", code);
         }
         [Method("CeilToInt")]
         [CustomCode(typeof(IntVector3), new Type[] { typeof(Vector3) })]
         public static void CeilToInt(CodeBuilder code)
         {
-            code.Add("IntVector3 result = VectorCeilToInt(arg0);");
+            MathCodeUtils.EmitVectorCeilToInt("IntVector3", code);
         }
         [Method("StableRandom")]
         [CustomCode(typeof(float), new Type[] { typeof(Vector3) })]
         public static void StableRandom(CodeBuilder code)
         {
-            code.Add("float result = StableRandom(arg0);");
+            MathCodeUtils.EmitVectorStableRandom("float", code);
         }
         [Method("Clamp")]
         [CustomCode(typeof(Vector3), new Type[] { typeof(Vector3), typeof(Vector3), typeof(Vector3) })]
@@ -716,37 +716,37 @@ namespace JSBindTool.Bindings.MathTypes
         [CustomCode(typeof(Vector4), new Type[] { typeof(Vector4), typeof(Vector4) , typeof(Vector4) })]
         public static void VectorLerp(CodeBuilder code)
         {
-            code.Add("Vector4 result = VectorLerp(arg0, arg1, arg2);");
+            MathCodeUtils.EmitVectorLerp("Vector4", code);
         }
         [Method("Min")]
         [CustomCode(typeof(Vector4), new Type[] { typeof(Vector4), typeof(Vector4) })]
         public static void VectorMin(CodeBuilder code)
         {
-            code.Add("Vector4 result = VectorMin(arg0, arg1);");
+            MathCodeUtils.EmitVectorMin("Vector4", code);
         }
         [Method("Max")]
         [CustomCode(typeof(Vector4), new Type[] { typeof(Vector4), typeof(Vector4) })]
         public static void VectorMax(CodeBuilder code)
         {
-            code.Add("Vector4 result = VectorMax(arg0, arg1);");
+            MathCodeUtils.EmitVectorMax("Vector4", code);
         }
         [Method("Floor")]
         [CustomCode(typeof(Vector4), new Type[] { typeof(Vector4) })]
         public static void VectorFloor(CodeBuilder code)
         {
-            code.Add("Vector4 result = VectorFloor(arg0);");
+            MathCodeUtils.EmitVectorFloor("Vector4", code);
         }
         [Method("Round")]
         [CustomCode(typeof(Vector4), new Type[] { typeof(Vector4) })]
         public static void VectorRound(CodeBuilder code)
         {
-            code.Add("Vector4 result = VectorRound(arg0);");
+            MathCodeUtils.EmitVectorRound("Vector4", code);
         }
         [Method("Ceil")]
         [CustomCode(typeof(Vector4), new Type[] { typeof(Vector4) })]
         public static void VectorCeil(CodeBuilder code)
         {
-            code.Add("Vector4 result = VectorCeil(arg0);");
+            MathCodeUtils.EmitVectorCeil("Vector4", code);
         }
         [Method("Clamp")]
         [CustomCode(typeof(Vector4), new Type[] { typeof(Vector4), typeof(Vector4), typeof(Vector4) })]

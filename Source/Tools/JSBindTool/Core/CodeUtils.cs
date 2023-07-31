@@ -213,6 +213,7 @@ namespace JSBindTool.Core
                         break;
                     case TemplateType.Vector:
                         {
+                            // TODO: refactor this
                             code.Add($"{GetNativeDeclaration(type)} {varName};");
                             code.Add("{");
                             {
