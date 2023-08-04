@@ -222,4 +222,56 @@ namespace JSBindTool.Bindings.MathTypes
         [Method]
         public void Twist(float angle, IKSettings settings) { }
     }
+    [Include("Urho3D/Math/InverseKinematics.h")]
+    public class IKFabrikChain : IKChain
+    {
+        public IKFabrikChain() : base(typeof(IKFabrikChain)) { }
+
+        [Method("Solve")]
+        public void Solve(Vector3 target, IKSettings settings) { }
+    }
+
+    [Include("Urho3D/Math/InverseKinematics.h")]
+    [Namespace(Constants.ProjectName+".ik")]
+    public class IK : ModuleObject
+    {
+        public IK() : base(typeof(IK)) { }
+
+        [Method("SolveBisect")]
+        [CustomCode(typeof(double), new Type[] { typeof(JSFunction), typeof(double), typeof(double), typeof(double) })]
+        public void SolveBisect(CodeBuilder code)
+        {
+            EmitSolveBisect(4, code);
+        }
+        [Method("SolveBisect")]
+        [CustomCode(typeof(double), new Type[] { typeof(JSFunction), typeof(double), typeof(double), typeof(double), typeof(uint) })]
+        public void SolveBisect1(CodeBuilder code)
+        {
+            EmitSolveBisect(5, code);
+        }
+
+        private void EmitSolveBisect(int argCount, CodeBuilder code)
+        {
+            StringBuilder args = new StringBuilder();
+            for(int i=1; i < argCount; ++i)
+            {
+                args.Append($"arg{i}");
+                if (i < argCount - 1)
+                    args.Append(", ");
+            }
+
+            code.Add($"double result = SolveBisect([ctx, arg0](double x)");
+            code.Scope(code =>
+            {
+                code
+                    .Add("duk_dup(ctx, arg0);")
+                    .Add("duk_push_number(ctx, x);")
+                    .Add("duk_call(ctx, 1);")
+                    .Add("x = duk_get_number_default(ctx, -1, 0.0);")
+                    .Add("duk_pop(ctx);")
+                    .Add("return x;");
+            }).AddSameLine($", {args});");
+
+        }
+    }
 }
