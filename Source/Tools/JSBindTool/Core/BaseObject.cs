@@ -10,16 +10,6 @@ using System.Threading.Tasks;
 
 namespace JSBindTool.Core
 {
-    public class BindingVariable
-    {
-        public string NativeName { get; set; } = string.Empty;
-        public string JSName { get; set; } = string.Empty;
-        public Type Type { get; set; }
-        public BindingVariable(Type type)
-        {
-            Type = type;
-        }
-    }
     public abstract class BaseObject
     {
         const BindingFlags StaticMethodsFlags = BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly;
@@ -40,15 +30,14 @@ namespace JSBindTool.Core
             var defines = Target.GetCustomAttributes<DefineAttribute>(false);
             defines.ToList().ForEach(define => code.Add(define.CustomCode));
         }
-        public virtual void EmitHeaderSignatures(CodeBuilder code)
+        public virtual void EmitHeaderSignatures(CodeBuilder code)  
         {
-            code
-                .Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);")
-                .Add($"duk_idx_t {CodeUtils.GetMethodPrefix(Target)}_ctor(duk_context* ctx);");
+            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);");
 
             EmitWrapSignature(code);
             EmitGetRefSignatures(code);
             EmitVariableSignatures(code);
+            EmitCtorSignatures(code);
             EmitPropertySignatures(code);
             EmitMethodSignatures(code);
             EmitOperatorMethodSignatures(code);
@@ -66,7 +55,7 @@ namespace JSBindTool.Core
         }
         protected virtual void EmitVariableSignatures(CodeBuilder code)
         {
-            var variables = GetVariables();
+            var variables = AnnotationUtils.GetVariables(Target);
             if (variables.Count > 0)
                 code.Add("// @ variables definitions");
 
@@ -138,6 +127,20 @@ namespace JSBindTool.Core
                 }
             }
         }
+        protected virtual void EmitCtorSignatures(CodeBuilder code)
+        {
+            var ctors = AnnotationUtils.GetConstructors(Target);
+            code.Add("// @ constructor definitions");
+
+            code.Add($"duk_idx_t {GetCtorSignature()}(duk_context* ctx);");
+            if (ctors.Count == 1)
+                return;
+
+            for(int i =0; i < ctors.Count; ++i)
+            {
+                code.Add($"duk_idx_t {GetVariantCtorSignature(i)}(duk_context* ctx);");
+            }
+        }
         #endregion
 
         public virtual void EmitSourceIncludes(CodeBuilder code)
@@ -191,7 +194,7 @@ namespace JSBindTool.Core
                 GetOperatorMethods().Values.ToList().ForEach(methodTypesCollect);
                 GetMethods(StaticMethodsFlags).Values.ToList().ForEach(methodTypesCollect);
                 GetProperties().ForEach(prop => usedTypes = usedTypes.Concat(new Type[] { prop.PropertyType }));
-                GetVariables().ForEach(vary => usedTypes = usedTypes.Concat(new Type[] { vary.Type }));
+                AnnotationUtils.GetVariables(Target).ForEach(vary => usedTypes = usedTypes.Concat(new Type[] { vary.Type }));
             }
 
 
@@ -223,7 +226,7 @@ namespace JSBindTool.Core
         public virtual void EmitSource(CodeBuilder code)
         {
             EmitSourceMethodLookupTable(code);
-            EmitSourceConstructor(code);
+            EmitSourceConstructors(code);
             EmitSourceSetup(code);
             EmitSourceWrap(code);
             EmitSourceGetRef(code);
@@ -275,9 +278,6 @@ namespace JSBindTool.Core
                     paramTypes = attr.ParameterTypes.ToList();
 
                 paramTypes.ForEach(param => hashParamCalc(param, typeof(string)));
-
-                if (funcHash == 1405959817)
-                    System.Diagnostics.Debugger.Break();
 
                 funcEntriesCode.Add($"{{ StringHash({(funcHash == 0u ? "0u" : funcHash.ToString())}), {funcSignature} }},");
 
@@ -341,7 +341,36 @@ namespace JSBindTool.Core
                     insertFunctionDefinition(method, pair.Key, GetVariantStaticMethodSignature(pair.Key, i));
                 }
             }
+            // ctors methods
+            var ctors = AnnotationUtils.GetConstructors(Target);
+            if(ctors.Count > 1)
+            {
+                uint ctorNameHash = HashUtils.Hash(GetCtorSignature());
+                for(int i =0; i < ctors.Count; ++i)
+                {
+                    funcHash = 0;
 
+                    var ctor = ctors[i];
+                    var ctorSignature = GetVariantCtorSignature(i);
+                    var paramTypes = ctor.Types.ToList();
+                    CodeBuilder ctorEntriesCode = new CodeBuilder();
+
+                    hasStringHash = false;
+                    paramTypes.ForEach(type => hashParamCalc(type, typeof(string)));
+
+                    ctorEntriesCode.Add($"{{ StringHash({(funcHash == 0u ? "0u" : funcHash.ToString())}), {ctorSignature} }},");
+
+                    if (hasStringHash)
+                    {
+                        funcHash = ctorNameHash;
+                        paramTypes.ForEach(param => hashParamCalc(param, typeof(uint)));
+
+                        ctorEntriesCode.Add($"{{ StringHash({(funcHash == 0u ? "0u" : funcHash.ToString())}), {ctorSignature} }},");
+                    }
+
+                    lookupField.Add(ctorEntriesCode);
+                }
+            }
             lookupField.Add("};").AddNewLine();
 
             if (hasVariants)
@@ -386,9 +415,100 @@ namespace JSBindTool.Core
         }
         protected virtual void EmitSourceSetup(CodeBuilder code)
         {
-            code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx)");
+            code
+                .Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx)")
+                .Scope(code => EmitSetupBody(code));
         }
 
+        protected virtual void EmitSourceConstructors(CodeBuilder code)
+        {
+            var ctors = AnnotationUtils.GetConstructors(Target);
+
+            code.Add($"duk_idx_t {GetCtorSignature()}(duk_context* ctx)");
+            if(ctors.Count == 1)
+            {
+                code.Scope(code => EmitGenericConstructorBody(ctors[0], code));
+                return;
+            }
+
+            // write constructor resolver
+            code.Scope(code =>
+            {
+                int minArgs = 0;
+                int maxArgs = 0;
+
+                // calc min and max args
+                ctors.ForEach(data =>
+                {
+                    minArgs = Math.Min(minArgs, data.Types.Count());
+                    maxArgs = Math.Max(maxArgs, data.Types.Count());
+                });
+
+                EmitConstructorCallValidation(code);
+
+                code.Add($"unsigned ctorHash = {HashUtils.Hash(GetCtorSignature())};")
+                    .Add("duk_idx_t argc = duk_get_top(ctx);")
+                    .AddNewLine()
+                    .Add("// validate arguments count");
+
+                if(minArgs == maxArgs)
+                {
+                    code
+                        .Add($"if(argc != {maxArgs}")
+                        .Scope(ifCode =>
+                        {
+                            ifCode
+                                .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid arguments to constructor '{GetJSTypeIdentifier()}'.\");")
+                                .Add("return duk_throw(ctx);");
+                        });
+                }
+                else
+                {
+                    string validation = string.Empty;
+                    if (minArgs > 0)
+                        validation = $"argc < {minArgs} || ";
+
+                    code
+                        .Add($"if({validation}argc > {maxArgs})")
+                        .Scope(ifCode =>
+                        {
+                            ifCode
+                                .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid arguments to constructor '{GetJSTypeIdentifier()}'.\");")
+                                .Add("return duk_throw(ctx);");
+                        });
+                }
+
+                code
+                    .AddNewLine()
+                    .Add("for (unsigned i = 0; i < argc; ++i)")
+                    .Scope(code =>
+                    {
+                        code
+                            .Add("StringHash typeHash = rbfx_get_type(ctx, i);")
+                            .Add("CombineHash(methodHash, typeHash.Value());");
+                    })
+                    .AddNewLine()
+                    .Add("const auto funcIt = g_functions.find(StringHash(methodHash));")
+                    .Add("if (funcIt == g_functions.end())")
+                    .Scope(code =>
+                    {
+                        code
+                            .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid arguments to constructor '{GetJSTypeIdentifier()}'.\");")
+                            .Add("return duk_throw(ctx);");
+                    })
+                    .Add("return funcIt->second(ctx);");
+            });
+
+            for(int i =0; i < ctors.Count; ++i)
+            {
+                code
+                    .Add($"duk_idx_t {GetVariantCtorSignature(i)}(duk_context* ctx)")
+                    .Scope(code =>
+                    {
+                        EmitConstructorBody(ctors[i], code);
+                    });
+            }
+        }
         protected virtual void EmitSourceMethods(CodeBuilder code)
         {
             OperatorType operatorType = OperatorType.None;
@@ -524,7 +644,7 @@ namespace JSBindTool.Core
         }
         protected virtual void EmitSourceVariables(CodeBuilder code)
         {
-            GetVariables().ForEach(variable =>
+            AnnotationUtils.GetVariables(Target).ForEach(variable =>
             {
                 EmitVariableGetter(variable, code);
                 EmitVariableSetter(variable, code);
@@ -540,6 +660,72 @@ namespace JSBindTool.Core
                 if (prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName))
                     EmitPropertySetter(prop, code);
             });
+        }
+
+        protected virtual void EmitSetupBody(CodeBuilder code)
+        {
+            code
+                .Add("duk_idx_t top = duk_get_top(ctx);")
+                .Add($"duk_push_c_function(ctx, {GetCtorSignature()}, DUK_VARARGS);")
+                .Add("duk_dup(ctx, -1);")
+                .Add($"duk_put_global_string(ctx, \"{AnnotationUtils.GetJSTypeName(Target)}\");");
+
+            EmitStaticFields(code, "top");
+            EmitStaticMethods(code, "top");
+
+            code.Add("duk_pop(ctx);");
+        }
+
+        protected virtual void EmitCustomConstructorBody(ConstructorData ctor, CodeBuilder code)
+        {
+            for (int i = 0; i < ctor.Types.Count(); ++i)
+                CodeUtils.EmitValueRead(ctor.Types.ElementAt(i), $"arg{i}", i.ToString(), code);
+
+            var modifiers = new ConstructorData.CustomCodeModifiers();
+            code
+                .Add("duk_idx_t result_code = 1;")
+                .Add("duk_idx_t this_idx = duk_get_top(ctx);")
+                .AddNewLine()
+                .Add("duk_push_this(ctx);")
+                .Add("// begin custom code");
+            // execute custom code call
+            ctor.CustomCodeCall(this, code, modifiers);
+
+            code
+                .Add("// end custom code")
+                .AddNewLine();
+
+            if (modifiers.SkipTypeInsert)
+            {
+                code
+                    .Add($"duk_push_string(ctx, \"{GetJSTypeIdentifier()}\");")
+                    .Add("duk_put_prop_string(ctx, this_idx, \"type\");");
+            }
+            if(modifiers.SkipPtrInsert)
+            {
+                code
+                    .Add("duk_push_pointer(ctx, instance);")
+                    .Add("duk_put_prop_string(ctx, this_idx, JS_OBJ_HIDDEN_PTR);");
+            }
+            if (modifiers.SkipFinalizer)
+                code.Add($"\t{CodeUtils.GetMethodPrefix(Target)}_set_finalizer(ctx, this_idx, instance);");
+            if (modifiers.SkipWrap)
+                code.Add($"\t{CodeUtils.GetMethodPrefix(Target)}_wrap(ctx, this_idx, instance);");
+            code.AddNewLine()
+                .Add("duk_dup(ctx, this_idx);")
+                .Add("return result_code;");
+        }
+        protected virtual string GetConstructorArgsCall(ConstructorData ctor)
+        {
+            StringBuilder result = new StringBuilder();
+            for(int i =0; i < ctor.Types.Count(); ++i)
+            {
+                result.Append($"arg{i}");
+                if (i < ctor.Types.Count() - 1)
+                    result.Append(", ");
+            }
+
+            return result.ToString();
         }
 
         protected virtual void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code)
@@ -711,6 +897,28 @@ namespace JSBindTool.Core
             }
             code.Add("#endif").AddNewLine();
         }
+        protected virtual void EmitArgumentValidation(ConstructorData ctor, CodeBuilder code)
+        {
+            if (ctor.Types.Count() == 0)
+                return;
+
+            code.Add("#if defined(URHO3D_DEBUG)");
+            for(int i =0; i < ctor.Types.Count(); ++i)
+            {
+                Type type = ctor.Types.ElementAt(i);
+                uint typeHash = CodeUtils.GetTypeHash(type);
+                if (TemplateObject.IsVectorType(type))
+                {
+                    TemplateObject templateObj = TemplateObject.Create(type);
+                    typeHash = CodeUtils.GetTypeHash(templateObj.TargetType);
+                    code.Add($"rbfx_require_array_type(ctx, {i}, {typeHash}/*Vector<{templateObj.TargetType.Name}>*/);");
+                    continue;
+                }
+
+                code.Add($"rbfx_require_type(ctx, {i}, {typeHash}/*{type.Name}*/);");
+            }
+            code.Add("#endif").AddNewLine();
+        }
 
         #region Methods Setup Bindings
         protected virtual void EmitMethods(CodeBuilder code, string accessor)
@@ -745,7 +953,7 @@ namespace JSBindTool.Core
                 code.Add($"duk_put_prop_string(ctx, {accessor}, \"{pair.Key}\");");
             }
         }
-        protected void EmitStaticMethods(CodeBuilder code, string accessor)
+        protected virtual bool EmitStaticMethods(CodeBuilder code, string accessor)
         {
             var methodsData = GetMethods(StaticMethodsFlags);
             if (methodsData.Count > 0)
@@ -775,6 +983,8 @@ namespace JSBindTool.Core
 
                 code.Add($"duk_put_prop_string(ctx, {accessor}, \"{pair.Key}\");");
             }
+
+            return methodsData.Count > 0;
         }
         protected virtual void EmitOperatorMethods(CodeBuilder code, string accessor)
         {
@@ -809,7 +1019,7 @@ namespace JSBindTool.Core
         }
         protected virtual void EmitVariables(CodeBuilder code, string accessor)
         {
-            var variables = GetVariables();
+            var variables = AnnotationUtils.GetVariables(Target);
             if (variables.Count > 0)
                 code.Add("// variables setup");
 
@@ -861,6 +1071,38 @@ namespace JSBindTool.Core
 
             if (props.Count > 0)
                 code.AddNewLine();
+        }
+        protected virtual bool EmitStaticFields(CodeBuilder code, string accessor)
+        {
+            CodeBuilder target = new CodeBuilder();
+            target.IndentationSize = 0;
+
+            int totalMethods = 0;
+            Target
+                .GetFields(BindingFlags.Static | BindingFlags.Public)
+                .Where(x => x.GetCustomAttribute<FieldAttribute>() != null)
+                .ToList()
+                .ForEach(field =>
+                {
+                    EmitStaticField(field, target, accessor);
+                    ++totalMethods;
+                });
+
+            Target
+                .GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                .Where(x => x.GetCustomAttribute<CustomFieldAttribute>() != null)
+                .ToList()
+                .ForEach(method =>
+                {
+                    EmitStaticField(method, target, accessor);
+                    ++totalMethods;
+                });
+
+            if (totalMethods > 0)
+                code.Add("// @ static fields setup");
+            code.Add(target);
+
+            return totalMethods > 0;
         }
         #endregion
         #region Variables and Properties Body
@@ -928,7 +1170,31 @@ namespace JSBindTool.Core
                         .Add("return 0;");
                 });
         }
+        protected virtual void EmitStaticField(FieldInfo field, CodeBuilder code, string accessor)
+        {
+            FieldAttribute fieldAttr = AnnotationUtils.GetFieldAttribute(field);
+            code.Add($"{CodeUtils.GetMethodPrefix(Target)}_push(ctx, {AnnotationUtils.GetTypeName(field.FieldType)}::{fieldAttr.NativeName});");
+            code.Add($"duk_put_prop_string(ctx, {accessor}, \"{fieldAttr.JSName}\");");
+        }
+        protected virtual void EmitStaticField(MethodInfo method, CodeBuilder code, string accessor)
+        {
+            CustomFieldAttribute attr = AnnotationUtils.GetCustomFieldAttribute(method);
+            method.Invoke(this, new object[] { code });
+            code.Add($"duk_put_prop_string(ctx, {accessor}, \"{attr.JSName}\");");
+        }
         #endregion
+
+        protected virtual void EmitConstructorCallValidation(CodeBuilder code)
+        {
+            code.Add("if (!duk_is_constructor_call(ctx))")
+                .Scope(code =>
+                {
+                    code
+                        .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, \"invalid constructor call. must call with 'new {GetJSTypeIdentifier()}(...args)'\");")
+                        .Add("return duk_throw(ctx);");
+                })
+                .AddNewLine();
+        }
 
         protected Dictionary<OperatorType, List<MethodInfo>> GetOperatorMethods()
         {
@@ -982,20 +1248,20 @@ namespace JSBindTool.Core
 
             return methodsData;
         }
-        protected virtual List<BindingVariable> GetVariables()
+
+        protected virtual string GetJSTypeIdentifier()
         {
-            return Target
-                .GetFields(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance).ToList()
-                .Where(x => x.GetCustomAttribute<VariableAttribute>() != null)
-                .Select(x =>
-                {
-                    BindingVariable vary = new BindingVariable(x.FieldType);
-                    vary.NativeName = AnnotationUtils.GetVariableName(x);
-                    vary.JSName = CodeUtils.ToCamelCase(x.Name);
-                    return vary;
-                }).ToList();
+            return AnnotationUtils.GetTypeName(Target);
         }
 
+        protected string GetCtorSignature()
+        {
+            return $"{CodeUtils.GetMethodPrefix(Target)}_ctor_call"; ;
+        }
+        protected string GetVariantCtorSignature(int index)
+        {
+            return $"{CodeUtils.GetMethodPrefix(Target)}_ctor{index}_call";
+        }
         protected string GetMethodSignature(string methodName)
         {
             return $"{CodeUtils.GetMethodPrefix(Target)}_{CodeUtils.ToSnakeCase(methodName)}_call";
@@ -1089,7 +1355,8 @@ namespace JSBindTool.Core
         {
             return CodeUtils.GetRefSignature(Target);
         }
-     
-        protected abstract void EmitSourceConstructor(CodeBuilder code);
+
+        protected abstract void EmitConstructorBody(ConstructorData ctor, CodeBuilder code);
+        protected abstract void EmitGenericConstructorBody(ConstructorData ctor, CodeBuilder code);
     }
 }

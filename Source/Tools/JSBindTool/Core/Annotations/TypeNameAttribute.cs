@@ -10,9 +10,16 @@ namespace JSBindTool.Core.Annotations
     public class TypeNameAttribute : Attribute
     {
         public string Name { get; private set; }
+        public string JSName { get; private set; }
+
         public TypeNameAttribute(string name)
         {
+            Name = JSName = name;
+        }
+        public TypeNameAttribute(string name, string jsName)
+        {
             Name = name;
+            JSName = jsName;
         }
     }
 }

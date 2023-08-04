@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace JSBindTool.Core
 {
     public class EnumGen : CodeGen
@@ -41,6 +35,7 @@ namespace JSBindTool.Core
                 sourceBody.Scope(scope =>
                 {
                     BuildSourceBody(scope);
+                    scope.Add($"URHO3D_LOGDEBUG(\"- {Target.Name}\");");
                 });
             });
             return source;
@@ -53,8 +48,9 @@ namespace JSBindTool.Core
             {
                 int value = (int)Enum.Parse(Target, enumKey);
 
-                code.Add($"duk_push_int(ctx, {value});");
-                code.Add($"duk_put_prop_string(ctx, -2, \"{ToCamelCase(enumKey)}\");");
+                code
+                    .Add($"duk_push_int(ctx, {value});")
+                    .Add($"duk_put_prop_string(ctx, -2, \"{ToCamelCase(enumKey)}\");");
             });
             code.Add(
                 "duk_seal(ctx, -1);",

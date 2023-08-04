@@ -21,6 +21,7 @@
         <Compile Include="Bindings\MathTypes\Matrix3x4.cs" />
         <Compile Include="Bindings\MathTypes\Matrix4.cs" />
         <Compile Include="Bindings\MathTypes\MathCodeUtils.cs" />
+        <Compile Include="Bindings\MathTypes\NumericRange.cs" />
         <Compile Include="Bindings\MathTypes\Planes.cs" />
         <Compile Include="Bindings\MathTypes\Polyhedron.cs" />
         <Compile Include="Bindings\MathTypes\Quaternion.cs" />
@@ -30,6 +31,7 @@
         <Compile Include="Bindings\SceneTypes\Component.cs" />
         <Compile Include="Bindings\SceneTypes\Enums.cs" />
         <Compile Include="Builders\DuktapeBuilder.cs" />
+        <Compile Include="Core\Annotations\ConstructorAttribute.cs" />
         <Compile Include="Core\Annotations\CustomCodeAttribute.cs" />
         <Compile Include="Core\Annotations\DefineAttribute.cs" />
         <Compile Include="Core\Annotations\FieldAttribute.cs" />

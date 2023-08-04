@@ -23,38 +23,35 @@ namespace JSBindTool.Core
             EmitSourceSetup(code);
             EmitSourceMethods(code);
         }
-        protected override void EmitSourceSetup(CodeBuilder code)
+        protected override void EmitSetupBody(CodeBuilder code)
         {
-            base.EmitSourceSetup(code);
-            code.Scope(code =>
+            NamespaceAttribute? namespaceAttr = Target.GetCustomAttribute<NamespaceAttribute>();
+
+            code.Add("duk_push_global_object(ctx);");
+
+            if (namespaceAttr != null)
             {
-                NamespaceAttribute? namespaceAttr = Target.GetCustomAttribute<NamespaceAttribute>();
-
-                code.Add("duk_push_global_object(ctx);");
-
-                if (namespaceAttr != null)
+                string[] parts = namespaceAttr.Namespace.Split('.');
+                foreach (string part in parts)
                 {
-                    string[] parts = namespaceAttr.Namespace.Split('.');
-                    foreach (string part in parts)
-                    {
-                        code
-                            .Add($"// search namespace part: {part}")
-                            .Add($"if(!duk_get_prop_string(ctx, duk_get_top_index(ctx), \"{part}\"))")
-                            .Scope(code =>
-                            {
-                                code
-                                    .Add("duk_pop(ctx);")
-                                    .Add("duk_push_object(ctx);")
-                                    .Add("duk_dup(ctx, -1);")
-                                    .Add($"duk_put_prop_string(ctx, -3, \"{part}\");");
-                            });
-                    }
+                    code
+                        .Add($"// search namespace part: {part}")
+                        .Add($"if(!duk_get_prop_string(ctx, duk_get_top_index(ctx), \"{part}\"))")
+                        .Scope(code =>
+                        {
+                            code
+                                .Add("duk_pop(ctx);")
+                                .Add("duk_push_object(ctx);")
+                                .Add("duk_dup(ctx, -1);")
+                                .Add($"duk_put_prop_string(ctx, -3, \"{part}\");");
+                        });
                 }
+            }
 
-                code.Add("duk_idx_t top = duk_get_top_index(ctx);");
-                EmitMethods(code, "top");
-                code.Add("duk_pop(ctx);");
-            });
+            code.Add("duk_idx_t top = duk_get_top_index(ctx);");
+            EmitMethods(code, "top");
+            code.Add("duk_pop(ctx);");
+            code.Add($"URHO3D_LOGDEBUG(\"- {AnnotationUtils.GetTypeName(Target)}\");");
         }
 
         protected override void EmitMethodBody(MethodInfo methodInfo, CodeBuilder code)
@@ -97,8 +94,13 @@ namespace JSBindTool.Core
         #region Skipped Methods
         protected override void EmitSourceGetRef(CodeBuilder code) { }
         protected override void EmitSourceProperties(CodeBuilder code) { }
-        protected override void EmitSourceConstructor(CodeBuilder code)
+        protected override void EmitConstructorBody(ConstructorData ctor, CodeBuilder code)
         {
+            throw new NotImplementedException();
+        }
+        protected override void EmitGenericConstructorBody(ConstructorData ctor, CodeBuilder code)
+        {
+            throw new NotImplementedException();
         }
         #endregion
 

@@ -8,6 +8,44 @@ using System.Threading.Tasks;
 
 namespace JSBindTool.Core
 {
+    public class ConstructorData
+    {
+        public class CustomCodeModifiers
+        {
+            public bool SkipFinalizer { get; set; }
+            public bool SkipWrap { get; set; }
+            public bool SkipTypeInsert { get; set; }
+            public bool SkipPtrInsert { get; set; }
+        }
+
+        public IEnumerable<Type> Types { get; private set; }
+        public bool HasCustomCode { get; private set; }
+        public Action<object, CodeBuilder, CustomCodeModifiers> CustomCodeCall { get; private set; }
+        public ConstructorData(IEnumerable<Type> types)
+        {
+            Types = types;
+            HasCustomCode = false;
+            CustomCodeCall = (instance, code, modifiers) => { };
+        }
+        public ConstructorData(IEnumerable<Type> types, Action<object, CodeBuilder, CustomCodeModifiers> customCodeCall)
+        {
+            Types = types;
+            HasCustomCode = true;
+            CustomCodeCall = customCodeCall;
+        }
+    }
+
+    public class BindingVariable
+    {
+        public string NativeName { get; set; } = string.Empty;
+        public string JSName { get; set; } = string.Empty;
+        public Type Type { get; private set; }
+        public BindingVariable(Type type)
+        {
+            Type = type;
+        }
+    }
+
     public static class AnnotationUtils
     {
         public static OperatorFlags GetOperatorFlags(Type type)
@@ -38,6 +76,49 @@ namespace JSBindTool.Core
         {
             return method.GetCustomAttribute<CustomCodeAttribute>() != null;
         }
+
+        public static List<ConstructorData> GetConstructors(Type type)
+        {
+            var methods = type
+                .GetMethods(BindingFlags.Public | BindingFlags.DeclaredOnly | BindingFlags.Instance)
+                .Where(x => x.GetCustomAttributes<ConstructorAttribute>().Count() > 0);
+
+            if(methods.Count() == 0)
+            {
+                var cData = new ConstructorData(GetVariables(type).Select(x => x.Type));
+                return new List<ConstructorData> { cData };
+            }
+            else
+            {
+                return methods.Select(method =>
+                {
+                    if(IsCustomCodeMethod(method))
+                    {
+                        CustomCodeAttribute attr = GetCustomCodeAttribute(method);
+                        return new ConstructorData(attr.ParameterTypes, (obj, code, modifiers) =>
+                        {
+                            method.Invoke(obj, new object[] { code, modifiers });
+                        });
+                    }
+
+                    return new ConstructorData(method.GetParameters().Select(x => x.ParameterType));
+                }).ToList();
+            }
+        }
+        public static List<BindingVariable> GetVariables(Type type)
+        {
+            return type
+                .GetFields(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance).ToList()
+                .Where(x => x.GetCustomAttribute<VariableAttribute>() != null)
+                .Select(x =>
+                {
+                    BindingVariable vary = new BindingVariable(x.FieldType);
+                    vary.NativeName = AnnotationUtils.GetVariableName(x);
+                    vary.JSName = CodeUtils.ToCamelCase(x.Name);
+                    return vary;
+                }).ToList();
+        }
+
         public static List<string> GetIncludes(Type type)
         {
             var includes = type.GetCustomAttributes<IncludeAttribute>();
@@ -55,6 +136,17 @@ namespace JSBindTool.Core
         public static string GetTypeName(Type type)
         {
             return type.GetCustomAttribute<TypeNameAttribute>()?.Name ?? type.Name;
+        }
+        public static string GetJSTypeName(Type type)
+        {
+            var attr = type.GetCustomAttribute<TypeNameAttribute>();
+            string name = attr?.JSName ?? string.Empty;
+
+            if (string.IsNullOrEmpty(name) && attr != null)
+                name = string.IsNullOrEmpty(attr.Name) ? attr.Name : type.Name;
+            else if(string.IsNullOrEmpty(name))
+                name = type.Name;
+            return name;
         }
 
         public static PropertyMapAttribute GetPropertyMap(PropertyInfo prop)

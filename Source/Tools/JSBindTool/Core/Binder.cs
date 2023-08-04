@@ -96,6 +96,7 @@ namespace JSBindTool.Core
             // Generate Files
             Console.WriteLine("------------------------------------------------");
             Console.WriteLine("-- Generating Enumerators");
+            Console.WriteLine("------------------------------------------------");
             {
                 var enums = BindingState.GetEnums().ToList();
                 GenerateSetupHeader(outputPath, "enum_bindings", Constants.EnumIncludeSuffix, enums);
@@ -105,7 +106,8 @@ namespace JSBindTool.Core
             WorkerUtils.ForEach(BindingState.GetEnums(), type => GenerateBindingFiles<EnumGen>(type, outputPath, Constants.EnumIncludeSuffix));
 
             Console.WriteLine("------------------------------------------------");
-            Console.WriteLine("-- Generating Primitives");
+            Console.WriteLine("-- Generating Primitives -----------------------");
+            Console.WriteLine("------------------------------------------------");
             {
                 var primitives = BindingState.GetPrimitives().ToList();
                 GenerateSetupHeader(outputPath, "primitive_bindings", Constants.PrimitiveIncludeSuffix, primitives);
@@ -114,7 +116,8 @@ namespace JSBindTool.Core
             WorkerUtils.ForEach(BindingState.GetPrimitives(), type => GenerateBindingFiles<PrimitiveGen>(type, outputPath, Constants.PrimitiveIncludeSuffix));
 
             Console.WriteLine("------------------------------------------------");
-            Console.WriteLine("-- Generating Classes");
+            Console.WriteLine("-- Generating Classes --------------------------");
+            Console.WriteLine("------------------------------------------------");
             {
                 var classes = BindingState.GetClasses().ToList();
                 GenerateSetupHeader(outputPath, "class_bindings", Constants.ClassIncludeSuffix, classes);
@@ -122,7 +125,8 @@ namespace JSBindTool.Core
             }
             WorkerUtils.ForEach(BindingState.GetClasses(), type => GenerateBindingFiles<ClassGen>(type, outputPath, Constants.ClassIncludeSuffix));
             Console.WriteLine("------------------------------------------------");
-            Console.WriteLine("-- Generating Code Modules");
+            Console.WriteLine("-- Generating Code Modules ---------------------");
+            Console.WriteLine("------------------------------------------------");
             {
                 var modules = BindingState.GetModules().ToList();
                 GenerateSetupHeader(outputPath, "module_bindings", Constants.ModuleIncludeSuffix, modules);
@@ -131,6 +135,7 @@ namespace JSBindTool.Core
             WorkerUtils.ForEach(BindingState.GetModules(), type => GenerateBindingFiles<ModuleGen>(type, outputPath, Constants.ModuleIncludeSuffix));
             Console.WriteLine("------------------------------------------------");
             Console.WriteLine("--- Bindings has been Generated with Success ---");
+            Console.WriteLine("------------------------------------------------");
         }
 
         private static void GenerateBindingFiles<TCodeGen>(Type type, string outputPath, string headerSuffix)
@@ -165,16 +170,31 @@ namespace JSBindTool.Core
             builder.IndentationSize = 0;
             HeaderUtils.EmitNotice(builder);
 
-            builder.Add($"#include \"{prefix}.h\"").AddNewLine();
+            builder
+                .Add($"#include \"{prefix}.h\"")
+                .Add("#include <Urho3D/IO/Log.h>")
+                .AddNewLine();
             builder.Namespace(Constants.Namespace, source =>
             {
                 source.Add($"void {Constants.MethodPrefix}_{prefix}_setup(duk_context* ctx)");
                 source.Scope(scope =>
                 {
+                    string label = string.Empty;
+                    if (prefix.Equals("primitive_bindings"))
+                        label = "Primitives";
+                    else if (prefix.Equals("class_bindings"))
+                        label = "Classes";
+                    else if (prefix.Equals("enum_bindings"))
+                        label = "Enums";
+                    else
+                        label = "Modules";
+
+                    scope.Add($"URHO3D_LOGDEBUG(\"-- Setup {label}\");");
                     types.ForEach(type =>
                     {
                         scope.Add($"{CodeUtils.GetMethodPrefix(type)}_setup(ctx);");
                     });
+                    scope.Add($"URHO3D_LOGDEBUG(\"-- Setup {label}: SUCCESS\");");
                 });
             });
 

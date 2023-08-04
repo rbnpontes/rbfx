@@ -10,6 +10,7 @@ namespace JSBindTool.Bindings.MathTypes
 {
     [Include("Urho3D/Math/Color.h")]
     [Define("#define ColorChannelMask Color::ChannelMask")]
+    [TypeName("ColorChannelMask", "ChannelMask")]
     public class ColorChannelMask : PrimitiveObject
     {
         [Variable("r_")]
