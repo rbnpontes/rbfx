@@ -38,6 +38,7 @@ namespace Urho3D
     static StringHash g_matrix4_type       = StringHash("Matrix4");
     static StringHash g_vector_type        = StringHash("Vector");
     static StringHash g_function_type      = StringHash("Function");
+    static StringHash g_array_type         = StringHash("Array");
 
     StringHash rbfx_require_string_hash(duk_context* ctx, duk_idx_t stack_idx)
     {
@@ -801,6 +802,8 @@ namespace Urho3D
 
         if (type_hash == g_function_type.Value() && !duk_is_function(ctx, value_idx))
             err_output = TYPE_REQ_ERROR_MSG(Function);
+        else if (type_hash == g_array_type.Value() && !duk_is_array(ctx, value_idx))
+            err_output = TYPE_REQ_ERROR_MSG(Array);
         else if (type == DUK_TYPE_NULL || type == DUK_TYPE_UNDEFINED)
             err_output = "invalid value type. object specified is null.";
         else if (type_hash == g_string_hash_type.Value() && !(type == DUK_TYPE_STRING || type == DUK_TYPE_NUMBER))

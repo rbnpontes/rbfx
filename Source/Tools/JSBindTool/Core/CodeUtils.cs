@@ -39,7 +39,10 @@ namespace JSBindTool.Core
                 output.Append("unsigned short");
             else if (type == typeof(IntPtr))
                 output.Append("void*");
-            else if(type == typeof(JSFunction) || type == typeof(JSObject)) { /*do nothing*/ }
+            else if(
+                type == typeof(JSFunction)
+                || type == typeof(JSObject)
+                || type == typeof(Array)) { /*do nothing*/ }
             else if (type.IsSubclassOf(typeof(ClassObject)))
                 output.Append(type == typeof(ClassObject) ? "Object" : AnnotationUtils.GetTypeName(type)).Append("*");
             else if (type.IsSubclassOf(typeof(TemplateObject)))
@@ -129,6 +132,8 @@ namespace JSBindTool.Core
                 code.Add($"duk_push_uint(ctx, {accessor});");
             else if (type == typeof(IntPtr))
                 code.Add($"duk_push_pointer(ctx, {accessor});");
+            else if (type == typeof(Array))
+                code.Add($"duk_push_array(ctx, {accessor});");
             else if (type.IsEnum)
                 code.Add($"duk_push_int(ctx, {accessor});");
             else if (type.IsSubclassOf(typeof(ClassObject)) || type.Name.StartsWith("SharedPtr"))
@@ -194,7 +199,7 @@ namespace JSBindTool.Core
                 code.Add($"unsigned {varName} = duk_get_uint_default(ctx, {accessor}, 0u);");
             else if (type == typeof(IntPtr))
                 code.Add($"void* {varName} = duk_get_pointer_default(ctx, {accessor}, nullptr);");
-            else if (type == typeof(JSFunction) || type == typeof(JSObject))
+            else if (type == typeof(JSFunction) || type == typeof(JSObject) || type == typeof(Array))
                 code.Add($"duk_idx_t {varName} = {accessor};");
             else if (type.IsEnum)
                 code.Add($"{type.Name} {varName} = ({type.Name})duk_get_int(ctx, {accessor});");
@@ -269,6 +274,8 @@ namespace JSBindTool.Core
                 hashInput = "Function";
             else if (type == typeof(JSObject))
                 hashInput = "VariantMap";
+            else if (type == typeof(Array))
+                hashInput = "Array";
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {
                 var templateObj = TemplateObject.Create(type);

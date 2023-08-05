@@ -343,12 +343,16 @@ namespace JSBindTool.Core
             }
             // ctors methods
             var ctors = AnnotationUtils.GetConstructors(Target);
+            if (Target == typeof(RandomEngine))
+                DebugUtils.Break();
             if(ctors.Count > 1)
             {
                 uint ctorNameHash = HashUtils.Hash(GetCtorSignature());
+                hasVariants = true;
+
                 for(int i =0; i < ctors.Count; ++i)
                 {
-                    funcHash = 0;
+                    funcHash = ctorNameHash;
 
                     var ctor = ctors[i];
                     var ctorSignature = GetVariantCtorSignature(i);
@@ -485,10 +489,10 @@ namespace JSBindTool.Core
                     {
                         code
                             .Add("StringHash typeHash = rbfx_get_type(ctx, i);")
-                            .Add("CombineHash(methodHash, typeHash.Value());");
+                            .Add("CombineHash(ctorHash, typeHash.Value());");
                     })
                     .AddNewLine()
-                    .Add("const auto funcIt = g_functions.find(StringHash(methodHash));")
+                    .Add("const auto funcIt = g_functions.find(StringHash(ctorHash));")
                     .Add("if (funcIt == g_functions.end())")
                     .Scope(code =>
                     {
