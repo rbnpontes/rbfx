@@ -92,6 +92,9 @@ namespace JSBindTool.Core
         }
 
         #region Skipped Methods
+        protected override void EmitSetupStaticBody(CodeBuilder code)
+        {
+        }
         protected override void EmitSourceGetRef(CodeBuilder code) { }
         protected override void EmitSourceProperties(CodeBuilder code) { }
         protected override void EmitConstructorBody(ConstructorData ctor, CodeBuilder code)

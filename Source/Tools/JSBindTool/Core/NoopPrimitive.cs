@@ -21,10 +21,12 @@ namespace JSBindTool.Core
         public override void EmitHeaderSignatures(CodeBuilder code)
         {
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);");
+            code.Add($"void {CodeUtils.GetSetupStaticSignature(Target)}(duk_context* ctx);");
         }
         public override void EmitSource(CodeBuilder code)
         {
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx)").Scope(x => { });
+            code.Add($"void {CodeUtils.GetSetupStaticSignature(Target)}(duk_context* ctx)").Scope(x => { });
         }
     }
 }

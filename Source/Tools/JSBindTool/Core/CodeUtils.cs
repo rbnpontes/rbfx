@@ -113,6 +113,10 @@ namespace JSBindTool.Core
         {
             return $"{GetMethodPrefix(type)}_push_ref";
         }
+        public static string GetSetupStaticSignature(Type type)
+        {
+            return $"{GetMethodPrefix(type)}_setup_static";
+        }
         private static int pDeepValueCount = 0;
 
         public static void EmitValueWrite(Type type, string accessor, CodeBuilder code)

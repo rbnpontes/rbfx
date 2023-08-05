@@ -33,18 +33,14 @@ namespace JSBindTool.Core
                 code.Add($"duk_push_c_function(ctx, {GetCtorSignature()}, 1);");
             else
                 code.Add($"duk_push_c_function(ctx, {GetCtorSignature()}, DUK_VARARGS);");
-            code
-                .Add("duk_idx_t top = duk_get_top_index(ctx);")
-                .Add("duk_dup(ctx, -1);")
-                .Add($"duk_put_global_string(ctx, \"{AnnotationUtils.GetJSTypeName(Target)}\");");
+            code.Add($"duk_put_global_string(ctx, \"{AnnotationUtils.GetJSTypeName(Target)}\");");
 
-            EmitStaticFields(code, "top");
-            EmitStaticMethods(code, "top");
-
-            code
-                .Add("duk_pop(ctx);")
-                .AddNewLine()
-                .Add($"URHO3D_LOGDEBUG(\"- {AnnotationUtils.GetTypeName(Target)}\");");
+            EmitInitializationNotice(code);
+        }
+        protected override void EmitSetupStaticBody(CodeBuilder code)
+        {
+            base.EmitSetupStaticBody(code);
+            EmitInitializationNotice(code);
         }
 
         protected override void EmitConstructorBody(ConstructorData ctor, CodeBuilder code)
@@ -119,6 +115,10 @@ namespace JSBindTool.Core
                 .Add("return 1;");
         }
 
+        private void EmitInitializationNotice(CodeBuilder code)
+        {
+            code.Add($"URHO3D_LOGDEBUG(\"- {AnnotationUtils.GetTypeName(Target)}\");");
+        }
         public static ClassObject Create(Type type)
         {
             if (!type.IsSubclassOf(typeof(ClassObject)))

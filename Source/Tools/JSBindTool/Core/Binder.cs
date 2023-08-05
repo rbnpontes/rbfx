@@ -82,12 +82,19 @@ namespace JSBindTool.Core
                     scope.Add($"void {Constants.MethodPrefix}_bindings_setup(duk_context* ctx)");
                     scope.Scope(setupScope =>
                     {
+                        setupScope.Add("URHO3D_LOGDEBUG(\"JSBindings: setup type\");");
                         setupScope.Add(
                             $"{Constants.MethodPrefix}_enum_bindings_setup(ctx);",
                             $"{Constants.MethodPrefix}_primitive_bindings_setup(ctx);",
-                            $"{Constants.MethodPrefix}_class_bindings_setup(ctx);",
+                            $"{Constants.MethodPrefix}_class_bindings_setup(ctx);"
+                        );
+                        setupScope.Add("URHO3D_LOGDEBUG(\"JSBindings: setup static\");");
+                        setupScope.Add(
+                            $"{Constants.MethodPrefix}_primitive_bindings_setup_static(ctx);",
+                            $"{Constants.MethodPrefix}_class_bindings_setup_static(ctx);",
                             $"{Constants.MethodPrefix}_module_bindings_setup(ctx);"
                         );
+                        setupScope.Add("URHO3D_LOGDEBUG(\"JSBindings: setup success\");");
                     });
                 });
                 File.WriteAllText(Path.Join(outputPath, "Bindings.cpp"), source.ToString());
@@ -155,6 +162,14 @@ namespace JSBindTool.Core
             header.IndentationSize = 0;
             header.Add($"void {Constants.MethodPrefix}_{prefix}_setup(duk_context* ctx);");
 
+            bool addStatic = true;
+
+            if(prefix.Equals("enum_bindings") || prefix.Equals("module_bindings"))
+                addStatic = false;
+
+            if(addStatic)
+                header.Add($"void {Constants.MethodPrefix}_{prefix}_setup_static(duk_context* ctx);");
+
             CodeBuilder builder = new CodeBuilder();
             builder.IndentationSize = 0;
             HeaderUtils.EmitNotice(builder);
@@ -176,26 +191,56 @@ namespace JSBindTool.Core
                 .AddNewLine();
             builder.Namespace(Constants.Namespace, source =>
             {
-                source.Add($"void {Constants.MethodPrefix}_{prefix}_setup(duk_context* ctx)");
-                source.Scope(scope =>
-                {
-                    string label = string.Empty;
-                    if (prefix.Equals("primitive_bindings"))
-                        label = "Primitives";
-                    else if (prefix.Equals("class_bindings"))
-                        label = "Classes";
-                    else if (prefix.Equals("enum_bindings"))
-                        label = "Enums";
-                    else
-                        label = "Modules";
+                bool addStatic = true;
 
-                    scope.Add($"URHO3D_LOGDEBUG(\"-- Setup {label}\");");
-                    types.ForEach(type =>
+                if (prefix.Equals("enum_bindings") || prefix.Equals("module_bindings"))
+                    addStatic = false;
+
+                source
+                    .Add($"void {Constants.MethodPrefix}_{prefix}_setup(duk_context* ctx)")
+                    .Scope(scope =>
                     {
-                        scope.Add($"{CodeUtils.GetMethodPrefix(type)}_setup(ctx);");
+                        string label = string.Empty;
+                        if (prefix.Equals("primitive_bindings"))
+                            label = "Primitives";
+                        else if (prefix.Equals("class_bindings"))
+                            label = "Classes";
+                        else if (prefix.Equals("enum_bindings"))
+                            label = "Enums";
+                        else
+                            label = "Modules";
+
+                        scope.Add($"URHO3D_LOGDEBUG(\"-- Setup {label}\");");
+                        types.ForEach(type =>
+                        {
+                            scope.Add($"{CodeUtils.GetMethodPrefix(type)}_setup(ctx);");
+                        });
+                        scope.Add($"URHO3D_LOGDEBUG(\"-- Setup {label}: SUCCESS\");");
+                    })
+                    .AddNewLine();
+
+                if (!addStatic)
+                    return;
+                source.Add($"void {Constants.MethodPrefix}_{prefix}_setup_static(duk_context* ctx)")
+                    .Scope(code =>
+                    {
+                        string label = string.Empty;
+                        if (prefix.Equals("primitive_bindings"))
+                            label = "Primitives";
+                        else if (prefix.Equals("class_bindings"))
+                            label = "Classes";
+                        else if (prefix.Equals("enum_bindings"))
+                            label = "Enums";
+                        else
+                            label = "Modules";
+
+                        code.Add($"URHO3D_LOGDEBUG(\"-- Setup Static {label}\");");
+                        types.ForEach(type =>
+                        {
+                            code.Add($"{CodeUtils.GetSetupStaticSignature(type)}(ctx);");
+                        });
+                        code.Add($"URHO3D_LOGDEBUG(\"-- Setup Static {label}: SUCCESS\");");
                     });
-                    scope.Add($"URHO3D_LOGDEBUG(\"-- Setup {label}: SUCCESS\");");
-                });
             });
 
             File.WriteAllText(Path.Join(outputPath, prefix+".cpp"), builder.ToString());

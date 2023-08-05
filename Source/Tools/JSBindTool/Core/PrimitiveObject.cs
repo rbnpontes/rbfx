@@ -1,13 +1,3 @@
-using JSBindTool.Core.Annotations;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Formats.Asn1.AsnWriter;
-
 namespace JSBindTool.Core
 {
     public class PrimitiveObject : BaseObject
@@ -170,19 +160,25 @@ namespace JSBindTool.Core
             code.Scope(scope =>
             {
                 scope.Add($"duk_get_global_string(ctx, \"{AnnotationUtils.GetJSTypeName(Target)}\");");
+                scope.Add("duk_new(ctx, 0);");
                 var variables = AnnotationUtils.GetVariables(Target);
                 variables.ForEach(vary =>
                 {
                     CodeUtils.EmitValueWrite(vary.Type, "value."+vary.NativeName, scope);
+                    scope.Add($"duk_put_prop_string(ctx, -2, \"{vary.JSName}\");");
                 });
-                scope.Add($"duk_new(ctx, {variables.Count});");
             });
         }
 
         protected override void EmitSetupBody(CodeBuilder code)
         {
             base.EmitSetupBody(code);
-            code.Add($"URHO3D_LOGDEBUG(\"- {AnnotationUtils.GetTypeName(Target)}\");");
+            EmitInitializationNotice(code);
+        }
+        protected override void EmitSetupStaticBody(CodeBuilder code)
+        {
+            base.EmitSetupStaticBody(code);
+            EmitInitializationNotice(code);
         }
 
         protected override void EmitConstructorBody(ConstructorData ctor, CodeBuilder code)
@@ -257,6 +253,10 @@ namespace JSBindTool.Core
                 .Add("return 1;");
         }
 
+        private void EmitInitializationNotice(CodeBuilder code)
+        {
+            code.Add($"URHO3D_LOGDEBUG(\"- {AnnotationUtils.GetTypeName(Target)}\");");
+        }
         public static PrimitiveObject Create(Type type)
         {
             if (!type.IsSubclassOf(typeof(PrimitiveObject)))

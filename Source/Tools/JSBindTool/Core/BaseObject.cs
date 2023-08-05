@@ -33,7 +33,7 @@ namespace JSBindTool.Core
         public virtual void EmitHeaderSignatures(CodeBuilder code)  
         {
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);");
-
+            EmitSetupStaticSignatures(code);
             EmitWrapSignature(code);
             EmitGetRefSignatures(code);
             EmitVariableSignatures(code);
@@ -141,6 +141,10 @@ namespace JSBindTool.Core
                 code.Add($"duk_idx_t {GetVariantCtorSignature(i)}(duk_context* ctx);");
             }
         }
+        protected virtual void EmitSetupStaticSignatures(CodeBuilder code)
+        {
+            code.Add($"void {CodeUtils.GetSetupStaticSignature(Target)}(duk_context* ctx);");
+        }
         #endregion
 
         public virtual void EmitSourceIncludes(CodeBuilder code)
@@ -229,6 +233,7 @@ namespace JSBindTool.Core
             EmitSourceMethodLookupTable(code);
             EmitSourceConstructors(code);
             EmitSourceSetup(code);
+            EmitSourceSetupStatic(code);
             EmitSourceWrap(code);
             EmitSourceGetRef(code);
             EmitSourceVariables(code);
@@ -344,8 +349,7 @@ namespace JSBindTool.Core
             }
             // ctors methods
             var ctors = AnnotationUtils.GetConstructors(Target);
-            if (Target == typeof(RandomEngine))
-                DebugUtils.Break();
+            
             if(ctors.Count > 1)
             {
                 uint ctorNameHash = HashUtils.Hash(GetCtorSignature());
@@ -423,6 +427,12 @@ namespace JSBindTool.Core
             code
                 .Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx)")
                 .Scope(code => EmitSetupBody(code));
+        }
+        protected virtual void EmitSourceSetupStatic(CodeBuilder code)
+        {
+            code
+                .Add($"void {CodeUtils.GetSetupStaticSignature(Target)}(duk_context* ctx)")
+                .Scope(code => EmitSetupStaticBody(code));
         }
 
         protected virtual void EmitSourceConstructors(CodeBuilder code)
@@ -675,17 +685,21 @@ namespace JSBindTool.Core
         protected virtual void EmitSetupBody(CodeBuilder code)
         {
             code
-                .Add("duk_idx_t top = duk_get_top(ctx);")
                 .Add($"duk_push_c_function(ctx, {GetCtorSignature()}, DUK_VARARGS);")
-                .Add("duk_dup(ctx, -1);")
                 .Add($"duk_put_global_string(ctx, \"{AnnotationUtils.GetJSTypeName(Target)}\");");
+        }
+        protected virtual void EmitSetupStaticBody(CodeBuilder code)
+        {
+            code
+                .Add("duk_idx_t top = duk_get_top(ctx);")
+                .Add($"duk_get_global_string(ctx, \"{AnnotationUtils.GetJSTypeName(Target)}\");");
 
             EmitStaticFields(code, "top");
             EmitStaticMethods(code, "top");
 
             code.Add("duk_pop(ctx);");
         }
-
+        
         protected virtual void EmitCustomConstructorBody(ConstructorData ctor, CodeBuilder code)
         {
             for (int i = 0; i < ctor.Types.Count(); ++i)
