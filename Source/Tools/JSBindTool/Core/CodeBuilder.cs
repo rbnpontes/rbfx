@@ -8,23 +8,86 @@ namespace JSBindTool.Core
 {
     public class CodeBuilder
     {
-        private List<string> pChunks = new List<string>();
+        interface IChunk
+        {
+            uint IndentationSize { get; set; }
+            void Append(string str);
+            string GetString();
+        }
+
+        class BaseChunk
+        {
+            public uint IndentationSize { get; set; }
+            protected string GetIndentation()
+            {
+                char[] parts = new char[IndentationSize];
+                Array.Fill(parts, '\t');
+                return new string(parts);
+            }
+        }
+        class StringChunk : BaseChunk, IChunk
+        {
+            private string pBuffer;
+            public StringChunk(string buffer, uint indentation)
+            {
+                pBuffer = buffer;
+                IndentationSize = indentation;
+            }
+            public void Append(string str)
+            {
+                pBuffer = pBuffer + str;
+            }
+            public string GetString()
+            {
+                return GetIndentation() + pBuffer;
+            }
+        }
+        class CodeChunk : BaseChunk, IChunk
+        {
+            private CodeBuilder pCode;
+            public CodeChunk(CodeBuilder pCode, uint indentationSize)
+            {
+                this.pCode = pCode;
+                IndentationSize = indentationSize;
+            }
+
+            public void Append(string str)
+            {
+                pCode.AddSameLine(str);
+            }
+
+            public string GetString()
+            {
+                StringBuilder finalStr = new StringBuilder();
+                for(int i =0; i < pCode.pChunks.Count; ++i)
+                {
+                    var chunk = pCode.pChunks[i];
+                    uint currIndentationSize = chunk.IndentationSize;
+                    chunk.IndentationSize += IndentationSize;
+                    string result = chunk.GetString();
+                    chunk.IndentationSize = currIndentationSize;
+
+                    finalStr.Append(result);
+                    if (i < pCode.pChunks.Count - 1)
+                        finalStr.AppendLine();
+                }
+                return finalStr.ToString();
+            }
+        }
+
+        private List<IChunk> pChunks = new List<IChunk>();
         public uint IndentationSize { get; set; } = 1;
 
-        private string GetIndentation()
-        {
-            char[] parts = new char[IndentationSize];
-            Array.Fill(parts, '\t');
-            return new string(parts);
-        }
         public CodeBuilder Add(CodeBuilder code)
         {
-            code.pChunks.ForEach(chunk => Add(chunk));
+            if (code == this)
+                throw new InvalidOperationException("Is not possible to add self reference of CodeBuilder.");
+            pChunks.Add(new CodeChunk(code, IndentationSize));
             return this;
         }
         public CodeBuilder Add(string code)
         {
-            pChunks.Add(GetIndentation() + code);
+            pChunks.Add(new StringChunk(code, IndentationSize));
             return this;
         }
         public CodeBuilder Add(IEnumerable<CodeBuilder> codeParts)
@@ -54,7 +117,7 @@ namespace JSBindTool.Core
         {
             if (pChunks.Count == 0)
                 return Add(code);
-            pChunks[pChunks.Count - 1] = pChunks[pChunks.Count - 1] + code;
+            pChunks[pChunks.Count - 1].Append(code);
             return this;
         }
         public CodeBuilder AddSameLine(IEnumerable<string> codeParts)
@@ -135,7 +198,7 @@ namespace JSBindTool.Core
         public override string ToString()
         {
             StringBuilder builder = new StringBuilder();
-            pChunks.ForEach(x => builder.AppendLine(x));
+            pChunks.ForEach(x => builder.AppendLine(x.GetString()));
             return builder.ToString();
         }
     }

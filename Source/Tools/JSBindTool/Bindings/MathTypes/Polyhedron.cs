@@ -12,5 +12,10 @@ namespace JSBindTool.Bindings.MathTypes
     public class Polyhedron : PrimitiveObject
     {
         public Polyhedron() : base(typeof(Polyhedron)) { }
+
+        [Constructor]
+        public void Constructor() { }
+        [Constructor]
+        public void Constructor(Vector<Vector<Vector3>> faces) { }
     }
 }

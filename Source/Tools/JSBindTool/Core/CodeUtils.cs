@@ -238,7 +238,7 @@ namespace JSBindTool.Core
                                     scopeLoop.Add($"duk_get_prop_index(ctx, {accessor}, i_{deepCount});");
                                     EmitValueRead(templateObj.TargetType, $"result_{deepCount}", "-1", scopeLoop);
                                     scopeLoop.Add($"{varName}[i_{deepCount}] = result_{deepCount};");
-
+                                    scopeLoop.Add("duk_pop(ctx);");
                                     scopeRead.Add(scopeLoop);
                                 }
                                 scopeRead.Add("}");
@@ -279,7 +279,7 @@ namespace JSBindTool.Core
             else if (type == typeof(JSObject))
                 hashInput = "VariantMap";
             else if (type == typeof(Array))
-                hashInput = "Array";
+                hashInput = "Vector";
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {
                 var templateObj = TemplateObject.Create(type);

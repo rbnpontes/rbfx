@@ -212,18 +212,31 @@ namespace JSBindTool.Core
                     includes.Add($"#include \"{type.Name}{Constants.PrimitiveIncludeSuffix}.h\"");
             };
 
-            usedTypes.ToList().ForEach(type =>
+
+            int nextIdx = 0;
+            Type? processType = null;
+
+            while(nextIdx < usedTypes.Count())
             {
-                if (type.IsSubclassOf(typeof(TemplateObject)))
+                if(processType is null)
                 {
-                    TemplateObject templateObj = TemplateObject.Create(type);
-                    insertType(templateObj.TargetType);
+                    processType = usedTypes.ElementAt(nextIdx);
+                    if (processType is null)
+                        ++nextIdx;
+                    continue;
                 }
-                else
+
+                if(processType.IsSubclassOf(typeof(TemplateObject)))
                 {
-                    insertType(type);
+                    TemplateObject templateObj = TemplateObject.Create(processType);
+                    processType = templateObj.TargetType;
+                    continue;
                 }
-            });
+
+                insertType(processType);
+                ++nextIdx;
+                processType = null;
+            }
 
             // finally, generate all headers into code
             code.Add(includes.ToArray()).AddNewLine();
@@ -902,48 +915,66 @@ namespace JSBindTool.Core
             if (customCodeAttr != null)
                 parameterTypes = customCodeAttr.ParameterTypes.ToList();
 
-            if (parameterTypes.Count == 0)
-                return;
-            code.Add("#if defined(URHO3D_DEBUG)");
-            for (int i = 0; i < parameterTypes.Count; ++i)
-            {
-                uint typeHash = CodeUtils.GetTypeHash(parameterTypes[i]);
-                if (TemplateObject.IsVectorType(parameterTypes[i]))
-                {
-                    TemplateObject templateObj = TemplateObject.Create(parameterTypes[i]);
-                    typeHash = CodeUtils.GetTypeHash(templateObj.TargetType);
-                    code.Add($"rbfx_require_array_type(ctx, {i}, {typeHash}/*Vector<{templateObj.TargetType.Name}>*/);");
-                    continue;
-                }
-
-                code.Add($"rbfx_require_type(ctx, {i}, {typeHash}/*{parameterTypes[i].Name}*/);");
-
-            }
-            code.Add("#endif").AddNewLine();
+            EmitArgumentValidation(parameterTypes, code);
         }
         protected virtual void EmitArgumentValidation(ConstructorData ctor, CodeBuilder code)
         {
-            if (ctor.Types.Count() == 0)
+            EmitArgumentValidation(ctor.Types.ToList(), code);
+        }
+        protected virtual void EmitArgumentValidation(List<Type> types, CodeBuilder code)
+        {
+            if (types.Count == 0)
                 return;
 
             code.Add("#if defined(URHO3D_DEBUG)");
-            for(int i =0; i < ctor.Types.Count(); ++i)
+
+            for (int i = 0; i < types.Count; ++i)
             {
-                Type type = ctor.Types.ElementAt(i);
-                uint typeHash = CodeUtils.GetTypeHash(type);
-                if (TemplateObject.IsVectorType(type))
+                uint typeHash = CodeUtils.GetTypeHash(types[i]);
+                if (TemplateObject.IsVectorType(types[i]))
                 {
-                    TemplateObject templateObj = TemplateObject.Create(type);
-                    typeHash = CodeUtils.GetTypeHash(templateObj.TargetType);
-                    code.Add($"rbfx_require_array_type(ctx, {i}, {typeHash}/*Vector<{templateObj.TargetType.Name}>*/);");
+                    CodeBuilder topCodeValidation = new CodeBuilder();
+                    CodeBuilder codeValidation = topCodeValidation;
+                    codeValidation.IndentationSize = 0;
+
+                    codeValidation.Add($"duk_dup(ctx, {i});");
+
+                    uint arrayHash = HashUtils.Hash("Vector");
+                    Type type = types[i];
+
+                    while (TemplateObject.IsVectorType(type))
+                    {
+                        codeValidation
+                            .Add($"rbfx_require_type(ctx, -1, {arrayHash}/*Array*/);")
+                            .Add($"if (duk_get_length(ctx, -1) > 0)")
+                            .Scope(code =>
+                            {
+                                code.Add("duk_get_prop_index(ctx, -1, 0);");
+                                codeValidation = code;
+                                TemplateObject tobj = TemplateObject.Create(type);
+                                type = tobj.TargetType;
+                            });
+
+                    }
+
+                    typeHash = CodeUtils.GetTypeHash(type);
+                    codeValidation.Add($"rbfx_require_type(ctx, -1, {typeHash}/*{AnnotationUtils.GetTypeName(type)}*/);");
+
+                    code.Scope(code =>
+                    {
+                        code
+                            .Add("duk_idx_t arg_top = duk_get_top(ctx);")
+                            .Add(topCodeValidation)
+                            .Add("duk_pop_n(ctx, duk_get_top(ctx) - arg_top);");
+                    });
                     continue;
                 }
 
-                code.Add($"rbfx_require_type(ctx, {i}, {typeHash}/*{type.Name}*/);");
+                code.Add($"rbfx_require_type(ctx, {i}, {typeHash}/*{AnnotationUtils.GetTypeName(types[i])}*/);");
             }
+
             code.Add("#endif").AddNewLine();
         }
-
         #region Methods Setup Bindings
         protected virtual void EmitMethods(CodeBuilder code, string accessor)
         {
