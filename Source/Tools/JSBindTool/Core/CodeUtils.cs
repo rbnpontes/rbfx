@@ -117,6 +117,10 @@ namespace JSBindTool.Core
         {
             return $"{GetMethodPrefix(type)}_setup_static";
         }
+        public static string GetResolveSignature(Type type)
+        {
+            return $"{GetMethodPrefix(type)}_resolve";
+        }
         private static int pDeepValueCount = 0;
 
         public static void EmitValueWrite(Type type, string accessor, CodeBuilder code)
@@ -142,8 +146,8 @@ namespace JSBindTool.Core
                 code.Add($"duk_push_int(ctx, {accessor});");
             else if (type.IsSubclassOf(typeof(ClassObject)) || type.Name.StartsWith("SharedPtr"))
                 code.Add($"rbfx_push_object(ctx, {accessor});");
-            else if (type.IsSubclassOf(typeof(PrimitiveObject)))
-                code.Add($"{GetMethodPrefix(type)}_push(ctx, {accessor});");
+            else if (type.IsSubclassOf(typeof(PrimitiveObject)) || type.IsSubclassOf(typeof(StructObject)))
+                code.Add($"{GetPushSignature(type)}(ctx, {accessor});");
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {
                 var templateObj = TemplateObject.Create(type);
@@ -209,6 +213,8 @@ namespace JSBindTool.Core
                 code.Add($"{type.Name} {varName} = ({type.Name})duk_get_int(ctx, {accessor});");
             else if (type.IsSubclassOf(typeof(ClassObject)))
                 code.Add($"{AnnotationUtils.GetTypeName(type)}* {varName} = static_cast<{AnnotationUtils.GetTypeName(type)}*>(rbfx_get_instance(ctx, {accessor}));");
+            else if (type.IsSubclassOf(typeof(StructObject)))
+                code.Add($"{AnnotationUtils.GetTypeName(type)} {varName} = {GetResolveSignature(type)}(ctx, {accessor});");
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {
                 var templateObj = TemplateObject.Create(type);
@@ -218,7 +224,7 @@ namespace JSBindTool.Core
                         code.Add($"{GetNativeDeclaration(templateObj.TargetType)} {varName}(static_cast<{AnnotationUtils.GetTypeName(templateObj.TargetType)}*>(rbfx_get_instance(ctx, {accessor})));");
                         break;
                     case TemplateType.RefPtr:
-                            code.Add($"{AnnotationUtils.GetTypeName(templateObj.TargetType)}* {varName}({GetRefSignature(templateObj.TargetType)}(ctx, {accessor}));");
+                        code.Add($"{AnnotationUtils.GetTypeName(templateObj.TargetType)}* {varName}({GetRefSignature(templateObj.TargetType)}(ctx, {accessor}));");
                         break;
                     case TemplateType.Vector:
                         {
@@ -254,7 +260,7 @@ namespace JSBindTool.Core
                 }
             }
             else if (type.IsSubclassOf(typeof(PrimitiveObject)))
-                code.Add($"{AnnotationUtils.GetTypeName(type)}& {varName} = {GetMethodPrefix(type)}_resolve(ctx, {accessor});");
+                code.Add($"{AnnotationUtils.GetTypeName(type)}& {varName} = {GetResolveSignature(type)}(ctx, {accessor});");
             else throw new NotImplementedException();
         }
 

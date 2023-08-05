@@ -16,5 +16,6 @@ namespace JSBindTool.Core
         public static string PrimitiveIncludeSuffix = "_Primitive";
         public static string ClassIncludeSuffix = "_Class";
         public static string ModuleIncludeSuffix = "_Module";
+        public static string StructIncludeSuffix = "_Struct";
     }
 }

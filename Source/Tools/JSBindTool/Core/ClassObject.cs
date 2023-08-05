@@ -17,6 +17,10 @@ namespace JSBindTool.Core
         {
         }
 
+        protected override string GetSelfHeader()
+        {
+            return $"{Target.Name}{Constants.ClassIncludeSuffix}.h";
+        }
         protected override void EmitSourceGetRef(CodeBuilder code)
         {
             code

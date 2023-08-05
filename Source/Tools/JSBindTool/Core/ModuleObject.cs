@@ -12,6 +12,10 @@ namespace JSBindTool.Core
     {
         public ModuleObject(Type type) : base(type) { }
 
+        protected override string GetSelfHeader()
+        {
+            return $"{Target.Name}{Constants.ModuleIncludeSuffix}.h";
+        }
         public override void EmitHeaderSignatures(CodeBuilder code)
         {
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);");
@@ -113,7 +117,7 @@ namespace JSBindTool.Core
                 throw new Exception("invalid module object derived type.");
             ModuleObject? result = Activator.CreateInstance(type) as ModuleObject;
             if (result is null)
-                throw new Exception("could not possible to instantiate this primitive object derived type.");
+                throw new Exception("could not possible to instantiate this module object derived type.");
             return result;
         }
     }

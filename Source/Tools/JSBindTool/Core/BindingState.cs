@@ -12,6 +12,7 @@ namespace JSBindTool.Core
         private static HashSet<Type> pClasses = new HashSet<Type>();
         private static HashSet<Type> pPrimitives = new HashSet<Type>();
         private static HashSet<Type> pModules = new HashSet<Type>();
+        private static HashSet<Type> pStructs = new HashSet<Type>();
 
         public static void AddEnum(Type type)
         {
@@ -29,6 +30,10 @@ namespace JSBindTool.Core
         {
             pModules.Add(type);
         }
+        public static void AddStruct(Type type)
+        {
+            pStructs.Add(type);
+        }
 
         public static IList<Type> GetEnums()
         {
@@ -45,6 +50,10 @@ namespace JSBindTool.Core
         public static IList<Type> GetModules()
         {
             return pModules.ToList();
+        }
+        public static IList<Type> GetStructs()
+        {
+            return pStructs.ToList();
         }
     }
 }

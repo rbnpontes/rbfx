@@ -25,6 +25,8 @@
         <Compile Include="Bindings\MathTypes\Plane.cs" />
         <Compile Include="Bindings\MathTypes\Polyhedron.cs" />
         <Compile Include="Bindings\MathTypes\Quaternion.cs" />
+        <Compile Include="Bindings\MathTypes\RandomModule.cs" />
+        <Compile Include="Bindings\MathTypes\Ray.cs" />
         <Compile Include="Bindings\MathTypes\Rect.cs" />
         <Compile Include="Bindings\MathTypes\Sphere.cs" />
         <Compile Include="Bindings\MathTypes\Vectors.cs" />
@@ -84,11 +86,16 @@
         <Compile Include="Core\RandomEngine.cs" />
         <Compile Include="Core\SharedPtr.cs" />
         <Compile Include="Core\BindingState.cs" />
+        <Compile Include="Core\StructGen.cs" />
         <Compile Include="Core\TemplateObject.cs" />
         <Compile Include="Core\Vector.cs" />
         <Compile Include="Core\WeakPtr.cs" />
         <Compile Include="Core\WorkerUtils.cs" />
         <Compile Include="Program.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="Core\StructObject.cs" />
     </ItemGroup>
 
 </Project>

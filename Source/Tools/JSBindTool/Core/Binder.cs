@@ -9,10 +9,17 @@ namespace JSBindTool.Core
 {
     public static class Binder
     {
+        private static bool IsAcceptableType(Type type)
+        {
+            return type.IsSubclassOf(typeof(ClassObject))
+                || type.IsSubclassOf(typeof(PrimitiveObject))
+                || type.IsSubclassOf(typeof(ModuleObject))
+                || type.IsSubclassOf(typeof(StructObject));
+        }
         public static void CollectTypes()
         {
             Assembly.GetExecutingAssembly().GetTypes()
-                .Where(x => x.IsSubclassOf(typeof(ClassObject)) || x.IsSubclassOf(typeof(PrimitiveObject)) || x.IsSubclassOf(typeof(ModuleObject)))
+                .Where(x => IsAcceptableType(x))
                 .Where(x => !AnnotationUtils.IsIgnored(x))
                 .ToList()
                 .ForEach(type =>
@@ -45,6 +52,10 @@ namespace JSBindTool.Core
                     else if(type.IsSubclassOf(typeof(ModuleObject)))
                     {
                         BindingState.AddModule(type);
+                    }
+                    else if (type.IsSubclassOf(typeof(StructObject)))
+                    {
+                        BindingState.AddStruct(type);
                     }
                 });
         }
@@ -131,6 +142,10 @@ namespace JSBindTool.Core
                 GenerateSetupSource(outputPath, "class_bindings", classes);
             }
             WorkerUtils.ForEach(BindingState.GetClasses(), type => GenerateBindingFiles<ClassGen>(type, outputPath, Constants.ClassIncludeSuffix));
+            Console.WriteLine("------------------------------------------------");
+            Console.WriteLine("-- Generating Structs --------------------------");
+            Console.WriteLine("------------------------------------------------");
+            WorkerUtils.ForEach(BindingState.GetStructs(), type => GenerateBindingFiles<StructGen>(type, outputPath, Constants.StructIncludeSuffix));
             Console.WriteLine("------------------------------------------------");
             Console.WriteLine("-- Generating Code Modules ---------------------");
             Console.WriteLine("------------------------------------------------");

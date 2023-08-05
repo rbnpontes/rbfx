@@ -8,6 +8,10 @@ namespace JSBindTool.Core
                 throw new Exception("Invalid Implementation. Inherited primitive object is using AbstractClass instead of Implementation.");
         }
 
+        protected override string GetSelfHeader()
+        {
+            return $"{Target.Name}{Constants.PrimitiveIncludeSuffix}.h";
+        }
         protected virtual void EmitResolveSignature(CodeBuilder code)
         {
             code.Add($"{AnnotationUtils.GetTypeName(Target)}& {CodeUtils.GetMethodPrefix(Target)}_resolve(duk_context* ctx, duk_idx_t stack_idx);");
