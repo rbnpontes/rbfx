@@ -195,6 +195,7 @@ namespace JSBindTool.Core
                 GetMethods(StaticMethodsFlags).Values.ToList().ForEach(methodTypesCollect);
                 GetProperties().ForEach(prop => usedTypes = usedTypes.Concat(new Type[] { prop.PropertyType }));
                 AnnotationUtils.GetVariables(Target).ForEach(vary => usedTypes = usedTypes.Concat(new Type[] { vary.Type }));
+                AnnotationUtils.GetConstructors(Target).ForEach(ctor => usedTypes = usedTypes.Concat(ctor.Types));
             }
 
 
@@ -431,7 +432,12 @@ namespace JSBindTool.Core
             code.Add($"duk_idx_t {GetCtorSignature()}(duk_context* ctx)");
             if(ctors.Count == 1)
             {
-                code.Scope(code => EmitGenericConstructorBody(ctors[0], code));
+                code.Scope(code => {
+                    if (ctors[0].IsDefault)
+                        EmitGenericConstructorBody(ctors[0], code);
+                    else
+                        EmitConstructorBody(ctors[0], code);
+                });
                 return;
             }
 

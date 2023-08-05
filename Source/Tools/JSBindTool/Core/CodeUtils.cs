@@ -250,7 +250,7 @@ namespace JSBindTool.Core
                 }
             }
             else if (type.IsSubclassOf(typeof(PrimitiveObject)))
-                code.Add($"{AnnotationUtils.GetTypeName(type)} {varName} = {GetMethodPrefix(type)}_resolve(ctx, {accessor});");
+                code.Add($"{AnnotationUtils.GetTypeName(type)}& {varName} = {GetMethodPrefix(type)}_resolve(ctx, {accessor});");
             else throw new NotImplementedException();
         }
 

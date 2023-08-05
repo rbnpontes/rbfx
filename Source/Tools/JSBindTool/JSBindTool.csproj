@@ -77,6 +77,7 @@
         <Compile Include="Core\JSFunction.cs" />
         <Compile Include="Core\ModuleGen.cs" />
         <Compile Include="Core\NoopPrimitive.cs" />
+        <Compile Include="Bindings\MathTypes\PerlinNoise.cs" />
         <Compile Include="Core\PrimitiveGen.cs" />
         <Compile Include="Core\PrimitiveObject.cs" />
         <Compile Include="Core\PtrRef.cs" />

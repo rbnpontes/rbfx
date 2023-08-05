@@ -20,6 +20,7 @@ namespace JSBindTool.Core
 
         public IEnumerable<Type> Types { get; private set; }
         public bool HasCustomCode { get; private set; }
+        public bool IsDefault { get; set; }
         public Action<object, CodeBuilder, CustomCodeModifiers> CustomCodeCall { get; private set; }
         public ConstructorData(IEnumerable<Type> types)
         {
@@ -86,22 +87,28 @@ namespace JSBindTool.Core
             if(methods.Count() == 0)
             {
                 var cData = new ConstructorData(GetVariables(type).Select(x => x.Type));
+                cData.IsDefault = true;
                 return new List<ConstructorData> { cData };
             }
             else
             {
                 return methods.Select(method =>
                 {
+                    ConstructorData ctor;
                     if(IsCustomCodeMethod(method))
                     {
                         CustomCodeAttribute attr = GetCustomCodeAttribute(method);
-                        return new ConstructorData(attr.ParameterTypes, (obj, code, modifiers) =>
+                        ctor = new ConstructorData(attr.ParameterTypes, (obj, code, modifiers) =>
                         {
                             method.Invoke(obj, new object[] { code, modifiers });
                         });
+                        ctor.IsDefault = false;
+                        return ctor;
                     }
 
-                    return new ConstructorData(method.GetParameters().Select(x => x.ParameterType));
+                    ctor = new ConstructorData(method.GetParameters().Select(x => x.ParameterType));
+                    ctor.IsDefault = false;
+                    return ctor;
                 }).ToList();
             }
         }
