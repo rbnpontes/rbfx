@@ -429,6 +429,7 @@ namespace JSBindTool.Core
                         code.Add($"{CodeUtils.GetMethodPrefix(Target.BaseType)}_wrap(ctx, obj_idx, instance);");
                     EmitVariables(code, "obj_idx");
                     EmitProperties(code, "obj_idx");
+                    EmitOperatorMethods(code, "obj_idx");
                     EmitMethods(code, "obj_idx");
                 });
         }

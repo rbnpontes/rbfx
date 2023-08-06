@@ -34,6 +34,9 @@ namespace JSBindTool.Bindings.MathTypes
         [Constructor]
         public void Constructor(Ray ray) { }
 
+        [OperatorMethod(OperatorType.Equal)]
+        public bool EqualOperator(Ray ray) => false;
+
         [Method]
         public void Define(Vector3 origin, Vector3 direction) { }
         [Method]
