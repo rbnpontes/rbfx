@@ -31,7 +31,9 @@
         <Compile Include="Bindings\MathTypes\Sphere.cs" />
         <Compile Include="Bindings\MathTypes\SphericalHarmonics.cs" />
         <Compile Include="Bindings\MathTypes\TetrahedralMesh.cs" />
+        <Compile Include="Bindings\MathTypes\Transform.cs" />
         <Compile Include="Bindings\MathTypes\Vectors.cs" />
+        <Compile Include="Bindings\MathTypes\WrappedScalar.cs" />
         <Compile Include="Bindings\SceneTypes\Component.cs" />
         <Compile Include="Bindings\SceneTypes\Enums.cs" />
         <Compile Include="Builders\DuktapeBuilder.cs" />
