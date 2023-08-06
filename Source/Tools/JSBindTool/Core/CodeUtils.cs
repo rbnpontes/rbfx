@@ -166,21 +166,23 @@ namespace JSBindTool.Core
                     case TemplateType.Vector:
                         {
                             int deepSuffix = ++pDeepValueCount;
-
-                            code.Add(
-                                "duk_push_array(ctx);",
-                                $"duk_idx_t arr_idx_{deepSuffix} = duk_get_top_index(ctx);",
-                                $"for(duk_idx_t i_{deepSuffix} = 0; i_{deepSuffix} < {accessor}.size(); ++i_{deepSuffix})",
-                                "{"
-                            );
+                            code.Scope(code =>
                             {
-                                CodeBuilder scopeLoop = new CodeBuilder();
-                                scopeLoop.Add($"{GetNativeDeclaration(templateObj.TargetType)} result_{deepSuffix} = {accessor}.at(i_{deepSuffix});");
-                                EmitValueWrite(templateObj.TargetType, $"result_{deepSuffix}", scopeLoop);
-                                scopeLoop.Add($"duk_put_prop_index(ctx, arr_idx_{deepSuffix}, i_{deepSuffix});");
-                                code.Add(scopeLoop);
-                            }
-                            code.Add("}");
+                                code.Add(
+                                    "duk_push_array(ctx);",
+                                    $"duk_idx_t arr_idx_{deepSuffix} = duk_get_top_index(ctx);",
+                                    $"for(duk_idx_t i_{deepSuffix} = 0; i_{deepSuffix} < {accessor}.size(); ++i_{deepSuffix})",
+                                    "{"
+                                );
+                                {
+                                    CodeBuilder scopeLoop = new CodeBuilder();
+                                    scopeLoop.Add($"{GetNativeDeclaration(templateObj.TargetType)} result_{deepSuffix} = {accessor}.at(i_{deepSuffix});");
+                                    EmitValueWrite(templateObj.TargetType, $"result_{deepSuffix}", scopeLoop);
+                                    scopeLoop.Add($"duk_put_prop_index(ctx, arr_idx_{deepSuffix}, i_{deepSuffix});");
+                                    code.Add(scopeLoop);
+                                }
+                                code.Add("}");
+                            });
                             --pDeepValueCount;
                         }
                         break;
@@ -191,6 +193,9 @@ namespace JSBindTool.Core
         }
         public static void EmitValueRead(Type type, string varName, string accessor, CodeBuilder code)
         {
+            if (type == typeof(CodeBuilder))
+                throw new InvalidOperationException("You have used CodeBuilder, did you forget to add CustomCode attribute ?");
+
             if (type == typeof(string))
                 code.Add($"ea::string {varName} = duk_get_string_default(ctx, {accessor}, \"\");");
             else if (type == typeof(StringHash))

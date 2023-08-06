@@ -730,22 +730,22 @@ namespace JSBindTool.Core
                 .Add("// end custom code")
                 .AddNewLine();
 
-            if (modifiers.SkipTypeInsert)
+            if (!modifiers.SkipTypeInsert)
             {
                 code
                     .Add($"duk_push_string(ctx, \"{GetJSTypeIdentifier()}\");")
                     .Add("duk_put_prop_string(ctx, this_idx, \"type\");");
             }
-            if(modifiers.SkipPtrInsert)
+            if(!modifiers.SkipPtrInsert)
             {
                 code
                     .Add("duk_push_pointer(ctx, instance);")
                     .Add("duk_put_prop_string(ctx, this_idx, JS_OBJ_HIDDEN_PTR);");
             }
-            if (modifiers.SkipFinalizer)
-                code.Add($"\t{CodeUtils.GetMethodPrefix(Target)}_set_finalizer(ctx, this_idx, instance);");
-            if (modifiers.SkipWrap)
-                code.Add($"\t{CodeUtils.GetMethodPrefix(Target)}_wrap(ctx, this_idx, instance);");
+            if (!modifiers.SkipFinalizer)
+                code.Add($"{CodeUtils.GetMethodPrefix(Target)}_set_finalizer(ctx, this_idx, instance);");
+            if (!modifiers.SkipWrap)
+                code.Add($"{CodeUtils.GetMethodPrefix(Target)}_wrap(ctx, this_idx, instance);");
             code.AddNewLine()
                 .Add("duk_dup(ctx, this_idx);")
                 .Add("return result_code;");
@@ -812,7 +812,7 @@ namespace JSBindTool.Core
 
             code
                 .Add("duk_push_this(ctx);")
-                .Add($"{AnnotationUtils.GetTypeName(Target)} instance = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, -1);")
+                .Add($"{AnnotationUtils.GetTypeName(Target)}& instance = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, -1);")
                 .Add("duk_pop(ctx);")
                 .AddNewLine();
 

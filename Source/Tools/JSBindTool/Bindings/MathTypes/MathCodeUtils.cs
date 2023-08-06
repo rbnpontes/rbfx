@@ -102,5 +102,27 @@ namespace JSBindTool.Bindings.MathTypes
         {
             code.Add($"{typeName} result = VectorClamp(arg0, arg1, arg2);");
         }
+
+        public static void EmitIndexOutOfBoundsValidation(uint max, CodeBuilder code)
+        {
+            code
+                .Add($"if (arg0 >= {max})")
+                .Scope(code =>
+                {
+                    code
+                        .Add($"duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR,\"Index is out of bounds. Index must be in the range of [0, {max - 1}]\");")
+                        .Add("return duk_throw(ctx);");
+                });
+        }
+        public static void EmitGetProp(string propType, string prop, uint propSize, CodeBuilder code)
+        {
+            EmitIndexOutOfBoundsValidation(propSize, code);
+            code.Add($"{propType} result = instance->{prop}[arg0];");
+        }
+        public static void EmitSetProp(string prop, uint propSize, CodeBuilder code)
+        {
+            EmitIndexOutOfBoundsValidation(propSize, code);
+            code.Add($"instance->{prop}[arg0] = arg1;");
+        }
     }
 }

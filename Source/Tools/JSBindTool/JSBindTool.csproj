@@ -29,6 +29,8 @@
         <Compile Include="Bindings\MathTypes\Ray.cs" />
         <Compile Include="Bindings\MathTypes\Rect.cs" />
         <Compile Include="Bindings\MathTypes\Sphere.cs" />
+        <Compile Include="Bindings\MathTypes\SphericalHarmonics.cs" />
+        <Compile Include="Bindings\MathTypes\TetrahedralMesh.cs" />
         <Compile Include="Bindings\MathTypes\Vectors.cs" />
         <Compile Include="Bindings\SceneTypes\Component.cs" />
         <Compile Include="Bindings\SceneTypes\Enums.cs" />

@@ -106,6 +106,19 @@ struct HighPrecisionVector3
         return result;
     }
 
+    /// Return x coordinate
+    double GetX() { return data_[0]; }
+    /// Return y coordinate
+    double GetY() { return data_[1]; }
+    /// Return z coordinate
+    double GetZ() { return data_[2]; }
+    /// Set x coordinate
+    void SetX(double value) { data_[0] = value; }
+    /// Set y coordinate
+    void SetY(double value) { data_[1] = value; }
+    /// Set z coordinate
+    void SetZ(double value) { data_[2] = value; }
+
     /// Components.
     double data_[3]{};
 };

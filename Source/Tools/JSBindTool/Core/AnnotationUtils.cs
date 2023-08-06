@@ -12,10 +12,10 @@ namespace JSBindTool.Core
     {
         public class CustomCodeModifiers
         {
-            public bool SkipFinalizer { get; set; }
-            public bool SkipWrap { get; set; }
-            public bool SkipTypeInsert { get; set; }
-            public bool SkipPtrInsert { get; set; }
+            public bool SkipFinalizer { get; set; } = false;
+            public bool SkipWrap { get; set; } = false;
+            public bool SkipTypeInsert { get; set; } = false;
+            public bool SkipPtrInsert { get; set; } = false;
         }
 
         public IEnumerable<Type> Types { get; private set; }
