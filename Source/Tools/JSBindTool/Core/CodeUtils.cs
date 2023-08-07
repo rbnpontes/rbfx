@@ -1,3 +1,4 @@
+using JSBindTool.Bindings.CoreTypes;
 using JSBindTool.Bindings.MathTypes;
 using System;
 using System.Collections.Generic;
@@ -37,9 +38,11 @@ namespace JSBindTool.Core
                 output.Append("unsigned");
             else if (type == typeof(ushort))
                 output.Append("unsigned short");
+            else if (type == typeof(byte))
+                output.Append("unsigned char");
             else if (type == typeof(IntPtr))
                 output.Append("void*");
-            else if(
+            else if (
                 type == typeof(JSFunction)
                 || type == typeof(JSObject)
                 || type == typeof(Array)) { /*do nothing*/ }
@@ -66,7 +69,7 @@ namespace JSBindTool.Core
                         output.Append($"const {GetNativeDeclaration(templateObj.TargetType)}");
                         break;
                     default:
-						throw new NotImplementedException();
+                        throw new NotImplementedException();
                 }
             }
             else
@@ -136,12 +139,14 @@ namespace JSBindTool.Core
                 code.Add($"duk_push_number(ctx, {accessor});");
             else if (type == typeof(int))
                 code.Add($"duk_push_int(ctx, {accessor});");
-            else if (type == typeof(uint) || type == typeof(ushort))
+            else if (type == typeof(uint) || type == typeof(ushort) || type == typeof(byte))
                 code.Add($"duk_push_uint(ctx, {accessor});");
             else if (type == typeof(IntPtr))
                 code.Add($"duk_push_pointer(ctx, {accessor});");
             else if (type == typeof(Array))
                 code.Add($"duk_push_array(ctx, {accessor});");
+            else if (type == typeof(Variant))
+                code.Add($"rbfx_push_variant(ctx, {accessor});");
             else if (type.IsEnum)
                 code.Add($"duk_push_int(ctx, {accessor});");
             else if (type.IsSubclassOf(typeof(ClassObject)) || type.Name.StartsWith("SharedPtr"))
@@ -210,10 +215,14 @@ namespace JSBindTool.Core
                 code.Add($"int {varName} = duk_get_int_default(ctx, {accessor}, 0);");
             else if (type == typeof(uint) || type == typeof(ushort))
                 code.Add($"unsigned {varName} = duk_get_uint_default(ctx, {accessor}, 0u);");
+            else if (type == typeof(byte))
+                code.Add($"unsigned char {varName} = (unsigned char)duk_get_uint_default(ctx, {accessor}, 0u);");
             else if (type == typeof(IntPtr))
                 code.Add($"void* {varName} = duk_get_pointer_default(ctx, {accessor}, nullptr);");
             else if (type == typeof(JSFunction) || type == typeof(JSObject) || type == typeof(Array))
                 code.Add($"duk_idx_t {varName} = {accessor};");
+            else if (type == typeof(Variant))
+                code.Add($"Variant {varName} = rbfx_get_variant(ctx, {accessor});");
             else if (type.IsEnum)
                 code.Add($"{type.Name} {varName} = ({type.Name})duk_get_int(ctx, {accessor});");
             else if (type.IsSubclassOf(typeof(ClassObject)))
@@ -281,7 +290,7 @@ namespace JSBindTool.Core
                 hashInput = "StringHash";
             else if (type == typeof(bool))
                 hashInput = "bool";
-            else if (type == typeof(float) || type == typeof(double) || type == typeof(int) || type == typeof(uint))
+            else if (type == typeof(float) || type == typeof(double) || type == typeof(int) || type == typeof(uint) || type == typeof(byte))
                 hashInput = "Number";
             else if (type == typeof(IntPtr))
                 hashInput = "void";
@@ -289,6 +298,8 @@ namespace JSBindTool.Core
                 hashInput = "Function";
             else if (type == typeof(JSObject))
                 hashInput = "VariantMap";
+            else if (type == typeof(Variant))
+                hashInput = "Variant";
             else if (type == typeof(Array))
                 hashInput = "Vector";
             else if (type.IsSubclassOf(typeof(TemplateObject)))

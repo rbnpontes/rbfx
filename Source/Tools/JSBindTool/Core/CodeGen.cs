@@ -25,6 +25,7 @@ namespace JSBindTool.Core
             codeBuilder.Add(GetIncludesFromType().ToList().Select(include => $"#include <{include}>"));
             codeBuilder.Add("#include <Urho3D/JavaScript/JavaScriptOperations.h>");
             codeBuilder.Add("#include <Urho3D/JavaScript/JavaScriptSystem.h>");
+            codeBuilder.Add("#include <Urho3D/IO/Log.h>");
             codeBuilder.Add("#include <duktape/duktape.h>");
             return codeBuilder;
         }

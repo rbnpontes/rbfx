@@ -78,6 +78,13 @@ namespace JSBindTool.Core
             return method.GetCustomAttribute<CustomCodeAttribute>() != null;
         }
 
+        public static Type[] GetTypeDependencies(Type type)
+        {
+            var attr = type.GetCustomAttribute<DependenciesAttribute>();
+            if (attr is null)
+                return new Type[0];
+            return attr.Types;
+        }
         public static List<ConstructorData> GetConstructors(Type type)
         {
             var methods = type
@@ -202,7 +209,17 @@ namespace JSBindTool.Core
         }
         public static bool IsValidProperty(PropertyInfo prop)
         {
-            return !IsIgnored(prop) && prop.GetCustomAttribute<PropertyMapAttribute>() != null;
+            if (IsIgnored(prop))
+                return false;
+            var attr = prop.GetCustomAttribute<PropertyMapAttribute>();
+            if(attr is null)
+                return prop.GetCustomAttribute<PropertyResolverAttribute>() != null;
+            return true;
+        }
+
+        public static bool IsCustomProperty(PropertyInfo prop)
+        {
+            return prop.GetCustomAttribute<PropertyResolverAttribute>() != null;
         }
 
         public static FieldAttribute GetFieldAttribute(FieldInfo field)
@@ -240,6 +257,14 @@ namespace JSBindTool.Core
             CustomCodeAttribute? attr = method.GetCustomAttribute<CustomCodeAttribute>();
             if (attr is null)
                 throw new NullReferenceException("type does not contains CustomCodeAttribute");
+            return attr;
+        }
+
+        public static PropertyResolverAttribute GetPropertyResolver(PropertyInfo prop)
+        {
+            PropertyResolverAttribute? attr = prop.GetCustomAttribute<PropertyResolverAttribute>();
+            if (attr is null)
+                throw new NullReferenceException("property does not contains PropertyResolverAttribute");
             return attr;
         }
     }

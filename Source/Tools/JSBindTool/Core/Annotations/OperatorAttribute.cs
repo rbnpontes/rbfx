@@ -23,7 +23,11 @@ namespace JSBindTool.Core.Annotations
         Sub,
         Mul,
         Div,
-        Equal
+        Equal,
+        Less,
+        LessEqual,
+        Greater,
+        GreaterEqual,
     }
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
     public class OperatorAttribute : Attribute

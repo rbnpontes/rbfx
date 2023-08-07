@@ -67,4 +67,26 @@ namespace JSBindTool.Bindings.UITypes
         Target = 0x2,
         SourceAndTarget = 0x3
     }
+    [Include("Urho3D/UI/UI.h")]
+    public enum FontHintLevel
+    {
+        None = 0,
+        Light,
+        Normal
+    }
+    [Include("Urho3D/UI/Cursor.h")]
+    public enum CursorShape
+    {
+        Normal,
+        IBeam,
+        Cross,
+        ResizeVertical,
+        ResizedDiagonalTopRight,
+        ResizeHorizontal,
+        ResizedDiagonalTopLeft,
+        AcceptDrop,
+        RejectDrop,
+        Busy,
+        BusyArrow
+    }
 }

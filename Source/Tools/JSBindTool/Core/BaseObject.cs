@@ -73,10 +73,24 @@ namespace JSBindTool.Core
 
             foreach(var prop in properties)
             {
-                var attr = AnnotationUtils.GetPropertyMap(prop);
-                if(prop.GetMethod != null && !string.IsNullOrEmpty(attr.GetterName))
+                bool hasGetter = false;
+                bool hasSetter = false;
+                if(AnnotationUtils.IsCustomProperty(prop))
+                {
+                    var resolver = FactoryResolver.Build(prop);
+                    hasGetter = resolver.HasGetter(prop.Name);
+                    hasSetter = resolver.HasSetter(prop.Name);
+                }
+                else
+                {
+                    var attr = AnnotationUtils.GetPropertyMap(prop);
+                    hasGetter = prop.GetMethod != null && !string.IsNullOrEmpty(attr.GetterName);
+                    hasSetter = prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName);
+
+                }
+                if(hasGetter)
                     code.Add($"duk_idx_t {GetPropertySignature(prop)}(duk_context* ctx);");
-                if(prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName))
+                if(hasSetter)
                     code.Add($"duk_idx_t {GetPropertySignature(prop, true)}(duk_context* ctx);");
             }
         }
@@ -189,6 +203,7 @@ namespace JSBindTool.Core
                     });
                 };
 
+                usedTypes = usedTypes.Concat(AnnotationUtils.GetTypeDependencies(Target));
                 GetMethods().Values.ToList().ForEach(methodTypesCollect);
                 GetOperatorMethods().Values.ToList().ForEach(methodTypesCollect);
                 GetMethods(StaticMethodsFlags).Values.ToList().ForEach(methodTypesCollect);
@@ -685,11 +700,22 @@ namespace JSBindTool.Core
         {
             GetProperties().ForEach(prop =>
             {
-                var attr = AnnotationUtils.GetPropertyMap(prop);
-                if (prop.GetMethod != null && !string.IsNullOrEmpty(attr.GetterName))
-                    EmitPropertyGetter(prop, code);
-                if (prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName))
-                    EmitPropertySetter(prop, code);
+                if (AnnotationUtils.IsCustomProperty(prop))
+                {
+                    var resolver = FactoryResolver.Build(prop);
+                    if (resolver.HasGetter(prop.Name))
+                        EmitPropertyGetter(prop, code);
+                    if (resolver.HasSetter(prop.Name))
+                        EmitPropertySetter(prop, code);
+                }
+                else
+                {
+                    var attr = AnnotationUtils.GetPropertyMap(prop);
+                    if (prop.GetMethod != null && !string.IsNullOrEmpty(attr.GetterName))
+                        EmitPropertyGetter(prop, code);
+                    if (prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName))
+                        EmitPropertySetter(prop, code);
+                }
             });
         }
 
@@ -867,12 +893,12 @@ namespace JSBindTool.Core
             if(methodInfo.ReturnType == typeof(void))
             {
                 code
-                    .Add($"{CodeUtils.GetNativeDeclaration(Target)}::{nativeName}({argsCall});")
+                    .Add($"{AnnotationUtils.GetTypeName(Target)}::{nativeName}({argsCall});")
                     .Add("return 0;");
                 return;
             }
 
-            code.Add($"{CodeUtils.GetNativeDeclaration(methodInfo.ReturnType)} result = {CodeUtils.GetNativeDeclaration(Target)}::{nativeName}({argsCall});");
+            code.Add($"{CodeUtils.GetNativeDeclaration(methodInfo.ReturnType)} result = {AnnotationUtils.GetTypeName(Target)}::{nativeName}({argsCall});");
 
             CodeUtils.EmitValueWrite(methodInfo.ReturnType, "result", code);
             code.Add("return 1;");
@@ -1099,13 +1125,28 @@ namespace JSBindTool.Core
 
                 code.Add($"duk_push_string(ctx, \"{CodeUtils.ToCamelCase(AnnotationUtils.GetJSPropertyName(prop))}\");");
 
-                var attr = AnnotationUtils.GetPropertyMap(prop);
-                if (prop.GetMethod != null && !string.IsNullOrEmpty(attr.GetterName))
+                bool hasGetter = false;
+                bool hasSetter = false;
+
+                if (AnnotationUtils.IsCustomProperty(prop))
+                {
+                    var resolver = FactoryResolver.Build(prop);
+                    hasGetter = resolver.HasGetter(prop.Name);
+                    hasSetter = resolver.HasSetter(prop.Name);
+                }
+                else
+                {
+                    var attr = AnnotationUtils.GetPropertyMap(prop);
+                    hasGetter = prop.GetMethod != null && !string.IsNullOrEmpty(attr.GetterName);
+                    hasSetter = prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName);
+                }
+
+                if (hasGetter)
                 {
                     code.Add($"duk_push_c_lightfunc(ctx, {GetPropertySignature(prop)}, 0, 0, 1);");
                     enumFlags.Add("DUK_DEFPROP_HAVE_GETTER");
                 }
-                if (prop.SetMethod != null && !string.IsNullOrEmpty(attr.SetterName))
+                if (hasSetter)
                 {
                     code.Add($"duk_push_c_lightfunc(ctx, {GetPropertySignature(prop, true)}, 1, 1, 1);");
                     enumFlags.Add("DUK_DEFPROP_HAVE_SETTER");
@@ -1199,9 +1240,24 @@ namespace JSBindTool.Core
                     code
                         .Add("duk_push_this(ctx);")
                         .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = {GetRefSignature()}(ctx, duk_get_top_index(ctx));")
-                        .Add("duk_pop(ctx);")
-                        .Add($"{CodeUtils.GetNativeDeclaration(prop.PropertyType)} result = instance->{AnnotationUtils.GetGetterName(prop)}();");
-                    CodeUtils.EmitValueWrite(prop.PropertyType, "result", code);
+                        .Add("duk_pop(ctx);");
+
+                    if (AnnotationUtils.IsCustomProperty(prop))
+                    {
+                        bool skipWrite = prop.PropertyType == typeof(JSObject) || prop.PropertyType == typeof(JSFunction) || prop.PropertyType == typeof(Array);
+                        var resolver = FactoryResolver.Build(prop);
+
+                        resolver.EmitGetter(prop.Name, code);
+
+                        if (!skipWrite)
+                            CodeUtils.EmitValueWrite(prop.PropertyType, "result", code);
+                    }
+                    else
+                    {
+                        code.Add($"{CodeUtils.GetNativeDeclaration(prop.PropertyType)} result = instance->{AnnotationUtils.GetGetterName(prop)}();");
+                        CodeUtils.EmitValueWrite(prop.PropertyType, "result", code);
+                    }
+
                     code.Add("return 1;");
                 });
         }
@@ -1214,13 +1270,28 @@ namespace JSBindTool.Core
                     code
                         .Add("duk_push_this(ctx);")
                         .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = {GetRefSignature()}(ctx, duk_get_top_index(ctx));")
-                        .Add("duk_pop(ctx);");
-                    CodeUtils.EmitValueRead(prop.PropertyType, "result", "0", code);
+                        .Add("duk_pop(ctx);").AddNewLine();
+                    if (AnnotationUtils.IsCustomProperty(prop))
+                    {
+                        bool skipRead = prop.PropertyType == typeof(JSObject) || prop.PropertyType == typeof(JSFunction) || prop.PropertyType == typeof(Array);
+                        var resolver = FactoryResolver.Build(prop);
 
-                    code
-                        .AddNewLine()
-                        .Add($"instance->{AnnotationUtils.GetSetterName(prop)}(result);")
-                        .Add("return 0;");
+                        if (!skipRead)
+                            CodeUtils.EmitValueRead(prop.PropertyType, "arg0", "0", code);
+
+                        code.Add("// @ begin custom code");
+                        resolver.EmitSetter(prop.Name, code);
+                        code.Add("// @ end custom code");
+                    }
+                    else
+                    {
+                        CodeUtils.EmitValueRead(prop.PropertyType, "result", "0", code);
+                        code
+                            .AddNewLine()
+                            .Add($"instance->{AnnotationUtils.GetSetterName(prop)}(result);");
+                    }
+
+                    code.Add("return 0;");
                 });
         }
         protected virtual void EmitStaticField(FieldInfo field, CodeBuilder code, string accessor)
@@ -1357,6 +1428,18 @@ namespace JSBindTool.Core
                     break;
                 case OperatorType.Equal:
                     op = "==";
+                    break;
+                case OperatorType.Less:
+                    op = "<";
+                    break;
+                case OperatorType.LessEqual:
+                    op = "<=";
+                    break;
+                case OperatorType.Greater:
+                    op = ">";
+                    break;
+                case OperatorType.GreaterEqual:
+                    op = ">=";
                     break;
             }
             return op;

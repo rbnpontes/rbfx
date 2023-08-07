@@ -33,5 +33,6 @@ namespace JSBindTool.Bindings.SceneTypes
         public Component() : base(typeof(Component))
         {
         }
+        public Component(Type type) : base(type) { }
     }
 }

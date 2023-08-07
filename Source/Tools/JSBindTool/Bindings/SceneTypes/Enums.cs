@@ -14,4 +14,11 @@ namespace JSBindTool.Bindings.SceneTypes
         Component,
         Node
     }
+    [Include("Urho3D/Scene/AnimationDefs.h")]
+    public enum WrapMode
+    {
+        Loop =0,
+        Once,
+        Clamp
+    }
 }

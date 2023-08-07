@@ -20,7 +20,7 @@
 # THE SOFTWARE.
 #
 
-project (JSBindTool)
+project (JSBindTool VERSION 0.1.0 LANGUAGES CSharp)
 
 file(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}" JS_BIND_TOOL_SRC_DIR)
 
