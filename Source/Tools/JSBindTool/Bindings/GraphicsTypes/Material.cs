@@ -78,32 +78,57 @@ namespace JSBindTool.Bindings.GraphicsTypes
         {
             code.Add("SharedPtr<Material> result = Material::CreateBaseMaterial(JavaScriptSystem::GetContext(), arg0, arg1, arg2);");
         }
+        [Method]
         public void SetTechnique(uint index, Technique tech) { }
+        [Method]
         public void SetTechnique(uint index, Technique tech, MaterialQuality qualityLevel) { }
+        [Method]
         public void SetTechnique(uint index, Technique tech, MaterialQuality qualityLevel, float lodDistance) { }
+        [Method]
         public void SetShaderParameter(string name, Variant value) { }
+        [Method]
         public void SetShaderParameter(string name, Variant value, bool isCustom) { }
+        [Method]
         public void SetShaderParameterAnimation(string name, ValueAnimation animation) { }
+        [Method]
         public void SetShaderParameterAnimation(string name, ValueAnimation animation, WrapMode wrapMode) { }
+        [Method]
         public void SetShaderParameterAnimation(string name, ValueAnimation animation, WrapMode wrapMode, float speed) { }
+        [Method]
         public void SetShaderParameterAnimationWrapMode(string name, WrapMode wrapMode) { }
+        [Method]
         public void SetShaderParameterAnimationSpeed(string name, float speed) { }
-        public void SetTexure(TextureUnit texUnit, Texture texture) { }
+        [Method]
+        public void SetTexture(TextureUnit texUnit, Texture texture) { }
+        [Method]
         public void SetUVTransform(Vector2 offset, float rotation, Vector2 repeat) { }
+        [Method]
         public void SetUVTransform(Vector2 offset, float rotation, float repeat) { }
+        [Method]
         public void RemoveShaderParameter(string name) { }
+        [Method]
         public void ReleaseShaders() { }
+        [Method]
         public SharedPtr<Material> Clone() => new SharedPtr<Material>();
+        [Method]
         public SharedPtr<Material> Clone(string name) => new SharedPtr<Material>();
+        [Method]
         public void SortTechniques() { }
+        [Method]
         public void MarkForAuxView(uint frameNumber) { }
+        [Method]
         public TechniqueEntry GetTechniqueEntry(uint index) => new TechniqueEntry();
+        [Method]
         public Technique GetTechnique(uint index) => new Technique();
+        [Method]
         public Technique FindTechnique(Drawable drawable, MaterialQuality materialQuality) => new Technique();
         // TODO: https://github.com/users/rbnpontes/projects/1/views/1
+        [Method]
         public IntPtr GetPass(uint index, string passName) => IntPtr.Zero;
         // TODO: https://github.com/users/rbnpontes/projects/1/views/1
+        [Method]
         public IntPtr GetDefaultPass() => IntPtr.Zero;
+        [Method]
         public Texture GetTexture(TextureUnit texUnit) => new Texture();
         [Method]
         [CustomCode]
@@ -121,8 +146,11 @@ namespace JSBindTool.Bindings.GraphicsTypes
                 })
                 .Add("result_code = 1;");
         }
+        [Method]
         public Variant GetShaderParameter(string name) => new Variant();
+        [Method]
         public ValueAnimation GetShaderParameterAnimation(string name) => new ValueAnimation();
+        [Method]
         public float GetShaderParameterAnimationSpeed(string name) => 0f;
         [Method]
         [CustomCode]
@@ -136,7 +164,7 @@ namespace JSBindTool.Bindings.GraphicsTypes
                 {
                     code
                         .Add($"{CodeUtils.GetPushSignature(typeof(MaterialShaderParameter))}(ctx, pair.second);")
-                        .Add("duk_put_prop_index(ctx, -2, pair.first);");
+                        .Add("duk_put_prop_index(ctx, -2, pair.first.Value());");
                 })
                 .Add("result_code = 1;");
         }
