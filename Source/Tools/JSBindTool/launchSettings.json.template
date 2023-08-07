@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "${PROJECT_NAME}": {
+      "commandName": "Project",
+      "commandLineArgs": "${JS_BINDINGS_SRC_DIR}",
+      "workingDirectory": "${JS_BIND_TOOL_WORK_DIR}"
+    }
+  }
+}

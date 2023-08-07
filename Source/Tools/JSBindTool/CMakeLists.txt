@@ -21,7 +21,24 @@
 #
 
 project (JSBindTool)
-include_external_msproject(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.csproj)
 
-set_target_properties(JSBindTool PROPERTIES
-    VS_DEBUGGER_COMMAND_ARGUMENTS "${CMAKE_CURRENT_SOURCE_DIR}../../JSBindings")
+file(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}" JS_BIND_TOOL_SRC_DIR)
+
+get_filename_component(JS_BINDINGS_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../JSBindings" ABSOLUTE)
+
+if (URHO3D_JS_MOBILE)
+    set (JS_BIND_TOOL_DEFINES "URHO3D_MOBILE")
+else ()
+    set (JS_BIND_TOOL_DEFINES "URHO3D_DESKTOP")
+endif ()
+
+set (JS_BIND_TOOL_WORK_DIR "${CMAKE_BINARY_DIR}/${DEST_BIN_DIR${_CONFIG}}") 
+file (TO_NATIVE_PATH "${JS_BIND_TOOL_WORK_DIR}" JS_BIND_TOOL_WORK_DIR)
+
+# normalize windows path like to JSON
+string (REPLACE "\\" "\\\\" JS_BIND_TOOL_WORK_DIR ${JS_BIND_TOOL_WORK_DIR})
+string (REPLACE "\\" "\\\\" JS_BINDINGS_SRC_DIR ${JS_BINDINGS_SRC_DIR})
+
+configure_file("${PROJECT_NAME}.csproj.template" "${PROJECT_NAME}.csproj")
+configure_file("launchSettings.json.template" "Properties/launchSettings.json")
+include_external_msproject(${PROJECT_NAME} ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.csproj)

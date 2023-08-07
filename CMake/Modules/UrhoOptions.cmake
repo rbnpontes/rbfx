@@ -197,7 +197,10 @@ option                (URHO3D_SHADER_OPTIMIZER   "Enable shader optimization via
 cmake_dependent_option(URHO3D_CSHARP             "Enable C# support"                                     OFF                  "BUILD_SHARED_LIBS;NOT MINGW"   OFF)
 option                (URHO3D_JS                 "Enable JavaScript support"                                    OFF)
 # JavaScript Binding Generation uses C# to generate bindings
-cmake_dependent_option(URHO3D_JS_BINDINGS        "Enable JavaScript Binding Generation. Requires .NET Core"     OFF                 "URHO3D_JS"        OFF)
+cmake_dependent_option(URHO3D_JS_BINDINGS        "Enable JavaScript Binding Generation. Requires .NET Core"     OFF           "URHO3D_JS"                     OFF)
+if (URHO3D_TOOLS)
+    option            (URHO3D_JS_MOBILE          "Enable Mobile Flags on JSBindTool."                           OFF)
+endif()
 # Valid values at https://docs.microsoft.com/en-us/dotnet/standard/frameworks
 # At the moment only netstandard2.1 supported
 set(URHO3D_NETFX netstandard2.1 CACHE STRING "TargetFramework value for .NET libraries")
