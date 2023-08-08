@@ -10,7 +10,7 @@ namespace JSBindTool.Bindings.GraphicsTypes
     [Include("Urho3D/Graphics/GraphicsDefs.h")]
     public enum MaterialQuality
     {
-        Low,
+        Low = 0,
         Medium,
         High
     }
@@ -27,7 +27,7 @@ namespace JSBindTool.Bindings.GraphicsTypes
     [Include("Urho3D/Graphics/GraphicsDefs.h")]
     public enum TextureAddressMode
     {
-        Wrap,
+        Wrap = 0,
         Mirror,
         Clamp,
         Border
@@ -35,14 +35,14 @@ namespace JSBindTool.Bindings.GraphicsTypes
     [Include("Urho3D/Graphics/GraphicsDefs.h")]
     public enum TextureCoordinate
     {
-        CoordU,
+        CoordU = 0,
         CoordV,
         CoordW
     }
     [Include("Urho3D/Graphics/GraphicsDefs.h")]
     public enum TextureUsage
     {
-        Static,
+        Static = 0,
         Dynamic,
         RenderTarget,
         DepthStencil
@@ -50,7 +50,7 @@ namespace JSBindTool.Bindings.GraphicsTypes
     [Include("Urho3D/Graphics/GraphicsDefs.h")]
     public enum CubeMapFace
     {
-        PositiveX,
+        PositiveX =0,
         NegativeX,
         PositiveY,
         NegativeY,
@@ -69,7 +69,7 @@ namespace JSBindTool.Bindings.GraphicsTypes
     [Include("Urho3D/Graphics/GraphicsDefs.h")]
     public enum RenderSurfaceUpdateMode
     {
-        ManualUpdate,
+        ManualUpdate = 0,
         UpdateVisible,
         UpdateAlways
     }
@@ -86,7 +86,7 @@ namespace JSBindTool.Bindings.GraphicsTypes
     [Include("Urho3D/Graphics/GraphicsDefs.h")]
     public enum ShaderParameterGroup
     {
-        Frame,
+        Frame = 0,
         Camera,
         Zone,
         Light,
@@ -97,7 +97,7 @@ namespace JSBindTool.Bindings.GraphicsTypes
     [Include("Urho3D/Graphics/GraphicsDefs.h")]
     public enum BlendMode
     {
-        Replace,
+        Replace = 0,
         Add,
         Multiply,
         Alpha,
@@ -111,14 +111,14 @@ namespace JSBindTool.Bindings.GraphicsTypes
     [Include("Urho3D/Graphics/GraphicsDefs.h")]
     public enum CullMode
     {
-        None,
+        None = 0,
         CCW,
         CW
     }
     [Include("Urho3D/Graphics/GraphicsDefs.h")]
     public enum FillMode
     {
-        Solid,
+        Solid = 0,
         WireFrame,
         Point
     }

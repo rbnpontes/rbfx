@@ -46,11 +46,16 @@ namespace JSBindTool.Core
             code.Add("duk_push_object(ctx);");
             Enum.GetNames(Target).ToList().ForEach(enumKey =>
             {
-                int value = (int)Enum.Parse(Target, enumKey);
+                var value = Enum.Parse(Target, enumKey);
+                var type = Enum.GetUnderlyingType(Target);
+                if (type == typeof(uint))
+                    code.Add($"duk_push_uint(ctx, {(uint)value});");
+                else if (type == typeof(int))
+                    code.Add($"duk_push_int(ctx, {(int)value});");
+                else
+                    throw new NotImplementedException();
 
-                code
-                    .Add($"duk_push_int(ctx, {value});")
-                    .Add($"duk_put_prop_string(ctx, -2, \"{ToCamelCase(enumKey)}\");");
+                code.Add($"duk_put_prop_string(ctx, -2, \"{ToCamelCase(enumKey)}\");");
             });
             code.Add(
                 "duk_seal(ctx, -1);",

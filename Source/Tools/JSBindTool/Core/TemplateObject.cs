@@ -12,7 +12,8 @@ namespace JSBindTool.Core
         WeakPtr,
         Vector,
         RefPtr,
-        Const
+        Const,
+        FlagSet
     }
     public class TemplateObject
     {
@@ -39,6 +40,13 @@ namespace JSBindTool.Core
                 return false;
             var templateObj = Activator.CreateInstance(type) as TemplateObject;
             return templateObj?.TemplateType == TemplateType.Vector;
+        }
+        public static bool IsFlagSetType(Type type)
+        {
+            if (!type.IsSubclassOf(typeof(TemplateObject)))
+                return false;
+            var templateObj = Activator.CreateInstance(type) as TemplateObject;
+            return templateObj?.TemplateType == TemplateType.FlagSet;
         }
     }
 }

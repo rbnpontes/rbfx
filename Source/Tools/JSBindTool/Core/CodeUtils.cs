@@ -24,6 +24,8 @@ namespace JSBindTool.Core
 
             if (type == typeof(string))
                 output.Append("ea::string");
+            else if (type == typeof(char))
+                output.Append("char");
             else if (type == typeof(StringHash))
                 output.Append("StringHash");
             else if (type == typeof(bool))
@@ -67,6 +69,9 @@ namespace JSBindTool.Core
                         break;
                     case TemplateType.Const:
                         output.Append($"const {GetNativeDeclaration(templateObj.TargetType)}");
+                        break;
+                    case TemplateType.FlagSet:
+                        output.Append($"FlagSet<{AnnotationUtils.GetTypeName(templateObj.TargetType)}>");
                         break;
                     default:
                         throw new NotImplementedException();
@@ -124,13 +129,21 @@ namespace JSBindTool.Core
         {
             return $"{GetMethodPrefix(type)}_resolve";
         }
-        private static int pDeepValueCount = 0;
 
+        private static int pDeepValueCount = 0;
         public static void EmitValueWrite(Type type, string accessor, CodeBuilder code)
         {
             if (type == typeof(JSFunction) || type == typeof(JSObject)) { /*do nothing*/ }
             else if (type == typeof(string))
                 code.Add($"duk_push_string(ctx, {accessor}.c_str());");
+            else if (type == typeof(char))
+                code.Scope(code =>
+                {
+                    code
+                        .Add("ea::string str;")
+                        .Add($"str += {accessor};")
+                        .Add("duk_push_string(ctx, str.c_str());");
+                });
             else if (type == typeof(StringHash))
                 code.Add($"rbfx_push_string_hash(ctx, {accessor});");
             else if (type == typeof(bool))
@@ -168,6 +181,17 @@ namespace JSBindTool.Core
                     case TemplateType.Const:
                         EmitValueWrite(templateObj.TargetType, $"const_cast<{GetNativeDeclaration(templateObj.TargetType)}>({accessor})", code);
                         break;
+                    case TemplateType.FlagSet:
+                        {
+                            var underlyingType = Enum.GetUnderlyingType(templateObj.TargetType);
+                            if (underlyingType == typeof(int))
+                                code.Add($"duk_push_int(ctx, {accessor}.AsInteger());");
+                            else if (underlyingType == typeof(uint))
+                                code.Add($"duk_push_uint(ctx, {accessor}.AsInteger());");
+                            else
+                                throw new NotImplementedException();
+                        }
+                        break;
                     case TemplateType.Vector:
                         {
                             int deepSuffix = ++pDeepValueCount;
@@ -203,6 +227,17 @@ namespace JSBindTool.Core
 
             if (type == typeof(string))
                 code.Add($"ea::string {varName} = duk_get_string_default(ctx, {accessor}, \"\");");
+            else if(type == typeof(char))
+            {
+                code
+                    .Add($"char {varName};")
+                    .Scope(code =>
+                    {
+                        code
+                            .Add($"ea::string str = duk_get_string_default(ctx, {accessor}, \" \");")
+                            .Add($"{varName} = str[0];");
+                    });
+            }
             else if (type == typeof(StringHash))
                 code.Add($"StringHash {varName} = rbfx_get_string_hash(ctx, {accessor});");
             else if (type == typeof(bool))
@@ -239,6 +274,19 @@ namespace JSBindTool.Core
                         break;
                     case TemplateType.RefPtr:
                         code.Add($"{AnnotationUtils.GetTypeName(templateObj.TargetType)}* {varName}({GetRefSignature(templateObj.TargetType)}(ctx, {accessor}));");
+                        break;
+                    case TemplateType.FlagSet:
+                        {
+                            string readCmd = string.Empty;
+                            Type underlyingType = Enum.GetUnderlyingType(templateObj.TargetType);
+                            if (underlyingType == typeof(uint))
+                                readCmd = $"duk_get_uint_default(ctx, {accessor}, 0)";
+                            else if (underlyingType == typeof(int))
+                                readCmd = $"duk_get_int_default(ctx, {accessor}, 0)";
+                            else
+                                throw new NotImplementedException();
+                            code.Add($"FlagSet<{AnnotationUtils.GetTypeName(templateObj.TargetType)}> {varName}({readCmd});");
+                        }
                         break;
                     case TemplateType.Vector:
                         {
@@ -284,7 +332,7 @@ namespace JSBindTool.Core
 
             if (type.IsEnum)
                 hashInput = "Number";
-            else if (type == typeof(string))
+            else if (type == typeof(string) || type == typeof(char))
                 hashInput = "string";
             else if (type == typeof(StringHash))
                 hashInput = "StringHash";
@@ -312,6 +360,9 @@ namespace JSBindTool.Core
                         break;
                     case TemplateType.RefPtr:
                         hashInput = AnnotationUtils.GetTypeName(templateObj.TargetType);
+                        break;
+                    case TemplateType.FlagSet:
+                        hashInput = "Number";
                         break;
                     default:
                         throw new NotImplementedException("not implemented GetTypeHash for TemplateObject inherited types.");

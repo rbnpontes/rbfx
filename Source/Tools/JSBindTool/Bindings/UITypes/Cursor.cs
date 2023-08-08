@@ -1,3 +1,4 @@
+using JSBindTool.Bindings.CoreTypes;
 using JSBindTool.Bindings.GraphicsTypes;
 using JSBindTool.Bindings.MathTypes;
 using JSBindTool.Bindings.ResourceTypes;
@@ -50,5 +51,25 @@ namespace JSBindTool.Bindings.UITypes
         public void Constructor() { }
         [Constructor]
         public void Constructor(int systemCursor) { }
+    }
+    [Include("Urho3D/UI/Cursor.h")]
+    public class Cursor : BorderImage
+    {
+        [PropertyMap("GetShape", "SetShape")]
+        public string Shape { get; set; } = string.Empty;
+        [PropertyMap("GetUseSystemShapes", "SetUseSystemShapes")]
+        public bool UseSystemShapes { get; set; }
+        [PropertyMap("GetShapesAttr", "SetShapesAttr")]
+        public Vector<Variant> ShapesAttr { get => new Vector<Variant>(); set { } }
+        public Cursor() : base(typeof(Cursor)) { }
+
+        [Method]
+        public void DefineShape(string shape, Image image, IntRect imageRect, IntVector2 hotSpot) { }
+        [Method]
+        public void DefineShape(CursorShape shape, Image image, IntRect imageRect, IntVector2 hotSpot) { }
+        [Method]
+        public void SetShape(CursorShape shape) { }
+        [Method]
+        public void ApplyOSCursorShape() { }
     }
 }
