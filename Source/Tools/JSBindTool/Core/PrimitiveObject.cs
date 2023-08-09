@@ -11,6 +11,13 @@ namespace JSBindTool.Core
         {
             return $"{Target.Name}{Constants.PrimitiveIncludeSuffix}.h";
         }
+        protected override string GetBaseTypeHeader()
+        {
+            if (Target.BaseType == null || Target.BaseType == typeof(PrimitiveObject))
+                return string.Empty;
+            return $"#include \"{Target.BaseType.Name}{Constants.PrimitiveIncludeSuffix}.h\"";
+        }
+
         protected virtual void EmitResolveSignature(CodeBuilder code)
         {
             code.Add($"{AnnotationUtils.GetTypeName(Target)}& {CodeUtils.GetMethodPrefix(Target)}_resolve(duk_context* ctx, duk_idx_t stack_idx);");
@@ -204,14 +211,16 @@ namespace JSBindTool.Core
                     "duk_push_this(ctx);",
                     "duk_idx_t this_idx = duk_get_top_index(ctx);"
                 )
-                .AddNewLine()
-                .Add($"duk_push_string(ctx, \"{GetJSTypeIdentifier()}\");")
-                .Add("duk_put_prop_string(ctx, this_idx, \"type\");")
+                .AddNewLine();
+            EmitTypeProperty(code, "this_idx");
+            code
                 .Add("duk_push_pointer(ctx, instance);")
                 .Add("duk_put_prop_string(ctx, this_idx, JS_OBJ_HIDDEN_PTR);")
                 .Add("// setup finalizer")
                 .Add($"{CodeUtils.GetMethodPrefix(Target)}_set_finalizer(ctx, this_idx, instance);")
-                .Add($"{CodeUtils.GetMethodPrefix(Target)}_wrap(ctx, this_idx, instance);")
+                .Add($"{CodeUtils.GetMethodPrefix(Target)}_wrap(ctx, this_idx, instance);");
+            EmitInstanceOf(code, "this_idx");
+            code
                 .AddNewLine()
                 .Add("duk_push_this(ctx);")
                 .Add("return 1;");
@@ -243,17 +252,31 @@ namespace JSBindTool.Core
                     "duk_push_this(ctx);",
                     "duk_idx_t this_idx = duk_get_top_index(ctx);"
                 )
-                .AddNewLine()
-                .Add($"duk_push_string(ctx, \"{GetJSTypeIdentifier()}\");")
-                .Add("duk_put_prop_string(ctx, this_idx, \"type\");")
-                .Add("duk_push_pointer(ctx, instance);")
+                .AddNewLine();
+            EmitTypeProperty(code, "this_idx");
+            code.Add("duk_push_pointer(ctx, instance);")
                 .Add("duk_put_prop_string(ctx, this_idx, JS_OBJ_HIDDEN_PTR);")
                 .Add("// setup finalizer")
                 .Add($"{CodeUtils.GetMethodPrefix(Target)}_set_finalizer(ctx, this_idx, instance);")
-                .Add($"{CodeUtils.GetMethodPrefix(Target)}_wrap(ctx, this_idx, instance);")
-                .AddNewLine()
+                .Add($"{CodeUtils.GetMethodPrefix(Target)}_wrap(ctx, this_idx, instance);");
+            EmitInstanceOf(code, "this_idx");
+            code.AddNewLine()
                 .Add("duk_push_this(ctx);")
                 .Add("return 1;");
+        }
+
+        protected override void EmitParentInstanceOf(CodeBuilder code)
+        {
+            code
+                .Add("duk_push_boolean(ctx, false);")
+                .Add("return 1;");
+        }
+        protected override void EmitParentWrapCall(CodeBuilder code, string accessor)
+        {
+            var baseType = Target.BaseType;
+            if (Target.BaseType == typeof(PrimitiveObject) || baseType == null)
+                return;
+            code.Add($"{CodeUtils.GetMethodPrefix(baseType)}_wrap(ctx, {accessor}, instance);");
         }
 
         private void EmitInitializationNotice(CodeBuilder code)

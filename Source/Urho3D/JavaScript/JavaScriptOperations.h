@@ -28,6 +28,7 @@
 
 #define JS_OBJ_HIDDEN_PTR DUK_HIDDEN_SYMBOL("__ptr")
 #define JS_OBJECT_HEAPPTR_PROP "heapptr"
+#define JS_INSTANCE_OF_PROP_STRONG_REFS DUK_HIDDEN_SYMBOL("__instanceof")
 #define JS_OBJ_HIDDEN_WRAP_CALL DUK_HIDDEN_SYMBOL("__wrapcall")
 #define JS_PROP_STRONG_REFS "__refs"
 
@@ -108,4 +109,6 @@ namespace Urho3D
     URHO3D_API StringHash rbfx_get_type(duk_context* ctx, duk_idx_t value_idx);
     URHO3D_API void rbfx_require_array_type(duk_context* ctx, duk_idx_t value_idx, unsigned type_hash);
     URHO3D_API void rbfx_require_type(duk_context* ctx, duk_idx_t value_idx, unsigned type_hash);
+    URHO3D_API duk_idx_t rbfx_ref_counted_instanceof(duk_context* ctx, const StringHash& type_hash);
+    URHO3D_API duk_idx_t rbfx_object_instanceof(duk_context* ctx, const StringHash& type_hash);
 }

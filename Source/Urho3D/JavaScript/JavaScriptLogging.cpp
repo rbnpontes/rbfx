@@ -3,6 +3,35 @@
 
 namespace Urho3D
 {
+    static void js_console_print_object(duk_context* ctx, duk_idx_t obj_idx, ea::string& output) {
+        if (duk_is_object(ctx, obj_idx))
+            output.append("{\n");
+        else if (duk_is_array(ctx, obj_idx))
+            output.append("[\n");
+        else
+        {
+            output.append(duk_safe_to_string(ctx, obj_idx));
+            return;
+        }
+
+        duk_enum(ctx, obj_idx, 0);
+        while (duk_next(ctx, -1, 1))
+        {
+            output.append("\t");
+            output.append(duk_get_string_default(ctx, -2, ""));
+            output.append(" : ");
+
+            output.append(duk_safe_to_string(ctx, -1));
+            output.append(", \n");
+
+            duk_pop_2(ctx);
+        }
+
+        if (duk_is_object(ctx, obj_idx))
+            output.append("}\n");
+        else if (duk_is_array(ctx, obj_idx))
+            output.append("]\n");
+    }
     void js_console_print(duk_context* ctx, unsigned argc, LogLevel logLvl) {
         ea::string output = "[JavaScript]: ";
         for (unsigned i = 0; i < argc; ++i)
@@ -38,26 +67,12 @@ namespace Urho3D
 
                         output.append(" ");
 
-                        duk_dup(ctx, i);
-                        const char* json = duk_json_encode(ctx, -1);
-                        output.append("\n");
-                        output.append(json ? json : "{}");
-                        duk_pop(ctx);
+                        js_console_print_object(ctx, i, output);
                     }
                     else
                     {
-                        duk_dup(ctx, i);
-                        const char* out = duk_json_encode(ctx, -1);
-
-                        if (!out)
-                        {
-                            duk_pop(ctx);
-                            out = duk_safe_to_string(ctx, -1);
-                        }
-
-                        output.append(out ? out : "{}");
+                        js_console_print_object(ctx, i, output);
                     }
-                    duk_pop(ctx);
                 }
                     break;
                 case DUK_TYPE_POINTER: 

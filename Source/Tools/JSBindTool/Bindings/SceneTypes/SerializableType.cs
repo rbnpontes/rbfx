@@ -1,3 +1,4 @@
+using JSBindTool.Bindings.CoreTypes;
 using JSBindTool.Core;
 using JSBindTool.Core.Annotations;
 using System;
@@ -11,7 +12,7 @@ namespace JSBindTool.Bindings.SceneTypes
     [Abstract]
     [TypeName("Serializable")]
     [Include("Urho3D/Scene/Serializable.h")]
-    public class SerializableType : ClassObject
+    public class SerializableType : EngineObject
     {
         public SerializableType() : base(typeof(SerializableType)) { }
         public SerializableType(Type type) : base(type) { }

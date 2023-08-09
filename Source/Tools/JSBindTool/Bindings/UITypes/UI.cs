@@ -1,3 +1,4 @@
+using JSBindTool.Bindings.CoreTypes;
 using JSBindTool.Core;
 using JSBindTool.Core.Annotations;
 using System;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 namespace JSBindTool.Bindings.UITypes
 {
     [Include("Urho3D/UI/UI.h")]
-    public class UI : ClassObject
+    public class UI : EngineObject
     {
         [PropertyMap("GetRoot")]
         public UIElement Root { get; } = new UIElement();

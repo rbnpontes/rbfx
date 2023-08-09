@@ -11,6 +11,7 @@
 namespace Urho3D
 {
     static StringHash g_ref_counted_type   = StringHash("RefCounted");
+    static StringHash g_object_type        = StringHash("Object");
     static StringHash g_boolean_type       = StringHash("bool");
     static StringHash g_number_type        = StringHash("Number");
     static StringHash g_int_type           = StringHash("int");
@@ -38,6 +39,15 @@ namespace Urho3D
     static StringHash g_matrix4_type       = StringHash("Matrix4");
     static StringHash g_vector_type        = StringHash("Vector");
     static StringHash g_function_type      = StringHash("Function");
+
+    static duk_idx_t rbfx_internal_ref_counted_instanceof(duk_context* ctx) {
+        StringHash type = rbfx_require_string_hash(ctx, 0);
+        return rbfx_ref_counted_instanceof(ctx, type);
+    }
+    static duk_idx_t rbfx_internal_object_instanceof(duk_context* ctx) {
+        StringHash type = rbfx_require_string_hash(ctx, 0);
+        return rbfx_object_instanceof(ctx, type);
+    }
 
     StringHash rbfx_require_string_hash(duk_context* ctx, duk_idx_t stack_idx)
     {
@@ -482,6 +492,9 @@ namespace Urho3D
                 rbfx_object_wrap(ctx, obj_idx, obj);
                 rbfx_set_finalizer(ctx, obj_idx, obj);
 
+                duk_push_c_lightfunc(ctx, rbfx_internal_object_instanceof, 1, 1, 0);
+                duk_put_prop_string(ctx, obj_idx, JS_INSTANCE_OF_PROP_STRONG_REFS);
+
                 heapptr = duk_get_heapptr(ctx, -1);
                 rbfx_lock_heapptr(ctx, heapptr);
                 obj->SetJSHeapptr(heapptr);
@@ -507,6 +520,9 @@ namespace Urho3D
             rbfx_lock_heapptr(ctx, heapptr);
             rbfx_ref_counted_wrap(ctx, obj_idx, ref_count);
             rbfx_set_finalizer(ctx, obj_idx, ref_count);
+
+            duk_push_c_lightfunc(ctx, rbfx_internal_ref_counted_instanceof, 1, 1, 0);
+            duk_put_prop_string(ctx, obj_idx, JS_INSTANCE_OF_PROP_STRONG_REFS);
         }
     }
     void rbfx_ref_counted_wrap(duk_context* ctx, duk_idx_t obj_idx, RefCounted* ref_count)
@@ -827,20 +843,15 @@ namespace Urho3D
             err_output = TYPE_REQ_ERROR_MSG(VariantMap);
         else if (type == DUK_TYPE_OBJECT)
         {
-            if (duk_get_prop_string(ctx, value_idx, "type"))
+            if (duk_get_prop_string(ctx, value_idx, JS_INSTANCE_OF_PROP_STRONG_REFS))
             {
-                const char* type = duk_get_string(ctx, -1);
-                StringHash obj_type_hash(type);
-                Object* obj = static_cast<Object*>(rbfx_get_instance(ctx, value_idx));
+                duk_dup(ctx, -1);
+                duk_push_uint(ctx, type_hash);
+                duk_call(ctx, 1);
 
-                bool has_err = true;
-                if (obj)
-                    has_err = !obj->GetTypeInfo()->IsTypeOf(StringHash(type_hash));
-                else
-                    has_err = type_hash != obj_type_hash.Value();
-
-                if (has_err)
+                if (!duk_get_boolean_default(ctx, -1, false))
                     err_output = "invalid value type. the value object type does not match type requirements.";
+                duk_pop(ctx);
             }
             duk_pop(ctx);
         }
@@ -853,5 +864,17 @@ namespace Urho3D
             duk_throw(ctx);
         }
 #endif
+    }
+    duk_idx_t rbfx_ref_counted_instanceof(duk_context* ctx, const StringHash& hash) {
+        duk_push_boolean(ctx, g_ref_counted_type == hash);;
+        return 1;
+    }
+    duk_idx_t rbfx_object_instanceof(duk_context* ctx, const StringHash& hash) {
+        if (hash == g_object_type)
+        {
+            duk_push_boolean(ctx, true);
+            return 1;
+        }
+        return rbfx_ref_counted_instanceof(ctx, hash);
     }
 }

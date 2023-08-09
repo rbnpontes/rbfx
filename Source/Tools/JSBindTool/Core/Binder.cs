@@ -1,3 +1,4 @@
+using JSBindTool.Bindings.CoreTypes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +12,8 @@ namespace JSBindTool.Core
     {
         private static bool IsAcceptableType(Type type)
         {
+            if (type == typeof(ClassObject) || type == typeof(EngineObject))
+                return false;
             return type.IsSubclassOf(typeof(ClassObject))
                 || type.IsSubclassOf(typeof(PrimitiveObject))
                 || type.IsSubclassOf(typeof(ModuleObject))

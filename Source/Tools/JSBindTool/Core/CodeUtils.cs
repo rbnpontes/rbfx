@@ -129,6 +129,10 @@ namespace JSBindTool.Core
         {
             return $"{GetMethodPrefix(type)}_resolve";
         }
+        public static string GetInstanceOfSignature(Type type)
+        {
+            return $"{GetMethodPrefix(type)}_instanceof";
+        }
 
         private static int pDeepValueCount = 0;
         public static void EmitValueWrite(Type type, string accessor, CodeBuilder code)

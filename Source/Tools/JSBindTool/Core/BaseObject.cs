@@ -35,6 +35,7 @@ namespace JSBindTool.Core
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);");
             EmitSetupStaticSignatures(code);
             EmitWrapSignature(code);
+            EmitInstanceOfSignature(code);
             EmitGetRefSignatures(code);
             EmitVariableSignatures(code);
             EmitCtorSignatures(code);
@@ -52,6 +53,12 @@ namespace JSBindTool.Core
         protected virtual void EmitGetRefSignatures(CodeBuilder code)
         {
             code.Add($"{AnnotationUtils.GetTypeName(Target)}* {GetRefSignature()}(duk_context* ctx, duk_idx_t obj_idx);");
+        }
+        protected virtual void EmitInstanceOfSignature(CodeBuilder code)
+        {
+            code
+                .Add($"duk_idx_t {CodeUtils.GetInstanceOfSignature(Target)}(duk_context* ctx, const StringHash& type);")
+                .Add($"duk_idx_t {CodeUtils.GetInstanceOfSignature(Target)}_call(duk_context* ctx);");
         }
         protected virtual void EmitVariableSignatures(CodeBuilder code)
         {
@@ -167,13 +174,9 @@ namespace JSBindTool.Core
             // add self header
             includes.Add($"#include \"{GetSelfHeader()}\"");
             // add inheritance headers if exists
-            if (Target.BaseType != null && Target.BaseType != typeof(ClassObject) && Target.BaseType != typeof(PrimitiveObject))
-            {
-                if (Target.IsSubclassOf(typeof(ClassObject)))
-                    includes.Add($"#include \"{Target.BaseType.Name}{Constants.ClassIncludeSuffix}.h\"");
-                else if (Target.IsSubclassOf(typeof(PrimitiveObject)))
-                    includes.Add($"#include \"{Target.BaseType.Name}{Constants.PrimitiveIncludeSuffix}.h\"");
-            }
+            var baseHeader = GetBaseTypeHeader();
+            if(!string.IsNullOrEmpty(baseHeader))
+                includes.Add(baseHeader);
 
             // add require headers
             includes.Add("#include <Urho3D/IO/Log.h>");
@@ -260,6 +263,7 @@ namespace JSBindTool.Core
             EmitSourceSetup(code);
             EmitSourceSetupStatic(code);
             EmitSourceWrap(code);
+            EmitSourceInstanceOf(code);
             EmitSourceGetRef(code);
             EmitSourceVariables(code);
             EmitSourceProperties(code);
@@ -438,10 +442,7 @@ namespace JSBindTool.Core
                 .Add($"void {CodeUtils.GetMethodPrefix(Target)}_wrap(duk_context* ctx, duk_idx_t obj_idx, {AnnotationUtils.GetTypeName(Target)}* instance)")
                 .Scope(code =>
                 {
-                    if (Target.BaseType == typeof(ClassObject))
-                        code.Add("rbfx_object_wrap(ctx, obj_idx, instance);");
-                    else if (Target.BaseType != null && Target.BaseType != typeof(PrimitiveObject))
-                        code.Add($"{CodeUtils.GetMethodPrefix(Target.BaseType)}_wrap(ctx, obj_idx, instance);");
+                    EmitParentWrapCall(code, "obj_idx");
                     EmitVariables(code, "obj_idx");
                     EmitProperties(code, "obj_idx");
                     EmitOperatorMethods(code, "obj_idx");
@@ -459,6 +460,22 @@ namespace JSBindTool.Core
             code
                 .Add($"void {CodeUtils.GetSetupStaticSignature(Target)}(duk_context* ctx)")
                 .Scope(code => EmitSetupStaticBody(code));
+        }
+        protected virtual void EmitSourceInstanceOf(CodeBuilder code)
+        {
+            code
+                .Add($"duk_idx_t {CodeUtils.GetInstanceOfSignature(Target)}(duk_context* ctx, const StringHash& type)")
+                .Scope(code =>
+                {
+                    EmitSourceInstanceOfBody(code);
+                })
+                .Add($"duk_idx_t {CodeUtils.GetInstanceOfSignature(Target)}_call(duk_context* ctx)")
+                .Scope(code =>
+                {
+                    code
+                        .Add("StringHash type = rbfx_require_string_hash(ctx, 0);")
+                        .Add($"return {CodeUtils.GetInstanceOfSignature(Target)}(ctx, type);");
+                });
         }
 
         protected virtual void EmitSourceConstructors(CodeBuilder code)
@@ -718,6 +735,20 @@ namespace JSBindTool.Core
                 }
             });
         }
+        protected virtual void EmitSourceInstanceOfBody(CodeBuilder code)
+        {
+            uint targetHash = CodeUtils.GetTypeHash(Target);
+
+            code
+                .Add($"if (type.Value() == {targetHash})")
+                .Scope(code =>
+                {
+                    code
+                        .Add("duk_push_boolean(ctx, true);")
+                        .Add("return 1;");
+                });
+            EmitParentInstanceOf(code);
+        }
 
         protected virtual void EmitSetupBody(CodeBuilder code)
         {
@@ -772,6 +803,7 @@ namespace JSBindTool.Core
                 code.Add($"{CodeUtils.GetMethodPrefix(Target)}_set_finalizer(ctx, this_idx, instance);");
             if (!modifiers.SkipWrap)
                 code.Add($"{CodeUtils.GetMethodPrefix(Target)}_wrap(ctx, this_idx, instance);");
+            EmitInstanceOf(code, "this_idx");
             code.AddNewLine()
                 .Add("duk_dup(ctx, this_idx);")
                 .Add("return result_code;");
@@ -1198,6 +1230,24 @@ namespace JSBindTool.Core
 
             return totalMethods > 0;
         }
+        protected virtual void EmitInstanceOf(CodeBuilder code, string accessor)
+        {
+            code
+                .Add($"duk_push_c_lightfunc(ctx, {CodeUtils.GetInstanceOfSignature(Target)}_call, 1, 1, 0);")
+                .Add($"duk_put_prop_string(ctx, {accessor}, JS_INSTANCE_OF_PROP_STRONG_REFS);");
+        }
+        protected virtual void EmitTypeProperty(CodeBuilder code, string accessor)
+        {
+            code
+                .Add("duk_push_string(ctx, \"type\");")
+                .LightFunction(code =>
+                {
+                    code
+                        .Add($"duk_push_string(ctx, \"{GetJSTypeIdentifier()}\");")
+                        .Add("return 1;");
+                }, "0")
+                .Add($"duk_def_prop(ctx, {accessor}, DUK_DEFPROP_HAVE_GETTER | DUK_DEFPROP_HAVE_ENUMERABLE);");
+        }
         #endregion
         #region Variables and Properties Body
         protected virtual void EmitVariableGetter(BindingVariable variable, CodeBuilder code)
@@ -1492,6 +1542,7 @@ namespace JSBindTool.Core
             return CodeUtils.GetRefSignature(Target);
         }
 
+        protected virtual string GetBaseTypeHeader() => string.Empty;
         protected void ValidateInheritance<T>(Type inheritType)
         {
             if (inheritType == typeof(T))
@@ -1501,5 +1552,7 @@ namespace JSBindTool.Core
         protected abstract string GetSelfHeader();
         protected abstract void EmitConstructorBody(ConstructorData ctor, CodeBuilder code);
         protected abstract void EmitGenericConstructorBody(ConstructorData ctor, CodeBuilder code);
+        protected abstract void EmitParentInstanceOf(CodeBuilder code);
+        protected abstract void EmitParentWrapCall(CodeBuilder code, string accessor);
     }
 }

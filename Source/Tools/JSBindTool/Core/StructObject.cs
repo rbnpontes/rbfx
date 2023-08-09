@@ -75,5 +75,9 @@ namespace JSBindTool.Core
         protected override void EmitConstructorBody(ConstructorData ctor, CodeBuilder code)
         {
         }
+        protected override void EmitParentInstanceOf(CodeBuilder code) { }
+        protected override void EmitParentWrapCall(CodeBuilder code, string accessor)
+        {
+        }
     }
 }

@@ -1,11 +1,4 @@
-using JSBindTool.Bindings.MathTypes;
 using JSBindTool.Core.Annotations;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace JSBindTool.Core
 {
@@ -21,6 +14,12 @@ namespace JSBindTool.Core
         protected override string GetSelfHeader()
         {
             return $"{Target.Name}{Constants.ClassIncludeSuffix}.h";
+        }
+        protected override string GetBaseTypeHeader()
+        {
+            if (Target.BaseType == null || Target.BaseType == typeof(ClassObject))
+                return string.Empty;
+            return $"#include \"{Target.BaseType.Name}{Constants.ClassIncludeSuffix}.h\"";
         }
         protected override void EmitSourceGetRef(CodeBuilder code)
         {
@@ -82,7 +81,7 @@ namespace JSBindTool.Core
                 .Add("if (obj_idx == 0)")
                 .Scope(code =>
                 {
-                    code.Add($"instance = new {AnnotationUtils.GetTypeName(Target)}(JavaScriptSystem::GetContext());");
+                    EmitNewCall(code);
                 })
                 .Add("else")
                 .Scope(code =>
@@ -111,15 +110,35 @@ namespace JSBindTool.Core
                 .Add("heapptr = duk_get_heapptr(ctx, obj_idx);")
                 .Add("instance->SetJSHeapptr(heapptr);")
                 .Add("instance->AddRef();")
-                .Add("rbfx_lock_heapptr(ctx, heapptr);")
-                .AddNewLine()
+                .Add("rbfx_lock_heapptr(ctx, heapptr);");
+
+            EmitTypeProperty(code, "obj_idx");
+
+            code.AddNewLine()
                 .Add($"{CodeUtils.GetMethodPrefix(Target)}_wrap(ctx, obj_idx, instance);")
-                .Add("rbfx_set_finalizer(ctx, obj_idx, instance);")
+                .Add("rbfx_set_finalizer(ctx, obj_idx, instance);");
+            EmitInstanceOf(code, "obj_idx");
+            code
                 .AddNewLine()
                 .Add("duk_push_this(ctx);")
                 .Add("return 1;");
         }
 
+        protected override void EmitParentInstanceOf(CodeBuilder code)
+        {
+            code.Add("return rbfx_ref_counted_instanceof(ctx, type);");
+        }
+        protected virtual void EmitNewCall(CodeBuilder code)
+        {
+            code.Add($"instance = new {AnnotationUtils.GetTypeName(Target)}();");
+        }
+        protected override void EmitParentWrapCall(CodeBuilder code, string accessor)
+        {
+            if (Target.BaseType == typeof(ClassObject))
+                code.Add($"rbfx_ref_counted_wrap(ctx, {accessor}, instance);");
+            else if(Target.BaseType != null)
+                code.Add($"{CodeUtils.GetMethodPrefix(Target.BaseType)}_wrap(ctx, {accessor}, instance);");
+        }
         private void EmitInitializationNotice(CodeBuilder code)
         {
             code.Add($"URHO3D_LOGDEBUG(\"- {AnnotationUtils.GetTypeName(Target)}\");");

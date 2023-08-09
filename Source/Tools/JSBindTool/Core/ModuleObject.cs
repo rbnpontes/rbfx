@@ -16,6 +16,10 @@ namespace JSBindTool.Core
         {
             return $"{Target.Name}{Constants.ModuleIncludeSuffix}.h";
         }
+        protected override string GetBaseTypeHeader()
+        {
+            return string.Empty;
+        }
         public override void EmitHeaderSignatures(CodeBuilder code)
         {
             code.Add($"void {CodeUtils.GetMethodPrefix(Target)}_setup(duk_context* ctx);");
@@ -116,6 +120,10 @@ namespace JSBindTool.Core
         protected override void EmitGenericConstructorBody(ConstructorData ctor, CodeBuilder code)
         {
             throw new NotImplementedException();
+        }
+        protected override void EmitParentInstanceOf(CodeBuilder code){ }
+        protected override void EmitParentWrapCall(CodeBuilder code, string accessor)
+        {
         }
         #endregion
 
