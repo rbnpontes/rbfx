@@ -267,9 +267,14 @@ namespace JSBindTool.Core
 
         protected override void EmitParentInstanceOf(CodeBuilder code)
         {
-            code
-                .Add("duk_push_boolean(ctx, false);")
-                .Add("return 1;");
+            if (Target.BaseType == typeof(PrimitiveObject) || Target.BaseType == null)
+            {
+                code
+                    .Add("duk_push_boolean(ctx, false);")
+                    .Add("return 1;");
+            }
+            else
+                code.Add($"return {CodeUtils.GetInstanceOfSignature(Target.BaseType)}(ctx, type);");
         }
         protected override void EmitParentWrapCall(CodeBuilder code, string accessor)
         {

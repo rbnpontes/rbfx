@@ -26,7 +26,10 @@ namespace JSBindTool.Bindings.CoreTypes
         }
         protected override void EmitParentInstanceOf(CodeBuilder code)
         {
-            code.Add("return rbfx_object_instanceof(ctx, type);");
+            if (Target.BaseType == typeof(EngineObject) || Target.BaseType == null)
+                code.Add("return rbfx_object_instanceof(ctx, type);");
+            else
+                code.Add($"return {CodeUtils.GetInstanceOfSignature(Target.BaseType)}(ctx, type);");
         }
         protected override void EmitParentWrapCall(CodeBuilder code, string accessor)
         {

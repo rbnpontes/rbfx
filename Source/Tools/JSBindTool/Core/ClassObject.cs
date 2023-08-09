@@ -126,7 +126,10 @@ namespace JSBindTool.Core
 
         protected override void EmitParentInstanceOf(CodeBuilder code)
         {
-            code.Add("return rbfx_ref_counted_instanceof(ctx, type);");
+            if(Target.BaseType == typeof(ClassObject) || Target.BaseType == null)
+                code.Add("return rbfx_ref_counted_instanceof(ctx, type);");
+            else
+                code.Add($"return {CodeUtils.GetInstanceOfSignature(Target.BaseType)}(ctx, type);");
         }
         protected virtual void EmitNewCall(CodeBuilder code)
         {
