@@ -411,7 +411,9 @@ namespace JSBindTool.Bindings.UITypes
         }
         [Method]
         public UIElement GetElementEventSender() => new UIElement();
+        [Method]
         public void SetFixedWidth(int width) { }
+        [Method]
         public void SetFixedHeight(int height) { }
     }
 }
