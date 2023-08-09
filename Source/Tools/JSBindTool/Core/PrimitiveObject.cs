@@ -4,8 +4,7 @@ namespace JSBindTool.Core
     {
         public PrimitiveObject(Type type) : base(type)
         {
-            if (type == typeof(PrimitiveObject))
-                throw new Exception("Invalid Implementation. Inherited primitive object is using AbstractClass instead of Implementation.");
+            ValidateInheritance<PrimitiveObject>(type);
         }
 
         protected override string GetSelfHeader()

@@ -16,4 +16,17 @@ namespace JSBindTool.Bindings.UITypes
         public UI() : base(typeof(UI)) { }
         public UI(Type type) : base(type) { }
     }
+
+    [Include("Urho3D/UI/UI.h")]
+    [Include("Urho3D/UI/Font.h")]
+    [Namespace(Constants.ProjectName + ".UI")]
+    public class UIModule : ModuleObject
+    {
+        public UIModule() : base(typeof(UIModule)) { }
+
+        [Field("fontTextureMinSize", "FONT_TEXTURE_MIN_SIZE")]
+        public static int FontTextureMinSize = 0;
+        [Field("fontDpi", "FONT_DPI")]
+        public static int FontDpi = 0;
+    }
 }

@@ -1492,6 +1492,12 @@ namespace JSBindTool.Core
             return CodeUtils.GetRefSignature(Target);
         }
 
+        protected void ValidateInheritance<T>(Type inheritType)
+        {
+            if (inheritType == typeof(T))
+                throw new Exception($"Invalid Implementation. Inherited {typeof(T).Name} is using the parent class instead of self class");
+        }
+
         protected abstract string GetSelfHeader();
         protected abstract void EmitConstructorBody(ConstructorData ctor, CodeBuilder code);
         protected abstract void EmitGenericConstructorBody(ConstructorData ctor, CodeBuilder code);

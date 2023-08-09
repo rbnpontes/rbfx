@@ -15,6 +15,7 @@ namespace JSBindTool.Core
     {
         public ClassObject(Type type) : base(type)
         {
+            ValidateInheritance<ClassObject>(type);
         }
 
         protected override string GetSelfHeader()

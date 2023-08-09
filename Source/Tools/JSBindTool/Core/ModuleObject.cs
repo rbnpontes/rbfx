@@ -54,6 +54,7 @@ namespace JSBindTool.Core
 
             code.Add("duk_idx_t top = duk_get_top_index(ctx);");
             EmitMethods(code, "top");
+            EmitStaticFields(code, "top");
             code.Add("duk_pop(ctx);");
             code.Add($"URHO3D_LOGDEBUG(\"- {AnnotationUtils.GetTypeName(Target)}\");");
         }
@@ -93,6 +94,13 @@ namespace JSBindTool.Core
             code.Add($"{CodeUtils.GetNativeDeclaration(methodInfo.ReturnType)} result = {nativeName}({argsCall});");
             CodeUtils.EmitValueWrite(methodInfo.ReturnType, "result", code);
             code.Add("return 1;");
+        }
+
+        protected override void EmitStaticField(FieldInfo field, CodeBuilder code, string accessor)
+        {
+            FieldAttribute fieldAttr = AnnotationUtils.GetFieldAttribute(field);
+            CodeUtils.EmitValueWrite(field.FieldType, fieldAttr.NativeName, code);
+            code.Add($"duk_put_prop_string(ctx, {accessor}, \"{fieldAttr.JSName}\");");
         }
 
         #region Skipped Methods
