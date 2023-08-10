@@ -18,69 +18,6 @@ namespace JSBindTool.Core
             chars[0] = char.ToLower(chars[0]);
             return new string(chars);
         }
-        public static string GetNativeDeclaration(Type type)
-        {
-            StringBuilder output = new StringBuilder();
-
-            if (type == typeof(string))
-                output.Append("ea::string");
-            else if (type == typeof(char))
-                output.Append("char");
-            else if (type == typeof(StringHash))
-                output.Append("StringHash");
-            else if (type == typeof(bool))
-                output.Append("bool");
-            else if (type == typeof(float))
-                output.Append("float");
-            else if (type == typeof(double))
-                output.Append("double");
-            else if (type == typeof(int))
-                output.Append("int");
-            else if (type == typeof(uint))
-                output.Append("unsigned");
-            else if (type == typeof(ushort))
-                output.Append("unsigned short");
-            else if (type == typeof(byte))
-                output.Append("unsigned char");
-            else if (type == typeof(IntPtr))
-                output.Append("void*");
-            else if (
-                type == typeof(JSFunction)
-                || type == typeof(JSObject)
-                || type == typeof(Array)) { /*do nothing*/ }
-            else if (type.IsSubclassOf(typeof(ClassObject)))
-                output.Append(type == typeof(ClassObject) ? "Object" : AnnotationUtils.GetTypeName(type)).Append("*");
-            else if (type.IsSubclassOf(typeof(TemplateObject)))
-            {
-                var templateObj = TemplateObject.Create(type);
-                switch (templateObj.TemplateType)
-                {
-                    case TemplateType.SharedPtr:
-                        output.Append($"SharedPtr<{AnnotationUtils.GetTypeName(templateObj.TargetType)}>");
-                        break;
-                    case TemplateType.WeakPtr:
-                        output.Append($"WeakPtr<{AnnotationUtils.GetTypeName(templateObj.TargetType)}>");
-                        break;
-                    case TemplateType.Vector:
-                        output.Append($"ea::vector<{GetNativeDeclaration(templateObj.TargetType)}>");
-                        break;
-                    case TemplateType.RefPtr:
-                        output.Append($"{AnnotationUtils.GetTypeName(templateObj.TargetType)}*");
-                        break;
-                    case TemplateType.Const:
-                        output.Append($"const {GetNativeDeclaration(templateObj.TargetType)}");
-                        break;
-                    case TemplateType.FlagSet:
-                        output.Append($"FlagSet<{AnnotationUtils.GetTypeName(templateObj.TargetType)}>");
-                        break;
-                    default:
-                        throw new NotImplementedException();
-                }
-            }
-            else
-                output.Append(type.Name);
-            return output.ToString();
-        }
         public static string ToSnakeCase(string input)
         {
             var output = new StringBuilder();
@@ -148,6 +85,15 @@ namespace JSBindTool.Core
                         .Add($"str += {accessor};")
                         .Add("duk_push_string(ctx, str.c_str());");
                 });
+            else if(type == typeof(JSBuffer))
+            {
+                code.Scope(code =>
+                {
+                    code
+                        .Add($"void* output_buffer = duk_push_buffer(ctx, {accessor}_length, 0);")
+                        .Add($"memcpy(output_buffer, {accessor}, {accessor}_length);");
+                });
+            }
             else if (type == typeof(StringHash))
                 code.Add($"rbfx_push_string_hash(ctx, {accessor});");
             else if (type == typeof(bool))
@@ -250,16 +196,32 @@ namespace JSBindTool.Core
                 code.Add($"float {varName} = (float)duk_get_number_default(ctx, {accessor}, 0.0);");
             else if (type == typeof(double))
                 code.Add($"double {varName} = duk_get_number_default(ctx, {accessor}, 0.0);");
-            else if (type == typeof(int))
-                code.Add($"int {varName} = duk_get_int_default(ctx, {accessor}, 0);");
+            else if (type == typeof(int) || type == typeof(short))
+            {
+                string castCmd = string.Empty;
+                if (type == typeof(short))
+                    castCmd = "(short)";
+                code.Add($"int {varName} = {castCmd}duk_get_int_default(ctx, {accessor}, 0);");
+            }
             else if (type == typeof(uint) || type == typeof(ushort))
-                code.Add($"unsigned {varName} = duk_get_uint_default(ctx, {accessor}, 0u);");
+            {
+                string castCmd = string.Empty;
+                if (type == typeof(ushort))
+                    castCmd = "(unsigned short)";
+                code.Add($"unsigned {varName} = {castCmd}duk_get_uint_default(ctx, {accessor}, 0u);");
+            }
             else if (type == typeof(byte))
                 code.Add($"unsigned char {varName} = (unsigned char)duk_get_uint_default(ctx, {accessor}, 0u);");
             else if (type == typeof(IntPtr))
                 code.Add($"void* {varName} = duk_get_pointer_default(ctx, {accessor}, nullptr);");
             else if (type == typeof(JSFunction) || type == typeof(JSObject) || type == typeof(Array))
                 code.Add($"duk_idx_t {varName} = {accessor};");
+            else if(type == typeof(JSBuffer))
+            {
+                code
+                    .Add($"duk_idx_t {varName}_length = 0;")
+                    .Add($"unsigned char* {varName} = static_cast<unsigned char*>(duk_get_buffer(ctx, {accessor}, &{varName}_length));");
+            }
             else if (type == typeof(Variant))
                 code.Add($"Variant {varName} = rbfx_get_variant(ctx, {accessor});");
             else if (type.IsEnum)
@@ -329,7 +291,73 @@ namespace JSBindTool.Core
                 code.Add($"{AnnotationUtils.GetTypeName(type)}& {varName} = {GetResolveSignature(type)}(ctx, {accessor});");
             else throw new NotImplementedException();
         }
+        public static string GetNativeDeclaration(Type type)
+        {
+            StringBuilder output = new StringBuilder();
 
+            if (type == typeof(string))
+                output.Append("ea::string");
+            else if (type == typeof(char))
+                output.Append("char");
+            else if (type == typeof(StringHash))
+                output.Append("StringHash");
+            else if (type == typeof(bool))
+                output.Append("bool");
+            else if (type == typeof(float))
+                output.Append("float");
+            else if (type == typeof(double))
+                output.Append("double");
+            else if (type == typeof(int))
+                output.Append("int");
+            else if (type == typeof(short))
+                output.Append("short");
+            else if (type == typeof(uint))
+                output.Append("unsigned");
+            else if (type == typeof(ushort))
+                output.Append("unsigned short");
+            else if (type == typeof(byte))
+                output.Append("unsigned char");
+            else if (type == typeof(IntPtr))
+                output.Append("void*");
+            else if (type == typeof(JSBuffer))
+                output.Append("unsigned char*");
+            else if (
+                type == typeof(JSFunction)
+                || type == typeof(JSObject)
+                || type == typeof(Array)) { /*do nothing*/ }
+            else if (type.IsSubclassOf(typeof(ClassObject)))
+                output.Append(type == typeof(ClassObject) ? "Object" : AnnotationUtils.GetTypeName(type)).Append("*");
+            else if (type.IsSubclassOf(typeof(TemplateObject)))
+            {
+                var templateObj = TemplateObject.Create(type);
+                switch (templateObj.TemplateType)
+                {
+                    case TemplateType.SharedPtr:
+                        output.Append($"SharedPtr<{AnnotationUtils.GetTypeName(templateObj.TargetType)}>");
+                        break;
+                    case TemplateType.WeakPtr:
+                        output.Append($"WeakPtr<{AnnotationUtils.GetTypeName(templateObj.TargetType)}>");
+                        break;
+                    case TemplateType.Vector:
+                        output.Append($"ea::vector<{GetNativeDeclaration(templateObj.TargetType)}>");
+                        break;
+                    case TemplateType.RefPtr:
+                        output.Append($"{AnnotationUtils.GetTypeName(templateObj.TargetType)}*");
+                        break;
+                    case TemplateType.Const:
+                        output.Append($"const {GetNativeDeclaration(templateObj.TargetType)}");
+                        break;
+                    case TemplateType.FlagSet:
+                        output.Append($"FlagSet<{AnnotationUtils.GetTypeName(templateObj.TargetType)}>");
+                        break;
+                    default:
+                        throw new NotImplementedException();
+                }
+            }
+            else
+                output.Append(type.Name);
+            return output.ToString();
+        }
         public static uint GetTypeHash(Type type)
         {
             string hashInput;
@@ -342,7 +370,10 @@ namespace JSBindTool.Core
                 hashInput = "StringHash";
             else if (type == typeof(bool))
                 hashInput = "bool";
-            else if (type == typeof(float) || type == typeof(double) || type == typeof(int) || type == typeof(uint) || type == typeof(byte))
+            else if (type == typeof(float)
+                || type == typeof(double) || type == typeof(int)
+                || type == typeof(uint) || type == typeof(byte)
+                || type == typeof(short) || type == typeof(ushort))
                 hashInput = "Number";
             else if (type == typeof(IntPtr))
                 hashInput = "void";
@@ -350,6 +381,8 @@ namespace JSBindTool.Core
                 hashInput = "Function";
             else if (type == typeof(JSObject))
                 hashInput = "VariantMap";
+            else if (type == typeof(JSBuffer))
+                hashInput = "Buffer";
             else if (type == typeof(Variant))
                 hashInput = "Variant";
             else if (type == typeof(Array))
