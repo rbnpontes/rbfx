@@ -737,7 +737,7 @@ namespace JSBindTool.Core
         }
         protected virtual void EmitSourceInstanceOfBody(CodeBuilder code)
         {
-            uint targetHash = CodeUtils.GetTypeHash(Target);
+            uint targetHash = HashUtils.Hash(AnnotationUtils.GetTypeName(Target));
 
             code
                 .Add($"if (type.Value() == {targetHash})")

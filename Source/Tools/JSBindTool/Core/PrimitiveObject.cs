@@ -193,6 +193,7 @@ namespace JSBindTool.Core
 
         protected override void EmitConstructorBody(ConstructorData ctor, CodeBuilder code)
         {
+            EmitConstructorCallValidation(code);
             EmitArgumentValidation(ctor, code);
 
             if (ctor.HasCustomCode)

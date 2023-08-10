@@ -1,3 +1,4 @@
+using JSBindTool.Bindings.GraphicsTypes;
 using JSBindTool.Core;
 using JSBindTool.Core.Annotations;
 
@@ -28,32 +29,47 @@ namespace JSBindTool.Bindings.UITypes
         public float Page;
         [Variable("used_")]
         public bool Used;
-        public FontFace() : base(typeof(FontFace)) { }
+
+        public FontGlyph() : base(typeof(FontGlyph)) { }
 
         [Constructor]
         public void Constructor() { }
     }
 
     [Include("Urho3D/UI/FontFace.h")]
+    [Dependencies(new Type[] { typeof(FontGlyph) })]
+    [Abstract]
     public class FontFace : ClassObject
     {
+        [PropertyMap("HasMutableGlyphs")]
+        public bool HasMutableGlyphs { get; }
+        [PropertyMap("IsDataLost")]
+        public bool IsDataLost { get; }
+        [PropertyMap("GetPointSize")]
+        public float PointSize { get; }
+        [PropertyMap("GetRowHeight")]
+        public float RowHeight { get; }
+        [PropertyMap("GetTextures")]
+        public Vector<SharedPtr<Texture2D>> Textures { get => new Vector<SharedPtr<Texture2D>>(); }
+
         public FontFace() : base(typeof(FontFace)) { }
 
-        [Constructor]
-        public void Constructor(Font font) { }
-
         [Method]
-        [CustomCode(typeof(bool), new Type[] { typeof(JSBuffer) })]
+        [CustomCode(typeof(bool), new Type[] { typeof(JSBuffer), typeof(float) })]
         public void Load(CodeBuilder code)
         {
-            code
-                .Add("instance->Load(arg0, arg0_length);");
+            code.Add("bool result = instance->Load(arg0, (unsigned)arg0_length, arg1);");
         }
-        [Method("Load")]
-        [CustomCode(typeof(bool), new Type[] { typeof(JSBuffer), typeof(float) })]
-        public void Load1(CodeBuilder code)
+        [Method]
+        [CustomCode(new Type[] { typeof(uint) })]
+        public void GetGlyph(CodeBuilder code)
         {
-            code.Add("instance->Load(arg0, arg0_length, arg1);");
+            code
+                .Add("const FontGlyph* glyph = instance->GetGlyph(arg0);")
+                .Add($"{CodeUtils.GetPushSignature(typeof(FontGlyph))}(ctx, *glyph);")
+                .Add("result_code = 1;");
         }
+
+        public float GetKerning(uint c, uint d) => 0f;
     }
 }

@@ -219,7 +219,7 @@ namespace JSBindTool.Core
             else if(type == typeof(JSBuffer))
             {
                 code
-                    .Add($"duk_idx_t {varName}_length = 0;")
+                    .Add($"duk_size_t {varName}_length = 0;")
                     .Add($"unsigned char* {varName} = static_cast<unsigned char*>(duk_get_buffer(ctx, {accessor}, &{varName}_length));");
             }
             else if (type == typeof(Variant))

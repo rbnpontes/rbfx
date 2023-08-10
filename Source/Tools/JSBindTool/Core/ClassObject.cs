@@ -47,9 +47,53 @@ namespace JSBindTool.Core
             EmitInitializationNotice(code);
         }
 
-        protected override void EmitConstructorBody(ConstructorData ctor, CodeBuilder code)
+        protected override void EmitCustomConstructorBody(ConstructorData ctor, CodeBuilder code)
         {
             throw new NotImplementedException();
+            //base.EmitCustomConstructorBody(ctor, code);
+        }
+        protected override void EmitConstructorBody(ConstructorData ctor, CodeBuilder code)
+        {
+            if (AnnotationUtils.IsAbstract(Target))
+                throw new Exception("Constructor cannot be created if class is marked as abstract.");
+
+            EmitConstructorCallValidation(code);
+            EmitArgumentValidation(ctor, code);
+
+            if (ctor.HasCustomCode)
+            {
+                EmitCustomConstructorBody(ctor, code);
+                return;
+            }
+
+            for (int i = 0; i < ctor.Types.Count(); ++i)
+                CodeUtils.EmitValueRead(ctor.Types.ElementAt(i), $"arg{i}", i.ToString(), code);
+
+            code
+                .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = new {AnnotationUtils.GetTypeName(Target)}({GetConstructorArgsCall(ctor)});")
+                .AddNewLine()
+                .Add("duk_push_this(ctx);")
+                .Add("duk_idx_t this_idx = duk_get_top_index(ctx);");
+
+            code
+                .Add("void* heapptr = duk_get_heapptr(ctx, this_idx);")
+                .Add("heapptr = duk_get_heapptr(ctx, this_idx);")
+                .Add("instance->SetJSHeapptr(heapptr);")
+                .Add("instance->AddRef();")
+                .Add("rbfx_lock_heapptr(ctx, heapptr);");
+
+            EmitTypeProperty(code, "this_idx");
+
+            code.AddNewLine()
+                .Add($"{CodeUtils.GetMethodPrefix(Target)}_wrap(ctx, this_idx, instance);")
+                .Add("rbfx_set_finalizer(ctx, this_idx, instance);");
+
+            EmitInstanceOf(code, "this_idx");
+
+            code
+                .AddNewLine()
+                .Add("duk_push_this(ctx);")
+                .Add("return 1;");
         }
         protected override void EmitGenericConstructorBody(ConstructorData ctor, CodeBuilder code)
         {
