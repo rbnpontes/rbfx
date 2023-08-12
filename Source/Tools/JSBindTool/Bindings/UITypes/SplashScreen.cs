@@ -6,6 +6,7 @@ using JSBindTool.Core.Annotations;
 
 namespace JSBindTool.Bindings.UITypes
 {
+    [Include("Urho3D/Scene/Scene.h")] // required to build correctly SplashScreen
     [Include("Urho3D/UI/SplashScreen.h")]
     public class SplashScreen : ApplicationState
     {
