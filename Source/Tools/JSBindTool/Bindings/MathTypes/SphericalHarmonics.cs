@@ -76,16 +76,8 @@ namespace JSBindTool.Bindings.MathTypes
         [Constructor]
         public void Constructor(Vector3 dir, Color color) { }
 
-        [OperatorMethod(OperatorType.Add)]
-        [CustomCode(new Type[] { typeof(SphericalHarmonicsColor9) })]
-        public void AddOperator(CodeBuilder code)
-        {
-            code
-                .Add($"instance += arg0;")
-                .Add($"duk_push_this(ctx);")
-                .Add($"result_code = 1;");
-            
-        }
+        [OperatorMethod(OperatorType.AddAssign)]
+        public void AddOperator(SphericalHarmonicsColor9 value) { }
         [OperatorMethod(OperatorType.Mul)]
         public SphericalHarmonicsColor9 MulOperator(float value) => new SphericalHarmonicsColor9();
 
@@ -143,21 +135,10 @@ namespace JSBindTool.Bindings.MathTypes
         [Method]
         public Vector3 EvaluateAverage() => new Vector3();
 
-        [OperatorMethod(OperatorType.Add)]
-        [CustomCode(new Type[] { typeof(Vector3) })]
-        public void AddOperator(CodeBuilder code)
-        {
-            code
-                .Add($"instance += arg0;")
-                .Add($"duk_push_this(ctx);")
-                .Add($"result_code = 1;");
-        }
-        [OperatorMethod(OperatorType.Add)]
-        [CustomCode(new Type[] { typeof(SphericalHarmonicsDot9) })]
-        public void AddOperator1(CodeBuilder code)
-        {
-            AddOperator(code);
-        }
+        [OperatorMethod(OperatorType.AddAssign)]
+        public void AddOperator(Vector3 value) { }
+        [OperatorMethod(OperatorType.AddAssign)]
+        public void AddOperator(SphericalHarmonicsDot9 value) { }
         [OperatorMethod(OperatorType.Mul)]
         public SphericalHarmonicsDot9 MulOperator(float value) => new SphericalHarmonicsDot9();
     }

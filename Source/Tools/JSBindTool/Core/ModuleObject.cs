@@ -33,30 +33,7 @@ namespace JSBindTool.Core
         }
         protected override void EmitSetupBody(CodeBuilder code)
         {
-            NamespaceAttribute? namespaceAttr = Target.GetCustomAttribute<NamespaceAttribute>();
-
-            code.Add("duk_push_global_object(ctx);");
-
-            if (namespaceAttr != null)
-            {
-                string[] parts = namespaceAttr.Namespace.Split('.');
-                foreach (string part in parts)
-                {
-                    code
-                        .Add($"// search namespace part: {part}")
-                        .Add($"if(!duk_get_prop_string(ctx, duk_get_top_index(ctx), \"{part}\"))")
-                        .Scope(code =>
-                        {
-                            code
-                                .Add("duk_pop(ctx);")
-                                .Add("duk_push_object(ctx);")
-                                .Add("duk_dup(ctx, -1);")
-                                .Add($"duk_put_prop_string(ctx, -3, \"{part}\");");
-                        });
-                }
-            }
-
-            code.Add("duk_idx_t top = duk_get_top_index(ctx);");
+            EmitNamespace(code, "top");
             EmitMethods(code, "top");
             EmitStaticFields(code, "top");
             code.Add("duk_pop(ctx);");

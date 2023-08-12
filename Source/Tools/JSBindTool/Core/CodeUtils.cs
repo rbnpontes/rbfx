@@ -74,6 +74,21 @@ namespace JSBindTool.Core
         private static int pDeepValueCount = 0;
         public static void EmitValueWrite(Type type, string accessor, CodeBuilder code)
         {
+            if(type.IsAssignableTo(typeof(ICodeEmitter)))
+            {
+                try
+                {
+                    ICodeEmitter? emitter = Activator.CreateInstance(type) as ICodeEmitter;
+                    if(emitter != null)
+                    {
+                        emitter.EmitWrite(accessor, code);
+                        return;
+                    }
+
+                }
+                catch { }
+            }
+
             if (type == typeof(JSFunction) || type == typeof(JSObject)) { /*do nothing*/ }
             else if (type == typeof(string))
                 code.Add($"duk_push_string(ctx, {accessor}.c_str());");
@@ -174,6 +189,20 @@ namespace JSBindTool.Core
         {
             if (type == typeof(CodeBuilder))
                 throw new InvalidOperationException("You have used CodeBuilder, did you forget to add CustomCode attribute ?");
+
+            if (type.IsAssignableTo(typeof(ICodeEmitter)))
+            {
+                try
+                {
+                    ICodeEmitter? emitter = Activator.CreateInstance(type) as ICodeEmitter;
+                    if(emitter != null)
+                    {
+                        emitter.EmitRead(varName, accessor, code);
+                        return;
+                    }
+                }
+                catch { }
+            }
 
             if (type == typeof(string))
                 code.Add($"ea::string {varName} = duk_get_string_default(ctx, {accessor}, \"\");");
@@ -295,6 +324,17 @@ namespace JSBindTool.Core
         {
             StringBuilder output = new StringBuilder();
 
+            if (type.IsAssignableTo(typeof(ICodeEmitter)))
+            {
+                try
+                {
+                    ICodeEmitter? emitter = Activator.CreateInstance(type) as ICodeEmitter;
+                    if (emitter != null)
+                        return emitter.GetNativeDeclaration();
+                }
+                catch { }
+            }
+
             if (type == typeof(string))
                 output.Append("ea::string");
             else if (type == typeof(char))
@@ -326,7 +366,7 @@ namespace JSBindTool.Core
                 || type == typeof(JSObject)
                 || type == typeof(Array)) { /*do nothing*/ }
             else if (type.IsSubclassOf(typeof(ClassObject)))
-                output.Append(type == typeof(ClassObject) ? "Object" : AnnotationUtils.GetTypeName(type)).Append("*");
+                output.Append(type == typeof(ClassObject) ? "RefCounted" : AnnotationUtils.GetTypeName(type)).Append("*");
             else if (type.IsSubclassOf(typeof(TemplateObject)))
             {
                 var templateObj = TemplateObject.Create(type);
@@ -354,6 +394,8 @@ namespace JSBindTool.Core
                         throw new NotImplementedException();
                 }
             }
+            else if (type.IsSubclassOf(typeof(PrimitiveObject)))
+                output.Append(AnnotationUtils.GetTypeName(type));
             else
                 output.Append(type.Name);
             return output.ToString();
@@ -361,6 +403,20 @@ namespace JSBindTool.Core
         public static uint GetTypeHash(Type type)
         {
             string hashInput;
+
+            if (type.IsAssignableTo(typeof(IHashable)))
+            {
+                try
+                {
+                    IHashable? hashable = Activator.CreateInstance(type) as IHashable;
+                    if (hashable != null)
+                        return hashable.ToHash();
+                }
+                catch
+                {
+                    // skip if cannot be constructed
+                }
+            }
 
             if (type.IsEnum)
                 hashInput = "Number";

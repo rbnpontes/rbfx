@@ -752,15 +752,15 @@ namespace JSBindTool.Core
 
         protected virtual void EmitSetupBody(CodeBuilder code)
         {
+            EmitNamespace(code, "top");
             code
                 .Add($"duk_push_c_function(ctx, {GetCtorSignature()}, DUK_VARARGS);")
-                .Add($"duk_put_global_string(ctx, \"{AnnotationUtils.GetJSTypeName(Target)}\");");
+                .Add($"duk_put_prop_string(ctx, top, \"{AnnotationUtils.GetJSTypeName(Target)}\");")
+                .Add("duk_pop(ctx);");
         }
         protected virtual void EmitSetupStaticBody(CodeBuilder code)
         {
-            code
-                .Add("duk_idx_t top = duk_get_top(ctx);")
-                .Add($"duk_get_global_string(ctx, \"{AnnotationUtils.GetJSTypeName(Target)}\");");
+            EmitNamespace(code, "top");
 
             EmitStaticFields(code, "top");
             EmitStaticMethods(code, "top");
@@ -829,9 +829,7 @@ namespace JSBindTool.Core
 
             string nativeName = AnnotationUtils.GetMethodNativeName(methodInfo);
 
-            code.Add("duk_push_this(ctx);");
-            code.Add($"{AnnotationUtils.GetTypeName(Target)}* instance = {GetRefSignature()}(ctx, duk_get_top_index(ctx));");
-            code.Add("duk_pop(ctx);");
+            EmitThisInstance(code, "instance");
 
             CustomCodeAttribute? customCodeAttr = methodInfo.GetCustomAttribute<CustomCodeAttribute>();
             if (customCodeAttr != null)
@@ -868,11 +866,7 @@ namespace JSBindTool.Core
 
             string operatorSignal = GetOperatorSignal(opType);
 
-            code
-                .Add("duk_push_this(ctx);")
-                .Add($"{AnnotationUtils.GetTypeName(Target)}& instance = {CodeUtils.GetMethodPrefix(Target)}_resolve(ctx, -1);")
-                .Add("duk_pop(ctx);")
-                .AddNewLine();
+            EmitThisInstance(code, "instance");
 
             CustomCodeAttribute? customCodeAttr = method.GetCustomAttribute<CustomCodeAttribute>();
             if (customCodeAttr != null)
@@ -886,15 +880,26 @@ namespace JSBindTool.Core
 
             CodeUtils.EmitValueRead(parameters[0].ParameterType, $"value", "0", code);
 
-            if (opType == OperatorType.Equal)
+            if (IsCompareOperator(opType))
             {
                 code
-                    .Add($"duk_push_boolean(ctx, instance == value);")
+                    .Add($"duk_push_boolean(ctx, *instance {operatorSignal} value);")
+                    .Add("return 1;");
+                return;
+            }
+            else if(IsAssignOperator(opType))
+            {
+                code
+                    .Add($"*instance {operatorSignal} value;")
+                    .Add("duk_push_this(ctx);")
                     .Add("return 1;");
                 return;
             }
 
-            code.Add($"{CodeUtils.GetNativeDeclaration(method.ReturnType)} result = instance {operatorSignal} value;");
+            if (method.ReturnType == typeof(void))
+                throw new Exception($"Must return type on method '{method.Name}' of {Target.Name} with operator signal '{operatorSignal}'. Only operator method with custom code is allowed void.");
+
+            code.Add($"{CodeUtils.GetNativeDeclaration(method.ReturnType)} result = *instance {operatorSignal} value;");
             CodeUtils.EmitValueWrite(method.ReturnType, "result", code);
             code.Add("return 1;");
         }
@@ -1032,6 +1037,32 @@ namespace JSBindTool.Core
             code.Add("#endif").AddNewLine();
         }
         #region Methods Setup Bindings
+        protected virtual void EmitNamespace(CodeBuilder code, string accessor)
+        {
+            NamespaceAttribute? namespaceAttr = Target.GetCustomAttribute<NamespaceAttribute>();
+            code.Add("duk_push_global_object(ctx);");
+
+            if(namespaceAttr != null)
+            {
+                string[] parts = namespaceAttr.Namespace.Split('.');
+                foreach (string part in parts)
+                {
+                    code
+                        .Add($"// search namespace part: {part}")
+                        .Add($"if(!duk_get_prop_string(ctx, duk_get_top_index(ctx), \"{part}\"))")
+                        .Scope(code =>
+                        {
+                            code
+                                .Add("duk_pop(ctx);")
+                                .Add("duk_push_object(ctx);")
+                                .Add("duk_dup(ctx, -1);")
+                                .Add($"duk_put_prop_string(ctx, -3, \"{part}\");");
+                        });
+                }
+            }
+
+            code.Add("duk_idx_t top = duk_get_top_index(ctx);");
+        }
         protected virtual void EmitMethods(CodeBuilder code, string accessor)
         {
             var methodsData = GetMethods();
@@ -1256,11 +1287,8 @@ namespace JSBindTool.Core
                 .Add($"duk_idx_t {GetVariableSignature(variable)}(duk_context* ctx)")
                 .Scope(code =>
                 {
-                    code
-                        .Add("duk_push_this(ctx);")
-                        .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = {GetRefSignature()}(ctx, duk_get_top_index(ctx));")
-                        .Add("duk_pop(ctx);")
-                        .Add($"{CodeUtils.GetNativeDeclaration(variable.Type)} result = instance->{variable.NativeName};");
+                    EmitThisInstance(code, "instance");
+                    code.Add($"{CodeUtils.GetNativeDeclaration(variable.Type)} result = instance->{variable.NativeName};");
                     CodeUtils.EmitValueWrite(variable.Type, "result", code);
                     code.Add("return 1;");
                 });
@@ -1271,10 +1299,7 @@ namespace JSBindTool.Core
                 .Add($"duk_idx_t {GetVariableSignature(variable, true)}(duk_context* ctx)")
                 .Scope(code =>
                 {
-                    code
-                        .Add("duk_push_this(ctx);")
-                        .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = {GetRefSignature()}(ctx, duk_get_top_index(ctx));")
-                        .Add("duk_pop(ctx);");
+                    EmitThisInstance(code, "instance");
                     CodeUtils.EmitValueRead(variable.Type, "result", "0", code);
                     code
                         .Add($"instance->{variable.NativeName} = result;")
@@ -1287,10 +1312,7 @@ namespace JSBindTool.Core
                 .Add($"duk_idx_t {GetPropertySignature(prop)}(duk_context* ctx)")
                 .Scope(code =>
                 {
-                    code
-                        .Add("duk_push_this(ctx);")
-                        .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = {GetRefSignature()}(ctx, duk_get_top_index(ctx));")
-                        .Add("duk_pop(ctx);");
+                    EmitThisInstance(code, "instance");
 
                     if (AnnotationUtils.IsCustomProperty(prop))
                     {
@@ -1317,10 +1339,8 @@ namespace JSBindTool.Core
                 .Add($"duk_idx_t {GetPropertySignature(prop, true)}(duk_context* ctx)")
                 .Scope(code =>
                 {
-                    code
-                        .Add("duk_push_this(ctx);")
-                        .Add($"{AnnotationUtils.GetTypeName(Target)}* instance = {GetRefSignature()}(ctx, duk_get_top_index(ctx));")
-                        .Add("duk_pop(ctx);").AddNewLine();
+                    EmitThisInstance(code, "instance");
+                    code.AddNewLine();
                     if (AnnotationUtils.IsCustomProperty(prop))
                     {
                         bool skipRead = prop.PropertyType == typeof(JSObject) || prop.PropertyType == typeof(JSFunction) || prop.PropertyType == typeof(Array);
@@ -1368,6 +1388,13 @@ namespace JSBindTool.Core
                         .Add("return duk_throw(ctx);");
                 })
                 .AddNewLine();
+        }
+        protected virtual void EmitThisInstance(CodeBuilder code, string varName)
+        {
+            code
+                .Add("duk_push_this(ctx);")
+                .Add($"{CodeUtils.GetNativeDeclaration(Target)} {varName} = {GetRefSignature()}(ctx, duk_get_top_index(ctx));")
+                .Add("duk_pop(ctx);");
         }
 
         protected Dictionary<OperatorType, List<MethodInfo>> GetOperatorMethods()
@@ -1479,6 +1506,9 @@ namespace JSBindTool.Core
                 case OperatorType.Equal:
                     op = "==";
                     break;
+                case OperatorType.NotEqual:
+                    op = "!=";
+                    break;
                 case OperatorType.Less:
                     op = "<";
                     break;
@@ -1491,8 +1521,28 @@ namespace JSBindTool.Core
                 case OperatorType.GreaterEqual:
                     op = ">=";
                     break;
+                case OperatorType.AddAssign:
+                    op = "+=";
+                    break;
+                case OperatorType.SubAssign:
+                    op = "-=";
+                    break;
+                case OperatorType.MulAssign:
+                    op = "*=";
+                    break;
+                case OperatorType.DivAssign:
+                    op = "/=";
+                    break;
             }
             return op;
+        }
+        protected bool IsCompareOperator(OperatorType opType)
+        {
+            return opType >= OperatorType.Equal && opType <= OperatorType.GreaterEqual;
+        }
+        protected bool IsAssignOperator(OperatorType opType)
+        {
+            return opType >= OperatorType.LessEqual && opType <= OperatorType.DivAssign;
         }
         protected string GetOperatorName(OperatorType opType)
         {
@@ -1514,16 +1564,43 @@ namespace JSBindTool.Core
                 case OperatorType.Equal:
                     op = "equals";
                     break;
+                case OperatorType.NotEqual:
+                    op = "nequals";
+                    break;
+                case OperatorType.Less:
+                    op = "lessThan";
+                    break;
+                case OperatorType.Greater:
+                    op = "greaterThan";
+                    break;
+                case OperatorType.LessEqual:
+                    op = "lessEqThan";
+                    break;
+                case OperatorType.GreaterEqual:
+                    op = "greaterEqThan";
+                    break;
+                case OperatorType.AddAssign:
+                    op = "add";
+                    break;
+                case OperatorType.SubAssign:
+                    op = "sub";
+                    break;
+                case OperatorType.MulAssign:
+                    op = "mul";
+                    break;
+                case OperatorType.DivAssign:
+                    op = "div";
+                    break;
             }
             return op;
         }
         protected string GetOperatorMethodSignature(OperatorType opType)
         {
-            return $"{CodeUtils.GetMethodPrefix(Target)}_op_{GetOperatorName(opType)}_call";
+            return $"{CodeUtils.GetMethodPrefix(Target)}_op_{CodeUtils.ToSnakeCase(GetOperatorName(opType))}_call";
         }
         protected string GetVariantOperatorMethodSignature(OperatorType opType, int idx)
         {
-            return $"{CodeUtils.GetMethodPrefix(Target)}_op_{GetOperatorName(opType)}{idx}_call";
+            return $"{CodeUtils.GetMethodPrefix(Target)}_op_{CodeUtils.ToSnakeCase(GetOperatorName(opType))}{idx}_call";
         }
         protected string GetPropertySignature(PropertyInfo prop, bool isSetter = false)
         {
@@ -1547,6 +1624,10 @@ namespace JSBindTool.Core
         {
             if (inheritType == typeof(T))
                 throw new Exception($"Invalid Implementation. Inherited {typeof(T).Name} is using the parent class instead of self class");
+        }
+        protected void ValidateInheritance<T>()
+        {
+            ValidateInheritance<T>(Target);
         }
 
         protected abstract string GetSelfHeader();

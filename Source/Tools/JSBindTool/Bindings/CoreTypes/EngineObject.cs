@@ -43,4 +43,28 @@ namespace JSBindTool.Bindings.CoreTypes
             // skip this method because rbfx_object_wrap will insert this property
         }
     }
+
+    public class EngineObjectRef : ICodeEmitter, IHashable
+    {
+        private static uint EngineObjectHash = HashUtils.Hash("Object");
+        public void EmitRead(string varName, string accessor, CodeBuilder code)
+        {
+            code.Add($"Object* {varName} = dynamic_cast<Object*>(rbfx_get_instance(ctx, {accessor}));");
+        }
+
+        public void EmitWrite(string accessor, CodeBuilder code)
+        {
+            code.Add($"rbfx_push_object(ctx, {accessor});");
+        }
+
+        public string GetNativeDeclaration()
+        {
+            return "Object*";
+        }
+
+        public uint ToHash()
+        {
+            return EngineObjectHash;
+        }
+    }
 }

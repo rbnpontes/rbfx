@@ -285,6 +285,14 @@ namespace JSBindTool.Core
             code.Add($"{CodeUtils.GetMethodPrefix(baseType)}_wrap(ctx, {accessor}, instance);");
         }
 
+        protected override void EmitThisInstance(CodeBuilder code, string varName)
+        {
+            code
+                .Add("duk_push_this(ctx);")
+                .Add($"{AnnotationUtils.GetTypeName(Target)}* {varName} = {GetRefSignature()}(ctx, duk_get_top_index(ctx));")
+                .Add("duk_pop(ctx);");
+        }
+
         private void EmitInitializationNotice(CodeBuilder code)
         {
             code.Add($"URHO3D_LOGDEBUG(\"- {AnnotationUtils.GetTypeName(Target)}\");");

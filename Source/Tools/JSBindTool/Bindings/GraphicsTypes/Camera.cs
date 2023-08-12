@@ -1,0 +1,4 @@
+namespace JSBindTool.Bindings.GraphicsTypes
+{
+    
+}

@@ -42,7 +42,7 @@ namespace JSBindTool.Bindings.MathTypes
         }
         public static void EmitEqualOperator(CodeBuilder code)
         {
-            code.Add("bool result = instance.Equals(arg0, arg1);");
+            code.Add("bool result = instance->Equals(arg0, arg1);");
         }
         public static void EmitGetData(CodeBuilder code, int sizeOf, string dataType = "float")
         {

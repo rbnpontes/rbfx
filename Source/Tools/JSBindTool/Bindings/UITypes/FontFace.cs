@@ -53,10 +53,12 @@ namespace JSBindTool.Bindings.UITypes
         public Vector<SharedPtr<Texture2D>> Textures { get => new Vector<SharedPtr<Texture2D>>(); }
 
         public FontFace() : base(typeof(FontFace)) { }
+        public FontFace(Type type) : base(type)
+        {
+            ValidateInheritance<FontFace>();
+        }
 
-        [Method]
-        [CustomCode(typeof(bool), new Type[] { typeof(JSBuffer), typeof(float) })]
-        public void Load(CodeBuilder code)
+        protected void EmitLoad(CodeBuilder code)
         {
             code.Add("bool result = instance->Load(arg0, (unsigned)arg0_length, arg1);");
         }

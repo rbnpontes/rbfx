@@ -265,4 +265,13 @@ namespace JSBindTool.Bindings.UITypes
         VolumeUp = 128 | (1 << 30),
         WWW = 264 | (1 << 30)
     }
+    [Include("Urho3D/Input/Input.h")]
+    public enum MouseMode
+    {
+        Absolute = 0,
+        Relative,
+        Wrap,
+        Free,
+        Invalid
+    }
 }

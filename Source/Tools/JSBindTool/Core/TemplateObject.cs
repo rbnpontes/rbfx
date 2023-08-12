@@ -13,7 +13,7 @@ namespace JSBindTool.Core
         Vector,
         RefPtr,
         Const,
-        FlagSet
+        FlagSet,
     }
     public class TemplateObject
     {
