@@ -547,6 +547,7 @@ public:
 %include "Urho3D/Scene/TrackedComponent.h"
 %include "Urho3D/Scene/PrefabReference.h"
 %include "Urho3D/Scene/PrefabResource.h"
+%include "Urho3D/Scene/ShakeComponent.h"
 
 // --------------------------------------- Extra components ---------------------------------------
 %ignore Urho3D::InputMap::GetMappings;
@@ -677,6 +678,7 @@ public:
 %ignore Urho3D::AnimationState::CalculateModelTracks;
 %ignore Urho3D::AnimationState::CalculateNodeTracks;
 %ignore Urho3D::AnimationState::CalculateAttributeTracks;
+%ignore Urho3D::AnimationParameters::Update;
 %ignore Urho3D::Animation::GetVariantTracks;
 %rename(DrawableFlags) Urho3D::DrawableFlag;
 
@@ -881,6 +883,7 @@ public:
 %include "Urho3D/Physics/RaycastVehicle.h"
 %include "Urho3D/Physics/RigidBody.h"
 %include "Urho3D/Physics/KinematicCharacterController.h"
+%include "Urho3D/Physics/TriggerAnimator.h"
 %template(PhysicsRaycastResultVector)   eastl::vector<Urho3D::PhysicsRaycastResult>;
 %template(RigidBodyVector)              eastl::vector<Urho3D::RigidBody*>;
 #endif

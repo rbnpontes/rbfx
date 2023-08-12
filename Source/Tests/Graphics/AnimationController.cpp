@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2022-2022 the rbfx project.
+// Copyright (c) 2023-2023 the rbfx project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,38 +19,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR rhs DEALINGS IN
 // THE SOFTWARE.
 //
+
+
 #include "../CommonUtils.h"
+#include "../ModelUtils.h"
+#include "Urho3D/Resource/ResourceCache.h"
 
-#include <Urho3D/IO/VirtualFileSystem.h>
+#include <Urho3D/Scene/Scene.h>
+#include <Urho3D/Graphics/Model.h>
+#include <Urho3D/Graphics/AnimationController.h>
 
-TEST_CASE("FileIdentifier tests")
-{
-    REQUIRE(!FileIdentifier::Empty);
-}
-
-TEST_CASE("VirtualFileSystem has mount points")
-{
-    auto context = Tests::GetOrCreateContext(Tests::CreateCompleteContext);
-    auto vfs = context->GetSubsystem<VirtualFileSystem>();
-
-    auto numMountPoints = vfs->NumMountPoints();
-    CHECK(numMountPoints > 0);
-    for (unsigned i = 0; i < numMountPoints; ++i)
-    {
-        auto mountPoint = vfs->GetMountPoint(i);
-        CHECK(mountPoint);
-    }
-}
-
-TEST_CASE("VirtualFileSystem can read and write text")
+TEST_CASE("AnimationController should remove animation on completion")
 {
     auto context = Tests::GetOrCreateContext(Tests::CreateCompleteContext);
-    auto vfs = context->GetSubsystem<VirtualFileSystem>();
 
-    FileIdentifier fileId{"conf", "test_file.txt"};
-    ea::string testString{"BlaBla\xE2\x82\xAC"};
-    REQUIRE(vfs->WriteAllText(fileId, testString));
+    auto scene = MakeShared<Scene>(context);
+    auto node = scene->CreateChild();
+    auto controller = node->CreateComponent<AnimationController>();
+    AnimationParameters params(
+        context->GetSubsystem<ResourceCache>()->GetResource<Animation>("Animations/SlidingDoor/Open.xml"));
+    params.removeOnCompletion_ = true;
+    controller->PlayNewExclusive(params, 0.0f);
+    const auto length = params.GetAnimation()->GetLength();
+    Tests::RunFrame(context, length + 1.0f);
 
-    auto restoredText = vfs->ReadAllText(fileId);
-    REQUIRE(testString == restoredText);
+    CHECK(0 == controller->GetNumAnimations());
 }

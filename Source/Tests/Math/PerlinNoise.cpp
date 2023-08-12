@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2022-2022 the rbfx project.
+// Copyright (c) 2023-2023 the rbfx project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,38 +19,53 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR rhs DEALINGS IN
 // THE SOFTWARE.
 //
+
 #include "../CommonUtils.h"
 
-#include <Urho3D/IO/VirtualFileSystem.h>
+#include <Urho3D/Math/PerlinNoise.h>
 
-TEST_CASE("FileIdentifier tests")
+using namespace Urho3D;
+
+TEST_CASE("Perlin noise 1D")
 {
-    REQUIRE(!FileIdentifier::Empty);
-}
+    double max = ea::numeric_limits<double>::min();
+    double min = ea::numeric_limits<double>::max();
 
-TEST_CASE("VirtualFileSystem has mount points")
-{
-    auto context = Tests::GetOrCreateContext(Tests::CreateCompleteContext);
-    auto vfs = context->GetSubsystem<VirtualFileSystem>();
+    RandomEngine randomEngine{0};
+    const PerlinNoise noise{randomEngine};
 
-    auto numMountPoints = vfs->NumMountPoints();
-    CHECK(numMountPoints > 0);
-    for (unsigned i = 0; i < numMountPoints; ++i)
+    for (unsigned i = 0; i < 1024; ++i)
     {
-        auto mountPoint = vfs->GetMountPoint(i);
-        CHECK(mountPoint);
+        const double val = noise.GetDouble(i * 1.1);
+        min = Min(min, val);
+        max = Max(max, val);
     }
+
+    CHECK(min >= 0.0);
+    CHECK(max <= 1.0);
 }
 
-TEST_CASE("VirtualFileSystem can read and write text")
+TEST_CASE("Perlin noise 3D")
 {
-    auto context = Tests::GetOrCreateContext(Tests::CreateCompleteContext);
-    auto vfs = context->GetSubsystem<VirtualFileSystem>();
+    double max = ea::numeric_limits<double>::min();
+    double min = ea::numeric_limits<double>::max();
 
-    FileIdentifier fileId{"conf", "test_file.txt"};
-    ea::string testString{"BlaBla\xE2\x82\xAC"};
-    REQUIRE(vfs->WriteAllText(fileId, testString));
+    RandomEngine randomEngine{0};
+    const PerlinNoise noise{randomEngine};
 
-    auto restoredText = vfs->ReadAllText(fileId);
-    REQUIRE(testString == restoredText);
+    for (unsigned x = 0; x < 100; ++x)
+    {
+        for (unsigned y = 0; y < 100; ++y)
+        {
+            for (unsigned z = 0; z < 100; ++z)
+            {
+                const double val = noise.GetDouble(x * 1.1, y * 1.1, z * 1.1);
+                min = Min(min, val);
+                max = Max(max, val);
+            }
+        }
+    }
+
+    CHECK(min >= 0.0);
+    CHECK(max <= 1.0);
 }
