@@ -12,7 +12,9 @@ namespace JSBindTool.Bindings.ActionsTypes
     public class BaseAction : SerializableType
     {
         public BaseAction() : base(typeof(BaseAction)) { }
+        public BaseAction(Type type) : base(type) { }
 
+        [Method]
         public BaseAction GetOrDefault(BaseAction action) => new BaseAction();
     }
 #endif

@@ -7,6 +7,8 @@ namespace JSBindTool.Bindings.ActionsTypes
     [Include("Urho3D/Actions/ActionManager.h")]
     public class ActionManager : EngineObject
     {
+        [PropertyMap("GetEmptyAction")]
+        public FiniteTimeAction EmptyAction { get => new FiniteTimeAction(); }
         public ActionManager() : base(typeof(ActionManager)) { }
 
         [Method]

@@ -70,6 +70,8 @@ namespace JSBindTool.Bindings.EngineTypes
         public ApplicationState State { get => new ApplicationState(); }
         [PropertyMap("GetTargetState")]
         public StringHash TargetState { get => new StringHash(); }
+        [PropertyMap("GetFadeOverlay")]
+        public Window FadeOverlay { get => new Window(); set { } }
         [PropertyMap("GetFadeInDuration", "SetFadeInDuration")]
         public float FadeInDuration { get; set; }
         [PropertyMap("GetFadeOutDuration", "SetFadeOutDuration")]
@@ -77,11 +79,17 @@ namespace JSBindTool.Bindings.EngineTypes
 
         public StateManager() : base(typeof(StateManager)) { }
 
+        [Method]
         public void Reset() { }
+        [Method]
         public void Update(float timeStep) { }
+        [Method]
         public void EnqueueState(ApplicationState gameScreen) { }
+        [Method]
         public void EnqueueState(ApplicationState gameScreen, StringVariantMap bundle) { }
+        [Method]
         public void EnqueueState(StringHash type) { }
+        [Method]
         public void EnqueueState(StringHash type, StringVariantMap bundle) { }
     }
 }

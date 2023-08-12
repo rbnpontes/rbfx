@@ -40,7 +40,10 @@ namespace JSBindTool.Bindings.UITypes
         public ResourceRef MaterialAttr { get => new ResourceRef(); set { } }
 
         public BorderImage() : base(typeof(BorderImage)) { }
-        public BorderImage(Type type) : base(type) { }
+        public BorderImage(Type type) : base(type)
+        {
+            ValidateInheritance<BorderImage>();
+        }
 
         [Method]
         public void SetFullImageRect() { }
