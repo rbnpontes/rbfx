@@ -28,5 +28,6 @@ namespace JSBindTool.Bindings.UITypes
         public bool ModalAutoDismiss { get; set; }
 
         public Window() : base(typeof(Window)) { }
+        public Window(Type type) : base(type) { }
     }
 }
