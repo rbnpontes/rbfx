@@ -29,7 +29,7 @@ namespace JSBindTool.Bindings.UITypes
         public uint VertexEnd = 0;
         [Variable("color_")]
         public uint Color = 0;
-        [Variable("userGradient_")]
+        [Variable("useGradient_")]
         public bool UseGradient = false;
         [Variable("customMaterial_")]
         public Material CustomMaterial = new Material();
@@ -66,9 +66,9 @@ namespace JSBindTool.Bindings.UITypes
         public void AddQuad(Matrix3x4 transform, IntVector2 a, IntVector2 b, IntVector2 c,
             IntVector2 d, IntVector2 texA, IntVector2 texB, IntVector2 texC, IntVector2 texD) { }
         [Method]
-        public void AddQuad(Matrix3x4 transform, IntVector2 a, IntVector2 b, IntVector2 c,
+        public void AddQuad(Matrix3x4 transform, IntVector2 a, IntVector2 b, IntVector2 c, IntVector2 d,
             IntVector2 texA, IntVector2 texB, IntVector2 texC, IntVector2 texD,
-            Color colorA, Color colorB, Color colorC, Color colorD)
+            Color colorA, Color colorB, Color colorC, Color colorD) 
         { }
         [Method]
         public bool Merge(UIBatch batch) => false;
