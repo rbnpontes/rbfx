@@ -22,21 +22,42 @@
 
 #pragma once
 #include "../Scene/Component.h"
+#include <duktape/duktape.h>
 
 namespace Urho3D
 {
+    /// @{
+    /// helper class used to call js functions
+    /// @}
+    class JavaScriptComponentUtils {
+    public:
+        JavaScriptComponentUtils(Component* instance);
+        virtual void SetProperty(const ea::string& key, const Variant& value);
+        virtual Variant GetProperty(const ea::string& key);
+        virtual bool HasProperty(const ea::string& key);
+        virtual StringVector GetProperties();
+        virtual Variant CallFunction(const ea::string& key);
+        virtual Variant CallFunction(const ea::string& key, const Variant& value);
+        virtual Variant CallFunction(const ea::string& key, const VariantVector& args);
+        virtual Variant CallFunction(const ea::string& key, const ea::function<unsigned(duk_context*)>& argsCall);
+
+        void OnSetEnabled();
+        void GetDependencyNode(ea::vector<Node*>& nodes);
+        void DrawDebugGeometry(DebugRenderer* debug, bool depthTest);
+        void OnNodeSet(Node* previousNode, Node* currentNode);
+        void OnSceneSet(Scene* scene);
+        void OnMarkedDirty(Node* node);
+        void OnNodeSetEnabled(Node* node);
+    protected:
+        Component* instance_;
+    };
+
     class URHO3D_API JavaScriptComponent : public Component {
         URHO3D_OBJECT(JavaScriptComponent, Component);
     public:
         JavaScriptComponent(Context* context);
-        void SetProperty(const ea::string& key, const Variant& value);
-        Variant GetProperty(const ea::string& key);
-        Variant CallFunction(const ea::string& key);
-        Variant CallFunction(const ea::string& key, const Variant& value);
-        Variant CallFunction(const ea::string& key, const VariantVector& args);
-
         virtual void OnSetEnabled();
-        virtual void GetDependencyNode(ea::vector<Node*>& desc);
+        virtual void GetDependencyNode(ea::vector<Node*>& nodes);
         virtual void DrawDebugGeometry(DebugRenderer* debug, bool depthTest);
     protected:
         virtual void OnNodeSet(Node* previousNode, Node* currentNode);
@@ -44,25 +65,24 @@ namespace Urho3D
         virtual void OnMarkedDirty(Node* node);
         virtual void OnNodeSetEnabled(Node* node);
     private:
-        bool GetJSProperty(const char* propKey);
+        ea::unique_ptr<JavaScriptComponentUtils> utils_;
     };
 
-    /// @{
-    /// JavaScript Proxy Component, this class is used by the
-    /// duktape to wrap JS Component into native component.
-    /// @}
-    class JavaScriptProxyComponent : public JavaScriptComponent {
-    public:
-        JavaScriptProxyComponent(Context* context, TypeInfo* typeInfo);
-
-        virtual StringHash GetType() const override { return typeInfo_->GetType(); }
-        virtual const ea::string& GetTypeName() const override { return typeInfo_->GetTypeName(); }
-        virtual const TypeInfo* GetTypeInfo() const override { return typeInfo_; }
-
-        static StringHash GetTypeStatic() { return GetTypeInfoStatic()->GetType(); }
-        static const ea::string& GetTypeNameStatic() { return GetTypeInfoStatic()->GetTypeName(); }
-        static const TypeInfo* GetTypeInfoStatic() { return JavaScriptComponent::GetTypeInfoStatic(); }
-    private:
+#define JS_DEFINE_PROXY_COMPONENT(typeName, baseTypeName) \
+    public:\
+        using ClassName = typeName; \
+        using BaseClassName = baseTypeName; \
+        ClassName(Context* context, TypeInfo* typeInfo) : BaseClassName(context), typeInfo_(typeInfo) {} \
+        virtual StringHash GetType() const override { return typeInfo_->GetType(); } \
+        virtual const TypeInfo* GetTypeInfo() const override { return typeInfo_; } \
+        static StringHash GetTypeStatic() { return GetTypeInfoStatic()->GetType(); } \
+        static const ea::string& GetTypeNameStatic() { return GetTypeInfoStatic()->GetTypeName(); } \
+        static const TypeInfo* GetTypeInfoStatic() { return BaseClassName::GetTypeInfoStatic(); } \
+    private: \
         TypeInfo* typeInfo_;
+
+    class JavaScriptProxyComponent : public JavaScriptComponent
+    {
+        JS_DEFINE_PROXY_COMPONENT(JavaScriptProxyComponent, JavaScriptComponent)
     };
 }

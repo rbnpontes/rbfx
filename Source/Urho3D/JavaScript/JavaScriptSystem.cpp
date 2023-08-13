@@ -7,6 +7,7 @@
 #include "JavaScriptErrors.h"
 #include "JavaScriptLogging.h"
 #include "JavaScriptSystemBindings.h"
+#include "JavaScriptComponentRegistry.h"
 #include "JavaScriptEvents.h"
 #include "JavaScriptOperations.h"
 #include "JavaScriptProfiler.h"
@@ -68,6 +69,7 @@ namespace Urho3D
         js_setup_error_bindings(ctx);
         js_setup_logger_bindings(ctx);
         js_setup_sys_bindings(ctx);
+        js_setup_component_registry(ctx);
         js_setup_profiler_bindings(ctx);
         js_setup_timer_bindings(ctx);
         js_setup_worker_bindings(ctx);
