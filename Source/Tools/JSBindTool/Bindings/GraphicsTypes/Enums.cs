@@ -8,6 +8,18 @@ using System.Threading.Tasks;
 namespace JSBindTool.Bindings.GraphicsTypes
 {
     [Include("Urho3D/Graphics/GraphicsDefs.h")]
+    public enum FaceCameraMode
+    {
+        None =0,
+        RotateXYZ,
+        RotateY,
+        LookAtXYZ,
+        LookAtY,
+        LookAtMixed,
+        Direction,
+        AxisAngle
+    }
+    [Include("Urho3D/Graphics/GraphicsDefs.h")]
     public enum MaterialQuality
     {
         Low = 0,

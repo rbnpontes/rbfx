@@ -33,6 +33,9 @@ namespace JSBindTool.Bindings.SceneTypes
         public Component() : base(typeof(Component))
         {
         }
-        public Component(Type type) : base(type) { }
+        public Component(Type type) : base(type)
+        {
+            ValidateInheritance<Component>();
+        }
     }
 }

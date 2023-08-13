@@ -89,11 +89,19 @@ namespace JSBindTool.Bindings.UITypes
         Busy,
         BusyArrow
     }
-    [Include("Urho3D/UI/Text.h")]
+    [Include("Urho3D/UI/Font.h")]
     public enum FontType
     {
         None = 0,
         FreeType,
         Bitmap
     }
+    [Include("Urho3D/UI/Text.h")]
+    public enum TextEffect
+    {
+        None = 0,
+        Shadow,
+        Stroke
+    }
+    
 }
