@@ -111,4 +111,6 @@ namespace Urho3D
     URHO3D_API void rbfx_require_type(duk_context* ctx, duk_idx_t value_idx, unsigned type_hash);
     URHO3D_API duk_idx_t rbfx_ref_counted_instanceof(duk_context* ctx, const StringHash& type_hash);
     URHO3D_API duk_idx_t rbfx_object_instanceof(duk_context* ctx, const StringHash& type_hash);
+    URHO3D_API void rbfx_push_weak_ptr(duk_context* ctx, const WeakPtr<Object>& instance);
+    URHO3D_API WeakPtr<Object> rbfx_get_weak_ptr(duk_context* ctx, duk_idx_t value_idx);
 }

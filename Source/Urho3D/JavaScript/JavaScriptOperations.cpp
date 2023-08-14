@@ -39,6 +39,7 @@ namespace Urho3D
     static StringHash g_matrix4_type       = StringHash("Matrix4");
     static StringHash g_vector_type        = StringHash("Vector");
     static StringHash g_function_type      = StringHash("Function");
+    static StringHash g_weakptr_type       = StringHash("WeakPtr");
 
     static duk_idx_t rbfx_internal_ref_counted_instanceof(duk_context* ctx) {
         StringHash type = rbfx_require_string_hash(ctx, 0);
@@ -846,8 +847,9 @@ namespace Urho3D
             if (duk_get_prop_string(ctx, value_idx, JS_INSTANCE_OF_PROP_STRONG_REFS))
             {
                 duk_dup(ctx, -1);
+                duk_dup(ctx, value_idx);
                 duk_push_uint(ctx, type_hash);
-                duk_call(ctx, 1);
+                duk_call_method(ctx, 1);
 
                 if (!duk_get_boolean_default(ctx, -1, false))
                     err_output = "invalid value type. the value object type does not match type requirements.";
@@ -875,6 +877,75 @@ namespace Urho3D
             duk_push_boolean(ctx, true);
             return 1;
         }
+
+        duk_push_this(ctx);
+        if (duk_get_prop_string(ctx, -1, JS_OBJ_HIDDEN_PTR))
+        {
+            Object* obj = static_cast<Object*>(duk_get_pointer_default(ctx, -1, nullptr));
+            URHO3D_ASSERTLOG(obj, "Object is null");
+
+            // test native instance before let it go to ref counted instanceof test.
+            if (obj->IsInstanceOf(hash))
+            {
+                duk_push_boolean(ctx, true);
+                return 1;
+            }
+        }
+        duk_pop_2(ctx);
+
         return rbfx_ref_counted_instanceof(ctx, hash);
+    }
+    static duk_idx_t rbfx_internal_weakptr_instanceof(duk_context* ctx)
+    {
+        StringHash type = rbfx_require_string_hash(ctx, 0);
+        duk_push_boolean(ctx, type == g_weakptr_type);
+        return 1;
+    }
+    static duk_idx_t rbfx_internal_weakptr_get(duk_context* ctx)
+    {
+        duk_push_this(ctx);
+        WeakPtr<Object> instance = rbfx_get_weak_ptr(ctx, duk_get_top_index(ctx));
+
+        if (instance.Expired())
+        {
+            duk_push_null(ctx);
+            return 1;
+        }
+
+        rbfx_push_object(ctx, instance.Get());
+        return 1;
+    }
+    void rbfx_push_weak_ptr(duk_context* ctx, const WeakPtr<Object>& instance)
+    {
+        if (instance.Expired())
+        {
+            duk_push_null(ctx);
+            return;
+        }
+
+        WeakPtr<Object>* handler = new WeakPtr<Object>(instance);
+
+        duk_push_object(ctx);
+        // setup instanceof call
+        duk_push_c_lightfunc(ctx, rbfx_internal_weakptr_instanceof, 1, 1, 0);
+        duk_put_prop_string(ctx, -2, JS_INSTANCE_OF_PROP_STRONG_REFS);
+        // setup weakptr hidden ptr
+        duk_push_pointer(ctx, handler);
+        duk_put_prop_string(ctx, -2, JS_OBJ_HIDDEN_PTR);
+
+        duk_push_c_function(ctx, rbfx_internal_weakptr_get, 0);
+        duk_put_prop_string(ctx, -2, "get");
+    }
+    WeakPtr<Object> rbfx_get_weak_ptr(duk_context* ctx, duk_idx_t value_idx)
+    {
+        rbfx_require_type(ctx, value_idx, g_weakptr_type.Value());
+
+        duk_get_prop_string(ctx, value_idx, JS_OBJ_HIDDEN_PTR);
+        WeakPtr<Object>* result = static_cast<WeakPtr<Object>*>(duk_get_pointer_default(ctx, -1, nullptr));
+
+        if (!result)
+            return WeakPtr<Object>();
+
+        return *result;
     }
 }
