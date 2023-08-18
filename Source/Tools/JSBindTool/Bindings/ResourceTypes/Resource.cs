@@ -17,14 +17,20 @@ namespace JSBindTool.Bindings.ResourceTypes
         public string Name { get; set; } = string.Empty;
 
         public Resource() : base(typeof(Resource)) { }
-        public Resource(Type type) : base(type) { }
+        public Resource(Type type) : base(type)
+        {
+            ValidateInheritance<Resource>();
+        }
     }
     [Include("Urho3D/Resource/Resource.h")]
     [Abstract]
     public class ResourceWithMetadata : Resource
     {
         public ResourceWithMetadata() : base(typeof(ResourceWithMetadata)) { }
-        public ResourceWithMetadata(Type type) : base(type) { }
+        public ResourceWithMetadata(Type type) : base(type)
+        {
+            ValidateInheritance<ResourceWithMetadata>();
+        }
 
         [Method]
         public void AddMetadata(string name, Variant value) { }
